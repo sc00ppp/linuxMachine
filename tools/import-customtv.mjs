@@ -279,6 +279,7 @@ async function scanVideoFiles(downloadRoot) {
 function downloadRow({ rowid, values }) {
   return {
     id: values[0] ?? rowid,
+    sourceUrl: String(values[1] ?? '').trim(),
     folderPath: String(values[4] ?? ''),
     downloadedAt: values[5] ? String(values[5]) : null,
     status: String(values[6] ?? ''),
@@ -410,7 +411,12 @@ async function main() {
       category: categoryIds.get(file.categoryFolder),
       title: row?.title || titleFromFilename(file.filename),
       filename: file.filename,
-      url: encodedUrlPath(file.relativeSegments),
+      // `url` is the original post/video URL. Keep the local mediaserve path
+      // separate so source provenance is never lost during an import.
+      url: row?.sourceUrl ?? '',
+      media_url: encodedUrlPath(file.relativeSegments),
+      thumbnail: null,
+      thumbnail_source: null,
       size_bytes: file.sizeBytes,
       extension: file.extension,
       duration_seconds: file.durationSeconds === null

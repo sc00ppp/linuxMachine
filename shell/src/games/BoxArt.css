@@ -1,5 +1,5 @@
-﻿/* Fake box art (DESIGN.md Â§11). Portrait like a real case, with the title
-   printed on the cover rather than captioned beneath it â€” that is what makes
+﻿/* Fake box art (DESIGN.md §11). Portrait like a real case, with the title
+   printed on the cover rather than captioned beneath it — that is what makes
    a grid of these read as boxes on a shelf instead of thumbnails in a list.
 
    Focus language is deliberately identical to the channel wall's
@@ -73,7 +73,7 @@
 
 /* --- Decorative motifs -----------------------------------------------------
    Four printed treatments, picked by the title seed, so covers differ in
-   *structure* and not just in hue. All pure gradients â€” no assets â€” blended
+   *structure* and not just in hue. All pure gradients — no assets — blended
    into the art so they read as ink on the print rather than stickers. */
 
 .boxart-motif {
@@ -84,7 +84,7 @@
   pointer-events: none;
 }
 
-/* 0 â€” concentric rings rising from the lower-left corner. */
+/* 0 — concentric rings rising from the lower-left corner. */
 .boxart-motif[data-motif='0'] {
   background: repeating-radial-gradient(
     circle at 12% 96%,
@@ -93,7 +93,7 @@
   );
 }
 
-/* 1 â€” a wide diagonal band, like a foil stripe across the case. */
+/* 1 — a wide diagonal band, like a foil stripe across the case. */
 .boxart-motif[data-motif='1'] {
   background: linear-gradient(
     var(--cover-sheen, 110deg),
@@ -104,7 +104,7 @@
   );
 }
 
-/* 2 â€” halftone dot field, fading out toward the plate. */
+/* 2 — halftone dot field, fading out toward the plate. */
 .boxart-motif[data-motif='2'] {
   background: radial-gradient(
     color-mix(in srgb, var(--text) 30%, transparent) 0.09rem,
@@ -115,7 +115,7 @@
   mask-image: linear-gradient(to bottom, #000 8%, transparent 72%);
 }
 
-/* 3 â€” a low horizon glow behind the title. */
+/* 3 — a low horizon glow behind the title. */
 .boxart-motif[data-motif='3'] {
   background: radial-gradient(
     88% 46% at 50% 92%,
@@ -124,7 +124,7 @@
   );
 }
 
-/* Slow specular drift across the laminate â€” idle boxes shimmer faintly, the
+/* Slow specular drift across the laminate — idle boxes shimmer faintly, the
    focused one fully (same rule the wall's tiles follow). */
 .boxart-sheen {
   position: absolute;
@@ -233,7 +233,7 @@
   );
 }
 
-/* Publisher-band rule above the title â€” accent, printed, deliberate. */
+/* Publisher-band rule above the title — accent, printed, deliberate. */
 .boxart-band {
   width: 2.4rem;
   height: 0.22rem;
@@ -337,7 +337,7 @@
 
 /* `contain`, not `cover`: box art is the artwork, and cropping a cover to fit
    a cell mangles logos and edges. The cell already carries the console's own
-   aspect ratio, so letterboxing is minimal â€” and what remains reads as the
+   aspect ratio, so letterboxing is minimal — and what remains reads as the
    shelf behind the box rather than a bug. */
 .boxart-photo {
   position: absolute;
@@ -359,7 +359,7 @@
   display: none;
 }
 
-/* Rating badge â€” shown only while the shelf is sorted by rating, so the
+/* Rating badge — shown only while the shelf is sorted by rating, so the
    ranking value is visible on the thing being ranked. */
 .boxart-rating {
   position: absolute;
@@ -392,7 +392,7 @@
    letterboxed most of the shelf.
 
    So the ROW sets the height and each box takes its artwork's own width.
-   Real covers size from the image itself (no JS measurement needed â€” the
+   Real covers size from the image itself (no JS measurement needed — the
    img is in flow at height:100%, width:auto), and boxes without art fall
    back to the console's typical packaging ratio. */
 
@@ -435,7 +435,7 @@
   aspect-ratio: var(--box-aspect, 0.75);
 }
 
-/* â”€â”€ Focus fixes for clamped cells â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Focus fixes for clamped cells ────────────────────────────────────────
    With per-console cell ratios the focused box scales up inside a fixed
    grid cell, so it must not collide with its neighbours and the ring must
    hug the cell rather than the artwork's letterboxed bounds. */
@@ -459,7 +459,7 @@
 
 /* The ring sits 0.55rem OUTSIDE the box, so it needs a correspondingly
    larger radius to stay concentric. Inheriting the box's own radius pulled
-   the corners in and made the focused state look pinched â€” the "hover looks
+   the corners in and made the focused state look pinched — the "hover looks
    bad" bug. */
 .games-grid .boxart::after {
   border-radius: calc(var(--radius-card) + 0.55rem);

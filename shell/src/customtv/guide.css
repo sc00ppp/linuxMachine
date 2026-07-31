@@ -1,0 +1,684 @@
+/* Live TV -------------------------------------------------------------- */
+
+.ctv-live,
+.ctv-guide {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--bg-0);
+  font-family: var(--font-ui);
+}
+
+.ctv-live-picture,
+.ctv-live-picture video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ctv-live-picture video {
+  display: block;
+  object-fit: contain;
+  background: var(--bg-0);
+}
+
+.ctv-live-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--bg-0) 34%, transparent),
+      transparent 25%,
+      transparent 70%,
+      color-mix(in srgb, var(--bg-0) 66%, transparent)
+    ),
+    radial-gradient(ellipse at center, transparent 56%, var(--scrim-soft));
+}
+
+.ctv-channel-bug {
+  position: absolute;
+  z-index: 4;
+  left: 3.5rem;
+  right: 3.5rem;
+  bottom: 5.8rem;
+  min-height: 8.8rem;
+  padding: 1rem 1.4rem;
+  display: grid;
+  grid-template-columns: 6rem minmax(0, 1fr);
+  gap: 1.35rem;
+  border-radius: var(--radius-card);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 1.25rem, 0);
+  transition:
+    opacity 360ms var(--ease-soft),
+    transform 360ms var(--ease-soft);
+}
+
+.ctv-channel-bug[data-visible='true'] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.ctv-channel-bug-number {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  border-right: 0.0625rem solid var(--line-strong);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctv-channel-bug-number span {
+  color: var(--text-dim);
+  font-size: 1.05rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.ctv-channel-bug-number strong {
+  margin-top: 0.22rem;
+  font-size: 2.65rem;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.ctv-channel-bug-copy {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 0.35rem;
+}
+
+.ctv-channel-bug-station,
+.ctv-channel-bug-next {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ctv-channel-bug-station strong {
+  color: var(--text);
+  font-size: 1.25rem;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.ctv-channel-bug-station > span {
+  padding: 0.2rem 0.48rem;
+  border-radius: var(--radius-chip);
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 58%, transparent);
+  font-size: 0.85rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ctv-channel-bug-copy h1 {
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.8rem;
+  line-height: 1.15;
+  font-weight: 820;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ctv-channel-bug-next {
+  color: var(--text-dim);
+  font-size: 1.15rem;
+  line-height: 1.2;
+  font-weight: 650;
+}
+
+.ctv-channel-bug-next span:first-child {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ctv-channel-bug-next span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ctv-live-hints,
+.ctv-guide-hints {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 1.2rem;
+  min-height: 3.2rem;
+  padding: 0.55rem 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  border-radius: var(--radius-chip);
+  transform: translateX(-50%);
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.ctv-live-hints span,
+.ctv-guide-hints span {
+  display: flex;
+  align-items: center;
+  gap: 0.48rem;
+}
+
+.ctv-live-hints b,
+.ctv-guide-hints b {
+  min-width: 1.7rem;
+  height: 1.7rem;
+  padding-inline: 0.34rem;
+  display: grid;
+  place-items: center;
+  border: 0.08rem solid var(--line-strong);
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font-size: 0.88rem;
+  line-height: 1;
+}
+
+/* Invisible geometric stops let the shared focus engine act like a circular
+   channel rocker without installing a second keyboard/gamepad listener. */
+.ctv-live-tuner {
+  position: absolute;
+  z-index: -1;
+  left: -2rem;
+  top: 50%;
+  width: 1rem;
+  height: 1rem;
+  opacity: 0.001;
+  pointer-events: none;
+}
+
+.ctv-live-tune-target {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1rem;
+  height: 1rem;
+  padding: 0;
+  border: 0;
+  transform: translateY(var(--channel-offset));
+}
+
+.ctv-live-off-air {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 5rem;
+  background:
+    radial-gradient(
+      ellipse 44% 38% at 50% 48%,
+      color-mix(in srgb, var(--accent) 14%, transparent),
+      transparent 76%
+    ),
+    var(--bg-gradient);
+  text-align: center;
+}
+
+.ctv-live--empty .ctv-live-off-air {
+  inset: 18% 22%;
+  border-radius: var(--radius-card);
+}
+
+.ctv-live-off-air-mark {
+  width: 5.5rem;
+  height: 4rem;
+  margin-bottom: 1.35rem;
+  border: 0.15rem solid color-mix(in srgb, var(--accent) 64%, var(--text));
+  border-radius: 1.15rem;
+  background:
+    repeating-linear-gradient(
+      -12deg,
+      transparent 0 0.38rem,
+      color-mix(in srgb, var(--text) 10%, transparent) 0.38rem 0.5rem
+    );
+  box-shadow: var(--glow-accent);
+}
+
+.ctv-live-off-air h1 {
+  margin: 0;
+  font-size: 2.3rem;
+  line-height: 1.15;
+}
+
+.ctv-live-off-air p {
+  margin: 0.6rem 0 0;
+  color: var(--text-dim);
+  font-size: 1.3rem;
+}
+
+/* Guide ---------------------------------------------------------------- */
+
+.ctv-guide {
+  display: flex;
+  flex-direction: column;
+  background:
+    radial-gradient(
+      ellipse 62% 42% at 78% 0%,
+      color-mix(in srgb, var(--accent) 11%, transparent),
+      transparent 72%
+    ),
+    var(--bg-gradient);
+}
+
+.ctv-guide-header {
+  position: relative;
+  z-index: 4;
+  flex: 0 0 7.2rem;
+  min-height: 0;
+  padding: 1.15rem 3.4rem 0.9rem;
+  display: grid;
+  grid-template-columns: minmax(22rem, 1fr) auto auto;
+  align-items: center;
+  gap: 1.35rem;
+  border-bottom: 0.0625rem solid var(--line);
+}
+
+.ctv-guide-title {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.ctv-guide-live-dot {
+  width: 0.8rem;
+  height: 0.8rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 1.2rem color-mix(in srgb, var(--accent) 75%, transparent);
+}
+
+.ctv-guide-title > div {
+  min-width: 0;
+}
+
+.ctv-guide-title h1 {
+  margin: 0;
+  font-size: 2.1rem;
+  line-height: 1;
+  font-weight: 850;
+}
+
+.ctv-guide-title p {
+  margin: 0.42rem 0 0;
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 1.18rem;
+  line-height: 1.2;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ctv-guide-selection-time {
+  color: var(--text-dim);
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.ctv-guide-on-demand {
+  position: relative;
+  min-width: 13.5rem;
+  min-height: 4.3rem;
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  border-radius: var(--radius-card);
+  outline: none;
+  color: var(--text);
+  font-family: var(--font-ui);
+  text-align: left;
+  transform: scale(1);
+  transition:
+    transform var(--dur-focus) var(--ease-soft),
+    background var(--dur-focus) var(--ease-soft);
+}
+
+.ctv-guide-on-demand::after,
+.ctv-guide-cell::after {
+  content: '';
+  position: absolute;
+  inset: -0.2rem;
+  pointer-events: none;
+  border: 0.18rem solid color-mix(in srgb, var(--accent) 72%, var(--text));
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow: var(--glow-accent);
+  transition: opacity var(--dur-focus) var(--ease-soft);
+}
+
+.ctv-guide-on-demand[data-focused='true'] {
+  z-index: 3;
+  background: color-mix(in srgb, var(--accent) 24%, var(--bg-2));
+  transform: scale(1.045);
+}
+
+.ctv-guide-on-demand[data-focused='true']::after,
+.ctv-guide-cell[data-focused='true']::after {
+  opacity: 1;
+  animation: ctv-guide-ring 2.1s ease-in-out infinite;
+}
+
+.ctv-guide-on-demand > span:first-child {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 35%, var(--bg-2));
+  font-size: 1rem;
+}
+
+.ctv-guide-on-demand > span:last-child {
+  display: grid;
+}
+
+.ctv-guide-on-demand strong {
+  font-size: 1.15rem;
+  line-height: 1.1;
+}
+
+.ctv-guide-on-demand small {
+  margin-top: 0.2rem;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+}
+
+.ctv-guide-grid {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0 3.4rem 4.5rem;
+  overflow: hidden;
+}
+
+.ctv-guide-axis-row,
+.ctv-guide-row {
+  display: grid;
+  grid-template-columns: 15rem minmax(0, 1fr);
+}
+
+.ctv-guide-axis-row {
+  height: 3.3rem;
+  border-bottom: 0.0625rem solid var(--line-strong);
+}
+
+.ctv-guide-axis-label,
+.ctv-guide-station {
+  border-right: 0.0625rem solid var(--line-strong);
+}
+
+.ctv-guide-axis-label {
+  padding: 1.05rem 1rem 0;
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ctv-guide-axis {
+  position: relative;
+  min-width: 0;
+}
+
+.ctv-guide-axis > span {
+  position: absolute;
+  top: 1rem;
+  color: var(--text-dim);
+  font-size: 1rem;
+  line-height: 1;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  transform: translateX(0.55rem);
+}
+
+.ctv-guide-axis > span::before {
+  content: '';
+  position: absolute;
+  left: -0.55rem;
+  top: 1.55rem;
+  width: 0.0625rem;
+  height: 50rem;
+  background: var(--line);
+}
+
+.ctv-guide-rows {
+  position: relative;
+  min-height: 0;
+  max-height: calc(100% - 3.3rem);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  overscroll-behavior-block: contain;
+}
+
+.ctv-guide-rows::-webkit-scrollbar {
+  display: none;
+}
+
+.ctv-guide-row {
+  height: 4.7rem;
+  border-bottom: 0.0625rem solid var(--line);
+}
+
+.ctv-guide-station {
+  min-width: 0;
+  padding: 0.7rem 1rem;
+  display: grid;
+  grid-template-columns: 2.25rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.7rem;
+  background: color-mix(in srgb, var(--bg-1) 78%, transparent);
+}
+
+.ctv-guide-station span {
+  color: color-mix(in srgb, var(--accent) 70%, var(--text));
+  font-size: 1.1rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctv-guide-station strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.22rem;
+  line-height: 1.15;
+  font-weight: 800;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ctv-guide-programmes {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--bg-0) 74%, transparent);
+}
+
+.ctv-guide-cell {
+  position: absolute;
+  z-index: 1;
+  left: var(--guide-left);
+  top: 0.34rem;
+  width: max(var(--guide-width), 0.12rem);
+  height: calc(100% - 0.68rem);
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  overflow: visible;
+  display: grid;
+  align-content: center;
+  gap: 0.14rem;
+  border: 0;
+  border-right: 0.0625rem solid var(--line-strong);
+  border-radius: 0.38rem;
+  outline: none;
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, var(--bg-2));
+  font-family: var(--font-ui);
+  text-align: left;
+  transform: scaleY(1);
+  transform-origin: center;
+  transition:
+    transform var(--dur-focus) var(--ease-soft),
+    background var(--dur-focus) var(--ease-soft),
+    filter var(--dur-focus) var(--ease-soft);
+}
+
+.ctv-guide-cell > strong,
+.ctv-guide-cell > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.ctv-guide-cell > strong {
+  font-size: 1.05rem;
+  line-height: 1.05;
+  font-weight: 780;
+}
+
+.ctv-guide-cell > span {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ctv-guide-cell[data-current='true'] {
+  background: color-mix(in srgb, var(--accent) 24%, var(--bg-2));
+}
+
+.ctv-guide-cell[data-current='true'][data-active-channel='true'] {
+  background: color-mix(in srgb, var(--accent) 42%, var(--bg-2));
+  box-shadow: inset 0 0 1.3rem color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.ctv-guide-cell[data-focused='true'] {
+  z-index: 4;
+  overflow: visible;
+  background: color-mix(in srgb, var(--accent) 45%, var(--bg-2));
+  filter: brightness(1.12);
+  transform: scaleY(1.08);
+}
+
+.ctv-guide-cell[data-off-air='true'] {
+  color: var(--text-dim);
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      transparent 0 0.8rem,
+      color-mix(in srgb, var(--text) 3%, transparent) 0.8rem 1.6rem
+    ),
+    color-mix(in srgb, var(--bg-1) 82%, transparent);
+}
+
+.ctv-guide-now-line {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  bottom: 0;
+  width: 0.12rem;
+  display: block;
+  pointer-events: none;
+  background: var(--accent);
+  box-shadow: 0 0 0.85rem color-mix(in srgb, var(--accent) 78%, transparent);
+}
+
+.ctv-guide-now-line b {
+  position: absolute;
+  left: 50%;
+  top: 0.18rem;
+  padding: 0.2rem 0.42rem;
+  border-radius: var(--radius-chip);
+  color: var(--bg-0);
+  background: var(--accent);
+  font-size: 0.72rem;
+  line-height: 1;
+  font-style: normal;
+  font-weight: 900;
+  text-transform: uppercase;
+  transform: translateX(-50%);
+}
+
+.ctv-guide-now-line--row {
+  top: 0;
+  bottom: 0;
+}
+
+.ctv-guide-empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem;
+  text-align: center;
+}
+
+.ctv-guide-empty h2 {
+  margin: 0;
+  font-size: 2.3rem;
+}
+
+.ctv-guide-empty p {
+  margin: 0.65rem 0 0;
+  color: var(--text-dim);
+  font-size: 1.3rem;
+}
+
+@keyframes ctv-guide-ring {
+  0%,
+  100% { filter: brightness(1); }
+  50% { filter: brightness(1.32); }
+}
+
+@media (max-height: 52rem) {
+  .ctv-guide-header { flex-basis: 6.2rem; }
+  .ctv-guide-row { height: 4.2rem; }
+  .ctv-channel-bug { min-height: 7.8rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ctv-channel-bug,
+  .ctv-guide-on-demand,
+  .ctv-guide-on-demand::after,
+  .ctv-guide-cell,
+  .ctv-guide-cell::after {
+    transition-duration: 1ms;
+  }
+
+  .ctv-guide-on-demand[data-focused='true']::after,
+  .ctv-guide-cell[data-focused='true']::after {
+    animation: none;
+  }
+}

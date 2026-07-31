@@ -7,16 +7,27 @@ import {
   type CSSProperties,
 } from 'react';
 import { channelById } from '../core/channels';
+import { useConsoleStore } from '../core/store';
 import { focusManager } from '../focus';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
 import { customTvCatalog, type CustomTvVideo } from './catalog';
 import { CustomTvCard } from './CustomTvCard';
 import { CustomTvPlayer } from './CustomTvPlayer';
+import { LiveChannel } from './LiveChannel';
+import { GuideGrid } from './GuideGrid';
 import './CustomTvChannel.css';
+import './guide.css';
 
 type CustomTvCssProperties = CSSProperties & Record<`--${string}`, string | number>;
-type Screen = 'library' | 'playback';
+/**
+ * Custom TV opens *live* — a station already playing, which you join partway
+ * through. That is the whole point of the channel and the thing that separates
+ * it from a catalogue: nothing waits for you to choose. `guide` is the flip-
+ * through grid, and `library` is the on-demand escape hatch where scrubbing is
+ * allowed (you cannot scrub live TV).
+ */
+type Screen = 'live' | 'guide' | 'library' | 'playback';
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -44,7 +55,21 @@ function EmptyLibrary() {
 }
 
 export function CustomTvChannel() {
-  const [screen, setScreen] = useState<Screen>('library');
+  // live/guide/library live in the store so App's B handler can walk back up
+  // them (guide → live → wall) instead of dumping you straight to the wall.
+  // Playback stays local: it is tied to the selected video object.
+  const storeScreen = useConsoleStore((s) => s.customTvScreen);
+  const [playbackOpen, setPlaybackOpen] = useState(false);
+  const screen: Screen = playbackOpen ? 'playback' : storeScreen;
+  const setScreen = useCallback((next: Screen) => {
+    if (next === 'playback') {
+      setPlaybackOpen(true);
+      return;
+    }
+    setPlaybackOpen(false);
+    useConsoleStore.getState().setCustomTvScreen(next);
+  }, []);
+  const [tunedChannel, setTunedChannel] = useState<string | undefined>(undefined);
   const [playingVideo, setPlayingVideo] = useState<CustomTvVideo | null>(null);
   const [unavailable, setUnavailable] = useState<ReadonlySet<string>>(
     () => new Set(),
@@ -113,6 +138,28 @@ export function CustomTvChannel() {
       data-customtv-screen={screen}
     >
       <div className="ctv-ambient-light" aria-hidden="true" />
+
+      {screen === 'live' && (
+        <LiveChannel
+          channelId={tunedChannel}
+          onTune={setTunedChannel}
+          onOpenGuide={(id) => {
+            setTunedChannel(id);
+            setScreen('guide');
+          }}
+        />
+      )}
+
+      {screen === 'guide' && (
+        <GuideGrid
+          channelId={tunedChannel}
+          onTune={(id) => {
+            setTunedChannel(id);
+            setScreen('live');
+          }}
+          onOpenOnDemand={() => setScreen('library')}
+        />
+      )}
 
       {screen === 'library' && (
         <>

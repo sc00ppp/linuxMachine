@@ -61,6 +61,15 @@
   border-radius: inherit;
   overflow: hidden;
   background:
+    /* The floor falls away into accent-tinted dark at the base — the surface
+       the horizon grid (see the depth section below) lives on. Glowing lines
+       cannot read on a bright pastel; the bottom has to fall into shadow. */
+    radial-gradient(
+      140% 86% at 50% 118%,
+      color-mix(in srgb, var(--bg-0) 78%, var(--accent)) 8%,
+      color-mix(in srgb, var(--bg-0) 42%, transparent) 42%,
+      transparent 68%
+    ),
     radial-gradient(
       130% 105% at 22% 8%,
       color-mix(in srgb, var(--accent) 88%, var(--text)) 0%,
@@ -319,4 +328,122 @@
   border-radius: var(--radius-chip);
   background: color-mix(in srgb, var(--bg-0) 62%, transparent);
   text-shadow: none;
+}
+
+/* --- Depth: horizon grid + bloom ------------------------------------------
+   Lifted from the GameCube boot screen's trick — a perspective floor grid
+   receding to a glowing horizon reads as *space behind the glass* rather than
+   a flat coloured square. The tile stops being a swatch with an icon on it.
+
+   Three accent-tinted layers so every channel keeps its identity:
+     face bg   the dark pool at the base (declared on .tile-face above) —
+               the floor the grid lives on
+     ::before  the floor grid, in perspective, dissolving at the horizon
+     ::after   the bloom sitting on that horizon, behind the glyph
+
+   Kept deliberately faint at rest. A wall of nine glowing tiles would be a
+   fairground; the light should only really arrive when you land on one. */
+
+.tile-face::before,
+.tile-face::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+/* The floor. `perspective()` before `rotateX()` is what makes the lines
+   converge — rotating alone just squashes them. Origin at the bottom so the
+   near edge stays put and the far edge runs away from the viewer. Lines are
+   accent-toward-white so they read as the channel's own light, not chalk. */
+.tile-face::before {
+  z-index: 0;
+  /* Anchored to the face's bottom edge and rotated about that line: the
+     perspective asymptote then forms the horizon INSIDE the face
+     (p·cot θ above the bottom). Anchoring the origin below the face —
+     the obvious inset — foreshortens the whole plane out of view. */
+  inset: auto -40% 0;
+  height: 190%;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--accent) 32%, var(--text)) 0.09rem,
+      transparent 0.09rem
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--accent) 32%, var(--text)) 0.09rem,
+      transparent 0.09rem
+    );
+  background-size: 2.6rem 2.6rem;
+  transform: perspective(20rem) rotateX(64deg);
+  transform-origin: 50% 100%;
+  /* Dissolve toward the horizon; a hard top edge would read as a floating
+     sheet of graph paper. Percentages are of the physical (pre-transform)
+     element — the fade compresses toward the horizon with the squares. */
+  mask-image: linear-gradient(
+    to top,
+    rgba(0, 0, 0, 0.9) 0%,
+    rgba(0, 0, 0, 0.5) 30%,
+    transparent 68%
+  );
+  opacity: 0.16;
+}
+
+/* The horizon glow the grid runs into — a tight near-white band right where
+   the floor meets the sky (the GameCube's bright horizon), plus a softer
+   accent haze rising above it, behind the glyph's feet. */
+.tile-face::after {
+  z-index: 1;
+  inset: 0;
+  background:
+    radial-gradient(
+      64% 9% at 50% 71%,
+      color-mix(in srgb, var(--accent) 34%, var(--text)) 0%,
+      transparent 78%
+    ),
+    radial-gradient(
+      58% 30% at 50% 62%,
+      color-mix(in srgb, var(--accent) 68%, var(--text)) 0%,
+      color-mix(in srgb, var(--accent) 34%, transparent) 48%,
+      transparent 74%
+    );
+  opacity: 0.14;
+}
+
+/* Focus brings the light up. This is the moment the tile is "on". */
+.tile[data-focused='true'] .tile-face::before {
+  opacity: 0.55;
+}
+.tile[data-focused='true'] .tile-face::after {
+  opacity: 0.7;
+}
+
+/* Explicit stacking so the two new layers stay behind everything that was
+   already painting on the face. Without this, ::after would cover the glyph. */
+.tile-art {
+  z-index: 2;
+}
+.tile-sheen {
+  z-index: 3;
+}
+.tile-body {
+  z-index: 4;
+}
+.tile-rim {
+  z-index: 5;
+}
+
+/* A pinned game shows its cover art edge to edge; a grid glowing through box
+   art just looks like a rendering fault. */
+.tile-face:has(.tile-art)::before,
+.tile-face:has(.tile-art)::after {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-face::before,
+  .tile-face::after {
+    transition: none;
+  }
 }

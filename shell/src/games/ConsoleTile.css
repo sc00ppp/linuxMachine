@@ -1,7 +1,7 @@
-﻿/* Console tile â€” the wall's tile language (home/Tile.css) applied to hardware:
+﻿/* Console tile — the wall's tile language (home/Tile.css) applied to hardware:
    accent-gradient face, crisp accent ring, label below revealed on focus,
    neighbours making room. Landscape rather than square because the machines
-   themselves are landscape (ConsoleArt draws into a 240Ã—160 viewBox). */
+   themselves are landscape (ConsoleArt draws into a 240×160 viewBox). */
 
 .ctile-slot {
   display: flex;
@@ -36,7 +36,7 @@
   will-change: transform;
 }
 
-/* Unfocused machines sit back a step â€” "the rest of the shelf recedes". */
+/* Unfocused machines sit back a step — "the rest of the shelf recedes". */
 .ctile:not([data-focused='true']) {
   filter: saturate(0.84) brightness(0.82);
 }
@@ -73,8 +73,8 @@
   box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 72%, transparent);
 }
 
-/* Slow specular drift across the face â€” idle tiles shimmer, the focused one
-   fully (DESIGN.md Â§2 "idle tiles animate subtly"). */
+/* Slow specular drift across the face — idle tiles shimmer, the focused one
+   fully (DESIGN.md §2 "idle tiles animate subtly"). */
 .ctile-sheen {
   position: absolute;
   inset: -30%;

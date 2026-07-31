@@ -1,4 +1,4 @@
-﻿/* Movies & TV â€” an amber-lit sibling of the Console Room. */
+﻿/* Movies & TV — an amber-lit sibling of the Console Room. */
 
 .movies {
   position: absolute;
@@ -133,7 +133,7 @@
   flex-direction: column;
 }
 
-/* Level 1 â€” the unbounded poster shelf. */
+/* Level 1 — the unbounded poster shelf. */
 .media-rows-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -556,7 +556,7 @@
   font-weight: 700;
 }
 
-/* Level 2 â€” season rail over a five-column Wii U-style episode grid. */
+/* Level 2 — season rail over a five-column Wii U-style episode grid. */
 .series-library {
   flex: 1 1 auto;
   min-height: 0;
@@ -700,6 +700,14 @@
       color-mix(in srgb, var(--accent) 62%, var(--bg-1)),
       color-mix(in srgb, var(--accent) 16%, var(--bg-0))
     );
+}
+
+.episode-card-thumbnail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .episode-number {

@@ -747,6 +747,9 @@ function EpisodeCard({
       : seasonNumber === 0
         ? `Special ${episode.episodeNumber}`
         : `S${seasonNumber} / E${episode.episodeNumber}`;
+  const thumbnail = (
+    episode as MediaEpisode & { thumbnail?: string | null }
+  ).thumbnail;
 
   return (
     <div
@@ -757,6 +760,14 @@ function EpisodeCard({
       aria-label={`${seriesTitle}, ${number}, ${episode.title}`}
     >
       <div className="episode-card-art">
+        {thumbnail && (
+          <img
+            className="episode-card-thumbnail"
+            src={thumbnail}
+            alt=""
+            loading="lazy"
+          />
+        )}
         <span className="episode-film-hole episode-film-hole--top" />
         <span className="episode-film-hole episode-film-hole--bottom" />
         <span className="episode-number">{number}</span>

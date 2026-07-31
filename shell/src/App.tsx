@@ -138,6 +138,15 @@ export default function App() {
           // Game page → back to the shelf.
           st.closeGameDetail();
           sound.play('back');
+        } else if (
+          st.mode === 'home' &&
+          st.view === 'customtv' &&
+          st.customTvScreen !== 'live'
+        ) {
+          // Guide / on-demand step back to the live channel, not out of the
+          // room — the same walk-up-a-level rule the Games room follows.
+          st.setCustomTvScreen('live');
+          sound.play('back');
         } else if (st.mode === 'home' && st.view === 'games' && st.gamesLevel === 'grid') {
           // Wii U grid → back up to the console row, not out of the room.
           st.setGamesLevel('consoles');

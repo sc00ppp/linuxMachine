@@ -71,7 +71,10 @@ export function CustomTvPlayer({
   onUnavailable: (id: string) => void;
 }) {
   const mediaRef = useRef<HTMLVideoElement | null>(null);
-  const sourceUrl = useMemo(() => customTvUrl(video.url), [video.url]);
+  const sourceUrl = useMemo(
+    () => customTvUrl(video.media_url || video.url),
+    [video.media_url, video.url],
+  );
   const [playing, setPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(video.duration_seconds ?? 0);

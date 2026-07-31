@@ -1,6 +1,6 @@
 ﻿/**
  * Global reset, atmosphere, and shared utility classes.
- * Loaded after tokens.css (see src/main.tsx) â€” every value here comes from a
+ * Loaded after tokens.css (see src/main.tsx) — every value here comes from a
  * token, nothing hard-codes palette colors.
  *
  * Contents:
@@ -8,12 +8,12 @@
  *   2. Atmosphere (dusk gradient, vignette, film grain)
  *   3. .console-root
  *   4. Focus visuals
- *   5. Utilities (.glow-accent, .chrome-fade, â€¦)
+ *   5. Utilities (.glow-accent, .chrome-fade, …)
  *   6. Idle cursor
  *   7. Reduced motion
  */
 
-/* â”€â”€ 1. Reset + document â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 1. Reset + document ─────────────────────────────────────────────── */
 
 *,
 *::before,
@@ -22,7 +22,7 @@
   margin: 0;
   padding: 0;
   /* Every animation in the shell is soft-spring eased; nothing linear
-     (DESIGN.md Â§6). Durations still come from tuning.ts / per-component CSS. */
+     (DESIGN.md §6). Durations still come from tuning.ts / per-component CSS. */
   animation-timing-function: var(--ease-soft);
 }
 
@@ -46,7 +46,7 @@ body {
   line-height: 1.35;
   color: var(--text);
 
-  /* Cozy dusk: subtle navyâ†’plum vertical gradient with a faint warm pool
+  /* Cozy dusk: subtle navy→plum vertical gradient with a faint warm pool
      low-centre (the lamp in the corner). `fixed` so the gradient belongs to
      the room, not to any scrolling content. */
   background-image: var(--bg-lamp), var(--bg-gradient);
@@ -119,11 +119,11 @@ h4 {
   line-height: 1.15;
 }
 
-/* â”€â”€ 2. Atmosphere â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 2. Atmosphere ───────────────────────────────────────────────────── */
 /*
  * Two fixed, pointer-events-none layers ride above the whole app:
- *   body::before â€” gentle edge vignette (DESIGN.md Â§1 "gentle vignette")
- *   body::after  â€” film grain / dither
+ *   body::before — gentle edge vignette (DESIGN.md §1 "gentle vignette")
+ *   body::after  — film grain / dither
  *
  * The grain sits on top of *everything*, including tiles and the shelf, on
  * purpose: its job is to dither every large flat gradient in the UI so a
@@ -157,7 +157,7 @@ html.no-grain body::after {
   display: none;
 }
 
-/* â”€â”€ 3. .console-root â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 3. .console-root ────────────────────────────────────────────────── */
 
 .console-root {
   position: relative;
@@ -175,7 +175,7 @@ html.no-grain body::after {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* â”€â”€ 4. Focus visuals â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 4. Focus visuals ────────────────────────────────────────────────── */
 /*
  * The focus engine stamps `data-focused="true"` on the focused element
  * (CONTRACTS: src/focus). Focus = light: the element glows in its own channel
@@ -185,7 +185,7 @@ html.no-grain body::after {
 
 [data-focused='true'] {
   /* Accent glow only. `--shadow-lift` used to ride along here, which painted
-     a grey halo between a tile and its accent ring â€” visible as a dull band
+     a grey halo between a tile and its accent ring — visible as a dull band
      hugging every focused object. Focus is light, not a drop shadow;
      components that genuinely want lift set it themselves. */
   box-shadow: var(--glow-accent);
@@ -201,7 +201,7 @@ html.no-grain body::after {
     transform var(--dur-focus) var(--ease-soft);
 }
 
-/* The DOM focus ring is redundant here â€” spatial focus is the real cursor â€”
+/* The DOM focus ring is redundant here — spatial focus is the real cursor —
    but keep a visible ring for keyboard users who tab outside the focus engine. */
 :focus {
   outline: none;
@@ -212,7 +212,7 @@ html.no-grain body::after {
   box-shadow: var(--ring-accent);
 }
 
-/* â”€â”€ 5. Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 5. Utilities ────────────────────────────────────────────────────── */
 
 /** Soft ambient glow in the current --accent. Safe on any element. */
 .glow-accent {
@@ -225,8 +225,8 @@ html.no-grain body::after {
 
 /**
  * Chrome that fades away when the user goes idle (top bar, button hints).
- * Toggle with either `is-idle` or `data-idle="true"` â€” whichever is easier
- * for the component â€” and override --chrome-idle-opacity to taste.
+ * Toggle with either `is-idle` or `data-idle="true"` — whichever is easier
+ * for the component — and override --chrome-idle-opacity to taste.
  */
 .chrome-fade {
   opacity: 1;
@@ -261,7 +261,7 @@ html.no-grain body::after {
   white-space: nowrap;
 }
 
-/* â”€â”€ 6. Idle cursor â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 6. Idle cursor ──────────────────────────────────────────────────── */
 /*
  * A living-room console shows no mouse pointer. The mechanism is pure CSS
  * plus one class: src/styles/cursorIdle.ts adds `cursor-idle` to <html> after
@@ -276,9 +276,9 @@ html.cursor-idle *::after {
   cursor: none !important;
 }
 
-/* â”€â”€ 7. Reduced motion â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ── 7. Reduced motion ───────────────────────────────────────────────── */
 /*
- * Zero out every duration and delay globally. Not `animation: none` â€” some
+ * Zero out every duration and delay globally. Not `animation: none` — some
  * components rely on animationend/WAAPI finish callbacks firing, and those
  * still fire for a ~0-length animation.
  */
@@ -303,7 +303,7 @@ html.cursor-idle *::after {
   overflow: clip;
 }
 
-/* Channel error fallback â€” a failing channel never exposes the OS. */
+/* Channel error fallback — a failing channel never exposes the OS. */
 .channel-fallback {
   position: fixed;
   inset: 0;
@@ -332,11 +332,11 @@ html.cursor-idle *::after {
   cursor: pointer;
 }
 
-/* â”€â”€ Wii U curves â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Wii U curves ──────────────────────────────────────────────────────────
    True continuous-curvature corners (squircles), not circular arcs. A plain
    border-radius corner is a quarter-circle: it meets the straight edge with
    a visible break in curvature, which is what makes UI read as "boxes with
-   rounded corners". A superellipse blends smoothly into the edge â€” the shape
+   rounded corners". A superellipse blends smoothly into the edge — the shape
    Nintendo used across the Wii U, and what design tools call a squircle.
 
    Chromium 139+ ships `corner-shape`, and this shell runs Chromium, so we get
@@ -347,7 +347,7 @@ html.cursor-idle *::after {
      `overflow: hidden` clips to the circular border-radius path, not to the
      superellipse, so a clipping container with corner-shape shows its
      children's square corners poking past the painted curve. Faces that clip
-     artwork (.tile-face, .ctile-face, .boxart-face) therefore stay round â€”
+     artwork (.tile-face, .ctile-face, .boxart-face) therefore stay round —
      they sit inside a squircled parent, so the visible silhouette is still
      the Wii U curve. */
   .tile,
@@ -376,7 +376,7 @@ html.cursor-idle *::after {
     corner-shape: squircle;
   }
 
-  /* Focus rings are ::after pseudo-elements â€” separate boxes that do NOT
+  /* Focus rings are ::after pseudo-elements — separate boxes that do NOT
      inherit corner-shape from their host. Left round while the tile became a
      squircle, the two curves diverge and the ring visibly bulges past the
      corners. Give every ring the same shape as the thing it hugs. */
@@ -395,7 +395,7 @@ html.cursor-idle *::after {
     corner-shape: squircle;
   }
 
-  /* Pills stay true capsules â€” a squircled 999px radius reads as a lozenge. */
+  /* Pills stay true capsules — a squircled 999px radius reads as a lozenge. */
   .hintbar,
   .games-sort,
   .quick-chip,

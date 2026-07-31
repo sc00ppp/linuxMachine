@@ -102,7 +102,7 @@
     0 0 1.4rem -0.4rem var(--accent);
 }
 
-/* Crisp ring hugging the tile â€” an object, not a light leak (DESIGN.md Â§3). */
+/* Crisp ring hugging the tile — an object, not a light leak (DESIGN.md §3). */
 .mirror-tile[data-focused='true'] .mirror-face::after {
   content: '';
   position: absolute;

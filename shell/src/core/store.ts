@@ -32,6 +32,8 @@ interface ConsoleStore {
   view: HomeView;
   /** Games room level: console picker → a console's grid → one game's page. */
   gamesLevel: 'consoles' | 'grid' | 'detail';
+  /** Custom TV opens live; guide and on-demand are steps down from it. */
+  customTvScreen: 'live' | 'guide' | 'library';
   /** Which game's detail page is open (shelf entry key). */
   selectedGameKey: string | null;
   /** News channel: reading the full story rather than the headline view. */
@@ -64,6 +66,7 @@ interface ConsoleStore {
   openView: (view: HomeView) => void;
   closeView: () => void;
   setGamesLevel: (level: 'consoles' | 'grid' | 'detail') => void;
+  setCustomTvScreen: (screen: 'live' | 'guide' | 'library') => void;
   openGameDetail: (key: string) => void;
   closeGameDetail: () => void;
   setNewsReading: (reading: boolean) => void;
@@ -79,6 +82,7 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
   mode: 'home',
   view: 'wall',
   gamesLevel: 'consoles',
+  customTvScreen: 'live',
   selectedGameKey: null,
   newsReading: false,
   runningChannel: null,
@@ -112,10 +116,11 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
 
   openGames: () => set({ view: 'games', gamesLevel: 'consoles' }),
   openSettings: () => set({ view: 'settings' }),
-  openView: (view) => set({ view, gamesLevel: 'consoles', newsReading: false }),
+  openView: (view) => set({ view, gamesLevel: 'consoles', customTvScreen: 'live', newsReading: false }),
   closeView: () =>
-    set({ view: 'wall', gamesLevel: 'consoles', newsReading: false }),
+    set({ view: 'wall', gamesLevel: 'consoles', customTvScreen: 'live', newsReading: false }),
   setGamesLevel: (level) => set({ gamesLevel: level }),
+  setCustomTvScreen: (screen) => set({ customTvScreen: screen }),
   openGameDetail: (key) => set({ gamesLevel: 'detail', selectedGameKey: key }),
   closeGameDetail: () => set({ gamesLevel: 'grid', selectedGameKey: null }),
   setNewsReading: (reading) => set({ newsReading: reading }),

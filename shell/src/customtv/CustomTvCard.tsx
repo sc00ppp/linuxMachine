@@ -92,6 +92,14 @@ export function CustomTvCard({
         aria-label={`${video.title}, ${categoryName}${duration ? `, ${duration}` : ''}${unavailable ? ', currently unavailable' : ''}`}
       >
         <span className="ctv-video-art">
+          {video.thumbnail && (
+            <img
+              className="ctv-video-thumbnail"
+              src={video.thumbnail}
+              alt=""
+              loading="lazy"
+            />
+          )}
           <span className="ctv-card-air" aria-hidden="true">
             <i />
             <i />

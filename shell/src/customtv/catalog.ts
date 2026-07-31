@@ -9,7 +9,12 @@ export interface CustomTvVideo {
   category: string;
   title: string;
   filename: string;
+  /** Original YouTube/Reddit/X source URL from the bot database. */
   url: string;
+  /** Root-relative path served by the local Custom TV mediaserve instance. */
+  media_url: string;
+  thumbnail: string | null;
+  thumbnail_source: 'source' | 'extracted' | null;
   size_bytes: number;
   extension: string;
   duration_seconds: number | null;

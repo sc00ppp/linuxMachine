@@ -18,6 +18,8 @@ shell/src/core/media.generated.json
 shell/src/core/customtv.generated.json
 shell/public/art/
 shell/public/media-art/
+shell/public/customtv-thumbs/
+shell/public/episode-thumbs/
 shell/public/console-art/
 shell/public/controller-art/
 shell/public/game-video/

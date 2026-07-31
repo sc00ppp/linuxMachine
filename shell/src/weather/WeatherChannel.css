@@ -327,7 +327,7 @@
   .weather-locations-scroll, .weather-hours-scroll, .weather-days-scroll { scroll-behavior: auto; }
 }
 
-/* â”€â”€ Fable layout pass â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+/* ── Fable layout pass ─────────────────────────────────────────────────────
    The channel was packing everything into the top ~730px of a 1080p screen
    and leaving the bottom third empty, which is what made it feel unfinished.
 
@@ -372,7 +372,7 @@
   min-width: 0;
 }
 
-/* Conditions text was truncating ("Passing showâ€¦"); let it wrap to two lines
+/* Conditions text was truncating ("Passing show…"); let it wrap to two lines
    inside the taller card instead. */
 .weather-day .weather-day__label,
 .weather-day [class*='label'],

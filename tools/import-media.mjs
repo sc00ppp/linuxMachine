@@ -15,6 +15,7 @@ import path from 'node:path';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
+import { ReadOnlySqlite as SharedReadOnlySqlite } from './sqlite.mjs';
 
 const execFile = promisify(execFileCallback);
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -27,6 +28,13 @@ const generatedPath = path.join(
   'media.generated.json',
 );
 const artDirectory = path.join(projectRoot, 'shell', 'public', 'media-art');
+const episodeThumbDirectory = path.join(
+  projectRoot,
+  'shell',
+  'public',
+  'episode-thumbs',
+);
+const episodeThumbCachePath = path.join(episodeThumbDirectory, '.cache.json');
 
 const remote = process.env.MEDIA_SSH ?? 'david@192.168.1.158';
 const sshBinary =
@@ -48,6 +56,7 @@ $ProgressPreference = 'SilentlyContinue'
 $tvRoot = 'S:\Kodi\Collection\TV Shows'
 $movieRoot = 'S:\Kodi\Collection\Movies'
 $kodiUserdata = Join-Path $env:APPDATA 'Kodi\userdata'
+$kodiDatabase = Join-Path $kodiUserdata 'Database'
 $videoExtensions = @(
   '.3gp', '.avi', '.divx', '.flv', '.iso', '.m2ts', '.m4v', '.mkv',
   '.mov', '.mp4', '.mpeg', '.mpg', '.mts', '.ogm', '.ts', '.vob',
@@ -111,6 +120,7 @@ if (Test-Path -LiteralPath $tvRoot -PathType Container) {
           Season = Get-SeasonNumber $file $seriesDirectory.FullName
           Episode = Get-EpisodeNumber $file.BaseName
           FileName = $file.Name
+          MediaPath = $file.FullName
           SizeBytes = [int64] $file.Length
         }
       }
@@ -153,6 +163,18 @@ foreach ($file in @(Get-VideoFiles $movieRoot)) {
 
 [pscustomobject] @{
   KodiUserdata = $kodiUserdata
+  VideoDatabase = @(
+    Get-ChildItem -LiteralPath $kodiDatabase -File -Filter 'MyVideos*.db' |
+      Sort-Object @{ Expression = {
+        if ($_.BaseName -match '(\d+)$') { [int] $Matches[1] } else { 0 }
+      }; Descending = $true }
+  )[0].Name
+  TextureDatabase = @(
+    Get-ChildItem -LiteralPath $kodiDatabase -File -Filter 'Textures*.db' |
+      Sort-Object @{ Expression = {
+        if ($_.BaseName -match '(\d+)$') { [int] $Matches[1] } else { 0 }
+      }; Descending = $true }
+  )[0].Name
   Series = $series
   Movies = $movies
 } | ConvertTo-Json -Depth 9 -Compress
@@ -182,29 +204,6 @@ function uniqueSlug(title, used) {
   }
   used.add(candidate);
   return candidate;
-}
-
-function cleanEpisodeTitle(fileName, seriesTitle, episodeNumber, fallbackNumber) {
-  const extension = path.extname(fileName);
-  let title = fileName.slice(0, extension ? -extension.length : undefined);
-  title = title
-    .replace(/S\d{1,3}E\d{1,4}(?:E\d{1,4})*|\d{1,3}x\d{1,4}|(?:^|[\s._-])E\d{1,4}(?=$|[\s._-])/i, ' ')
-    .replace(/[._]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-  const seriesBase = seriesTitle.replace(/\s*\((?:19|20)\d{2}\)\s*$/, '').trim();
-  if (
-    title.localeCompare(seriesTitle, undefined, { sensitivity: 'base' }) === 0 ||
-    title.localeCompare(seriesBase, undefined, { sensitivity: 'base' }) === 0
-  ) {
-    title = '';
-  } else if (title.toLocaleLowerCase().startsWith(`${seriesBase.toLocaleLowerCase()} `)) {
-    title = title.slice(seriesBase.length).replace(/^[\s–—-]+/, '');
-  }
-
-  if (/^\((?:19|20)\d{2}\)$/.test(title)) title = '';
-  return title || `Episode ${episodeNumber ?? fallbackNumber}`;
 }
 
 function movieIdentity(row) {
@@ -504,6 +503,13 @@ function mediaMatchKey(value) {
     .replace(/[^a-z0-9]+/g, '');
 }
 
+function mediaPathKey(value) {
+  return String(value ?? '')
+    .replaceAll('/', '\\')
+    .replace(/\\+/g, '\\')
+    .toLocaleLowerCase();
+}
+
 function yearFromDate(value) {
   const match = /^((?:19|20)\d{2})/.exec(String(value ?? ''));
   return match ? Number(match[1]) : null;
@@ -702,12 +708,27 @@ function createKodiMetadata(videoDb, textureDb) {
   const episodesByShow = new Map();
   for (const { rowid, values } of videoDb.table('episode')) {
     const showId = Number(values[26]);
+    const fileId = Number(values[1]);
+    const file = files.get(fileId);
+    const filePath = file
+      ? windowsJoin(paths.get(file.pathId)?.value ?? '', file.fileName)
+      : '';
     const episode = {
       id: rowid,
-      fileId: Number(values[1]),
-      title: String(values[2] ?? 'Episode'),
+      fileId,
+      fileName: file?.fileName ?? '',
+      mediaPath: String(values[20] ?? filePath),
+      title: String(values[2] ?? '').trim(),
+      plot: String(values[3] ?? '').trim() || null,
+      airDate: String(values[7] ?? '').trim() || null,
       seasonNumber: finiteNumber(values[14]),
       episodeNumber: finiteNumber(values[15]),
+      thumbnailCachedUrl: pickArtwork(
+        'episode',
+        rowid,
+        ['thumb', 'landscape', 'fanart'],
+        'landscape',
+      ),
     };
     const list = episodesByShow.get(showId) ?? [];
     list.push(episode);
@@ -718,6 +739,21 @@ function createKodiMetadata(videoDb, textureDb) {
   for (const { rowid, values } of videoDb.table('tvshow')) {
     const title = String(values[1] ?? '');
     const episodes = episodesByShow.get(rowid) ?? [];
+    const episodesByPath = new Map();
+    const episodesByIdentity = new Map();
+    const episodesByFileName = new Map();
+    for (const episode of episodes) {
+      const pathKey = mediaPathKey(episode.mediaPath);
+      if (pathKey) episodesByPath.set(pathKey, episode);
+      const identity = `${episode.seasonNumber ?? ''}:${episode.episodeNumber ?? ''}`;
+      const identityRows = episodesByIdentity.get(identity) ?? [];
+      identityRows.push(episode);
+      episodesByIdentity.set(identity, identityRows);
+      const fileKey = episode.fileName.toLocaleLowerCase();
+      const fileRows = episodesByFileName.get(fileKey) ?? [];
+      fileRows.push(episode);
+      episodesByFileName.set(fileKey, fileRows);
+    }
     const episodeRatings = episodes
       .map((episode) => ratingsByMedia.get(`episode:${episode.id}`)?.rating)
       .filter((rating) => rating !== undefined);
@@ -763,6 +799,17 @@ function createKodiMetadata(videoDb, textureDb) {
         ['fanart', 'landscape', 'thumb', 'banner'],
         'landscape',
       ),
+      episode(row) {
+        const pathMatch = episodesByPath.get(mediaPathKey(row.MediaPath));
+        if (pathMatch) return pathMatch;
+        const identity = `${row.Season ?? ''}:${row.Episode ?? ''}`;
+        const identityRows = episodesByIdentity.get(identity) ?? [];
+        if (identityRows.length === 1) return identityRows[0];
+        const fileRows = episodesByFileName.get(
+          String(row.FileName ?? '').toLocaleLowerCase(),
+        ) ?? [];
+        return fileRows.length === 1 ? fileRows[0] : null;
+      },
     });
   }
 
@@ -845,6 +892,27 @@ async function isUsableJpeg(filePath) {
   }
 }
 
+async function readEpisodeThumbCache() {
+  try {
+    const value = JSON.parse(await fs.readFile(episodeThumbCachePath, 'utf8'));
+    value.version = 1;
+    value.items ??= {};
+    return value;
+  } catch (error) {
+    if (error && typeof error === 'object' && error.code === 'ENOENT') {
+      return { version: 1, items: {} };
+    }
+    throw error;
+  }
+}
+
+async function writeEpisodeThumbCache(cache) {
+  await fs.mkdir(episodeThumbDirectory, { recursive: true });
+  const partial = `${episodeThumbCachePath}.${process.pid}.tmp`;
+  await fs.writeFile(partial, `${JSON.stringify(cache, null, 2)}\n`, 'utf8');
+  await fs.rename(partial, episodeThumbCachePath);
+}
+
 function remoteScpPath(remotePath) {
   // OpenSSH's SFTP-backed scp accepts a Windows drive path with forward
   // slashes. Passing this as one execFile argument preserves spaces and
@@ -863,11 +931,26 @@ function windowsJoin(...parts) {
     .join('\\');
 }
 
-async function copyKodiDatabases(kodiUserdata, temporaryDirectory) {
+function mediaUrlFromWindowsPath(value) {
+  const withoutDrive = String(value ?? '')
+    .replace(/^[a-z]:[\\/]+/i, '')
+    .replaceAll('\\', '/');
+  const segments = withoutDrive.split('/').filter(Boolean);
+  return segments.length > 0
+    ? `/${segments.map((segment) => encodeURIComponent(segment)).join('/')}`
+    : null;
+}
+
+async function copyKodiDatabases(
+  kodiUserdata,
+  videoDatabase,
+  textureDatabase,
+  temporaryDirectory,
+) {
   const databaseDirectory = windowsJoin(kodiUserdata, 'Database');
   const copies = [
-    ['MyVideos131.db', path.join(temporaryDirectory, 'MyVideos131.db')],
-    ['Textures13.db', path.join(temporaryDirectory, 'Textures13.db')],
+    [videoDatabase, path.join(temporaryDirectory, videoDatabase)],
+    [textureDatabase, path.join(temporaryDirectory, textureDatabase)],
   ];
 
   for (const [name, destination] of copies) {
@@ -905,18 +988,43 @@ async function copyArtwork(
   kodiUserdata,
   temporaryDirectory,
   counters,
+  episodeThumbCache,
 ) {
   const downloadDirectory = path.join(temporaryDirectory, 'thumbnails');
   await fs.mkdir(downloadDirectory, { recursive: true });
+  let episodeCacheChanges = 0;
+  const checkpointEpisodeCache = async () => {
+    episodeCacheChanges += 1;
+    if (episodeCacheChanges % 25 === 0) {
+      await writeEpisodeThumbCache(episodeThumbCache);
+    }
+  };
 
   const pending = [];
   for (const request of requests) {
-    if (await isUsableJpeg(request.destination)) {
+    const cacheEntry = request.cacheKey
+      ? episodeThumbCache.items[request.cacheKey]
+      : null;
+    const reusableKodiThumb =
+      request.cacheKey &&
+      cacheEntry?.status === 'ok' &&
+      cacheEntry.source === 'kodi' &&
+      cacheEntry.fingerprint === request.cachedUrl;
+    if ((await isUsableJpeg(request.destination)) && (!request.cacheKey || reusableKodiThumb)) {
       request.target[request.field] = request.publicPath;
+      if (request.sourceField) request.target[request.sourceField] = request.source;
       counters.artSkipped += 1;
       continue;
     }
-    if (await exists(request.destination)) {
+    if (
+      request.cacheKey &&
+      cacheEntry?.kodiStatus === 'failed' &&
+      cacheEntry.kodiFingerprint === request.cachedUrl
+    ) {
+      counters.artFailures += 1;
+      continue;
+    }
+    if (!request.cacheKey && (await exists(request.destination))) {
       counters.artFailures += 1;
       console.warn(
         `Existing artwork is not a usable JPEG; left untouched: ${request.destination}`,
@@ -964,21 +1072,64 @@ async function copyArtwork(
     );
     if (!(await isUsableJpeg(staged))) {
       counters.artFailures += 1;
+      if (request.cacheKey) {
+        episodeThumbCache.items[request.cacheKey] = {
+          ...(episodeThumbCache.items[request.cacheKey] ?? {}),
+          kodiStatus: 'failed',
+          kodiFingerprint: request.cachedUrl,
+          kodiReason: 'cached Kodi artwork was unavailable or not a JPEG',
+          updatedAt: new Date().toISOString(),
+        };
+        await checkpointEpisodeCache();
+      }
       console.warn(`Cached Kodi artwork was unavailable: ${request.cachedUrl}`);
       continue;
     }
 
     const partial = `${request.destination}.part`;
+    await fs.mkdir(path.dirname(request.destination), { recursive: true });
     await fs.rm(partial, { force: true });
     try {
       await fs.copyFile(staged, partial);
+      await fs.rm(request.destination, { force: true });
       await fs.rename(partial, request.destination);
       request.target[request.field] = request.publicPath;
+      if (request.sourceField) request.target[request.sourceField] = request.source;
+      if (request.cacheKey) {
+        episodeThumbCache.items[request.cacheKey] = {
+          status: 'ok',
+          source: request.source,
+          fingerprint: request.cachedUrl,
+          updatedAt: new Date().toISOString(),
+        };
+        await checkpointEpisodeCache();
+      }
       counters.artCopied += 1;
     } catch (error) {
       counters.artFailures += 1;
       await fs.rm(partial, { force: true });
       console.warn(`Artwork install failed for ${request.destination}: ${error}`);
+    }
+  }
+  if (episodeCacheChanges % 25 !== 0) {
+    await writeEpisodeThumbCache(episodeThumbCache);
+  }
+}
+
+async function applyExistingEpisodeThumbs(catalog, episodeThumbCache) {
+  for (const series of catalog.series) {
+    for (const season of series.seasons) {
+      for (const episode of season.episodes) {
+        const destination = path.join(
+          episodeThumbDirectory,
+          series.id,
+          `${episode.id}.jpg`,
+        );
+        if (!(await isUsableJpeg(destination))) continue;
+        episode.thumbnail = `/episode-thumbs/${series.id}/${episode.id}.jpg`;
+        const source = episodeThumbCache.items[episode.id]?.source;
+        episode.thumbnailSource = source === 'extracted' ? 'extracted' : 'kodi';
+      }
     }
   }
 }
@@ -988,6 +1139,9 @@ function buildCatalog(inventory, kodiMetadata) {
   const artworkRequests = [];
   const counters = {
     seriesMetadataMatches: 0,
+    episodeMetadataMatches: 0,
+    episodeTitlesApplied: 0,
+    episodeArtworkMatches: 0,
     movieMetadataMatches: 0,
     artCopied: 0,
     artSkipped: 0,
@@ -1007,18 +1161,42 @@ function buildCatalog(inventory, kodiMetadata) {
             ? null
             : Number(episode.Episode);
         const ordinal = episodeNumber ?? index + 1;
-        return {
+        const kodiEpisode = kodi?.episode({
+          ...episode,
+          Season: number,
+          Episode: episodeNumber,
+        }) ?? null;
+        if (kodiEpisode) counters.episodeMetadataMatches += 1;
+        // Kodi is the authority for names. When it has no matching row, keep
+        // the honest ordinal instead of guessing a title from a filename.
+        const fallbackTitle = `Episode ${episodeNumber ?? index + 1}`;
+        const item = {
           id: `${id}-s${String(number).padStart(2, '0')}-e${String(ordinal).padStart(3, '0')}-${index + 1}`,
-          title: cleanEpisodeTitle(
-            String(episode.FileName),
-            String(row.Title),
-            episodeNumber,
-            index + 1,
-          ),
+          title: kodiEpisode?.title || fallbackTitle,
+          plot: kodiEpisode?.plot ?? null,
+          airDate: kodiEpisode?.airDate ?? null,
           fileName: String(episode.FileName),
+          mediaUrl: mediaUrlFromWindowsPath(episode.MediaPath),
           episodeNumber,
           sizeBytes: Number(episode.SizeBytes),
+          thumbnail: null,
+          thumbnailSource: null,
         };
+        if (kodiEpisode?.title) counters.episodeTitlesApplied += 1;
+        if (kodiEpisode?.thumbnailCachedUrl) {
+          counters.episodeArtworkMatches += 1;
+          artworkRequests.push({
+            target: item,
+            field: 'thumbnail',
+            sourceField: 'thumbnailSource',
+            source: 'kodi',
+            cacheKey: item.id,
+            cachedUrl: kodiEpisode.thumbnailCachedUrl,
+            destination: path.join(episodeThumbDirectory, id, `${item.id}.jpg`),
+            publicPath: `/episode-thumbs/${id}/${item.id}.jpg`,
+          });
+        }
+        return item;
       });
 
       return {
@@ -1117,6 +1295,7 @@ async function writeCatalog(catalog) {
 
 async function main() {
   await fs.mkdir(artDirectory, { recursive: true });
+  await fs.mkdir(episodeThumbDirectory, { recursive: true });
   const temporaryDirectory = path.join(
     artDirectory,
     `.kodi-import-${process.pid}-${Date.now()}`,
@@ -1129,16 +1308,22 @@ async function main() {
     if (!inventory.KodiUserdata) {
       throw new Error('The media PC did not report Kodi userdata.');
     }
+    if (!inventory.VideoDatabase || !inventory.TextureDatabase) {
+      throw new Error('The media PC did not report Kodi video/texture databases.');
+    }
 
     console.log('Copying Kodi databases for local read-only parsing...');
     const databasePaths = await copyKodiDatabases(
       String(inventory.KodiUserdata),
+      String(inventory.VideoDatabase),
+      String(inventory.TextureDatabase),
       temporaryDirectory,
     );
     const [videoDb, textureDb] = await Promise.all([
-      ReadOnlySqlite.open(databasePaths.videos),
-      ReadOnlySqlite.open(databasePaths.textures),
+      SharedReadOnlySqlite.open(databasePaths.videos),
+      SharedReadOnlySqlite.open(databasePaths.textures),
     ]);
+    const episodeThumbCache = await readEpisodeThumbCache();
     const kodiMetadata = createKodiMetadata(videoDb, textureDb);
     const { catalog, artworkRequests, counters } = buildCatalog(
       inventory,
@@ -1150,7 +1335,9 @@ async function main() {
       String(inventory.KodiUserdata),
       temporaryDirectory,
       counters,
+      episodeThumbCache,
     );
+    await applyExistingEpisodeThumbs(catalog, episodeThumbCache);
     await writeCatalog(catalog);
 
     const episodeCount = catalog.series.reduce(
@@ -1163,9 +1350,19 @@ async function main() {
     const seriesPosters = catalog.series.filter((item) => item.poster).length;
     const moviePosters = catalog.movies.filter((item) => item.poster).length;
     const seriesFanart = catalog.series.filter((item) => item.fanart).length;
+    const episodes = catalog.series.flatMap((item) =>
+      item.seasons.flatMap((season) => season.episodes),
+    );
+    const kodiEpisodeThumbs = episodes.filter(
+      (episode) => episode.thumbnailSource === 'kodi',
+    ).length;
+    const extractedEpisodeThumbs = episodes.filter(
+      (episode) => episode.thumbnailSource === 'extracted',
+    ).length;
+    const missingEpisodeThumbs = episodes.length - kodiEpisodeThumbs - extractedEpisodeThumbs;
 
     console.log(
-      'SQLite route: copied DBs + built-in pure Node read-only b-tree reader',
+      'SQLite route: copied DBs + tools/sqlite.mjs read-only b-tree reader',
     );
     console.log(`Series: ${catalog.series.length}`);
     console.log(`Episodes: ${episodeCount}`);
@@ -1173,6 +1370,15 @@ async function main() {
     console.log(`Media bytes: ${totalBytes}`);
     console.log(
       `Kodi metadata matched: ${counters.seriesMetadataMatches} series, ${counters.movieMetadataMatches} movies`,
+    );
+    console.log(
+      `Kodi episodes matched: ${counters.episodeMetadataMatches}/${episodeCount}`,
+    );
+    console.log(
+      `Kodi episode titles applied: ${counters.episodeTitlesApplied}/${episodeCount}`,
+    );
+    console.log(
+      `Episode thumbnails: ${kodiEpisodeThumbs} Kodi, ${extractedEpisodeThumbs} extracted, ${missingEpisodeThumbs} missing`,
     );
     console.log(
       `Posters recovered: ${seriesPosters}/${catalog.series.length} series, ${moviePosters}/${catalog.movies.length} movies`,
