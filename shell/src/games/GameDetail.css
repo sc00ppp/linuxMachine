@@ -140,19 +140,6 @@
     color-mix(in srgb, var(--text) 18%, transparent);
 }
 
-.game-detail-preview-label {
-  position: absolute;
-  right: 1.5rem;
-  bottom: 1.45rem;
-  padding: 0.4rem 0.9rem;
-  border-radius: var(--radius-chip);
-  font-size: 1.1rem;
-  font-weight: 800;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  color: var(--text-dim);
-  background: color-mix(in srgb, var(--bg-0) 58%, transparent);
-}
 
 .game-detail-copy {
   min-width: 0;
@@ -365,3 +352,111 @@
   }
 }
 
+
+/* --- Mods (DESIGN.md §11b) ------------------------------------------------
+   Romhacks folded off the shelf onto the page of the game they modify. They
+   have no box art — nobody scrapes covers for hacks — so these read as
+   typographic chips rather than boxes with a hole where the art should be.
+   The row scrolls sideways so a game with eleven Zelda hacks doesn't push the
+   B hint off the bottom of a 10-foot screen. */
+.game-detail-mods {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.game-detail-mods h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+
+.game-detail-mods-count {
+  display: grid;
+  place-items: center;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  color: var(--bg-1);
+  background: color-mix(in srgb, var(--accent) 62%, var(--text));
+}
+
+.game-detail-mod-row {
+  display: flex;
+  gap: 0.6rem;
+  padding: 0.3rem 0.2rem 0.55rem;
+  /* `clip` not `hidden`: a scroll container here lets scrollIntoView drag the
+     whole detail page sideways when focus enters the row. */
+  overflow-x: auto;
+  overflow-y: clip;
+  scrollbar-width: thin;
+  scrollbar-color:
+    color-mix(in srgb, var(--accent) 42%, transparent)
+    color-mix(in srgb, var(--text) 6%, transparent);
+}
+
+.game-detail-mod {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: 0 0 auto;
+  max-width: 18rem;
+  min-height: 2.9rem;
+  padding: 0.55rem 0.95rem;
+  border: 0.0625rem solid var(--glass-border);
+  border-radius: var(--radius-card);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-align: left;
+  color: var(--text-dim);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  transform: translateY(0);
+  transition:
+    color var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease),
+    box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.game-detail-mod-glyph {
+  flex: 0 0 auto;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 52%, var(--text));
+}
+
+.game-detail-mod-name {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.game-detail-mod[data-focused='true'] {
+  color: var(--text);
+  transform: translateY(-0.12rem);
+  box-shadow:
+    0 0 0 0.2rem color-mix(in srgb, var(--accent) 68%, var(--text)),
+    var(--glow-accent),
+    var(--shadow-soft);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-detail-mod {
+    transition: none;
+  }
+  .game-detail-mod[data-focused='true'] {
+    transform: none;
+  }
+}

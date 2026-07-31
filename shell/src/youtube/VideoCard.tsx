@@ -22,11 +22,13 @@ export function VideoCard({
   focusId,
   autoFocus = false,
   onOpen,
+  secondaryLabel,
 }: {
   video: YouTubeVideo;
   focusId: string;
   autoFocus?: boolean;
   onOpen: (video: YouTubeVideo) => void;
+  secondaryLabel?: string;
 }) {
   const elementRef = useRef<HTMLButtonElement | null>(null);
   const latestOpen = useRef(onOpen);
@@ -84,6 +86,9 @@ export function VideoCard({
           <span className="yt-video-duration">
             {durationLabel(video.durationSeconds)}
           </span>
+          {secondaryLabel && (
+            <span className="yt-video-secondary-action">{secondaryLabel}</span>
+          )}
           <span className="yt-video-rim" aria-hidden="true" />
         </span>
         <span className="yt-video-copy">

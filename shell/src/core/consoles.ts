@@ -1,6 +1,10 @@
 import { PLATFORMS, type Platform } from './platforms';
-import { allSystems, getGames, hasLibrary, type LibraryGame } from './library';
-import { dedupeGames, shouldDedupe } from './dedupe';
+import {
+  allSystems,
+  hasLibrary,
+  loadSystem,
+  type LibraryGame,
+} from './library';
 
 /**
  * The console shelf, resolved from the REAL imported library when one exists
@@ -155,7 +159,7 @@ const platformById = new Map<string, Platform>(PLATFORMS.map((p) => [p.id, p]));
 
 function buildFromLibrary(): ConsoleEntry[] {
   return allSystems()
-    .filter((s) => s.games.length > 0)
+    .filter((s) => s.shelfCount > 0)
     .map((s) => {
       const p = platformById.get(s.id);
       const maker = p?.maker ?? MAKER_BY_ID[s.id] ?? 'Other';
@@ -199,32 +203,27 @@ export interface ShelfGame {
   /** Public art path from the importer, when the scrape had an image. */
   art: string | null;
   game: LibraryGame | null;
-  /** Other prints of the same game (regions/revisions), best-first. */
-  variants?: LibraryGame[];
+  /** How many prints of this game the romset held; absent when unique. */
+  variantCount?: number;
 }
 
-/** The playable shelf for a console: real library entries, or sample titles. */
-export function shelfFor(id: string): ShelfGame[] {
+/**
+ * The playable shelf for a console: real library entries, or sample titles.
+ *
+ * Romset dedupe happens in the importer now (tools/dedupe.mjs), over the
+ * complete per-system set. It used to run here, which meant it only ever saw
+ * the 150 games that survived the importer's cap — so a 2,255-game NES shelf
+ * arrived as ~60 titles. This function no longer filters anything.
+ */
+export async function loadShelf(id: string): Promise<ShelfGame[]> {
   if (hasLibrary) {
-    const games = getGames(id);
-
-    // Cartridge-era romsets collapse their regional/revision duplicates;
-    // modern systems are left exactly as imported (see dedupe.ts).
-    if (shouldDedupe(id)) {
-      return dedupeGames(games).map(({ game, variants }) => ({
-        key: game.path || game.name,
-        title: game.name,
-        art: game.art,
-        game,
-        variants: variants.length > 1 ? variants : undefined,
-      }));
-    }
-
-    return games.map((g) => ({
+    const system = await loadSystem(id);
+    return system.games.map((g) => ({
       key: g.path || g.name,
       title: g.name,
       art: g.art,
       game: g,
+      variantCount: g.variantCount && g.variantCount > 1 ? g.variantCount : undefined,
     }));
   }
   const p = platformById.get(id);

@@ -1,3 +1,11 @@
+import { mediaUrl } from './mediaHost';
+
+/** A romhack, launchable from its base game's page. */
+export interface GameMod {
+  name: string;
+  path: string;
+}
+
 export interface LibraryGame {
   systemId: string;
   path: string;
@@ -20,18 +28,39 @@ export interface LibraryGame {
   gametime: number;
   art: string | null;
   screenshot: string | null;
+  /**
+   * How many prints of this game the romset held (1 when unique). Set by the
+   * importer's dedupe pass; absent on systems that aren't deduped.
+   */
+  variantCount?: number;
+  /**
+   * Romhacks of this game, folded off the shelf by the importer so they launch
+   * from the page of the game they modify. Absent when there are none.
+   */
+  mods?: GameMod[];
 }
 
 export interface LibrarySystem {
   id: string;
-  /** Full source-library count; `games` is capped for the console prototype. */
+  /**
+   * Full source-library count, duplicates included — what the romset actually
+   * holds. `games` is the deduped shelf, so on cartridge systems it is smaller
+   * (NES: 2,255 files, ~900 distinct games). Nothing is capped.
+   */
   gameCount: number;
   games: LibraryGame[];
 }
 
-interface GeneratedLibrary {
+export interface LibrarySystemSummary {
+  id: string;
+  gameCount: number;
+  /** Number of game records in this system's lazy shelf chunk. */
+  shelfCount: number;
+}
+
+interface GeneratedLibraryIndex {
   generatedAt: string;
-  systems: LibrarySystem[];
+  systems: LibrarySystemSummary[];
 }
 
 declare global {
@@ -40,6 +69,9 @@ declare global {
       pattern: string,
       options: { eager: true; import: 'default' },
     ): Record<string, T>;
+    glob<T = unknown>(
+      pattern: string,
+    ): Record<string, () => Promise<T>>;
   }
 }
 
@@ -51,15 +83,18 @@ export const RETROBAT_PLATFORM_ID_MAP: Readonly<Record<string, string>> = {
   gbc: 'gb',
 };
 
-const generatedModules = import.meta.glob<GeneratedLibrary>(
-  './library.generated.json',
+const generatedIndexModules = import.meta.glob<GeneratedLibraryIndex>(
+  './library/index.generated.json',
   { eager: true, import: 'default' },
 );
-const generatedLibrary = generatedModules['./library.generated.json'];
-const sourceSystems = Array.isArray(generatedLibrary?.systems)
-  ? generatedLibrary.systems
+const generatedIndex =
+  generatedIndexModules['./library/index.generated.json'];
+const sourceSystems = Array.isArray(generatedIndex?.systems)
+  ? generatedIndex.systems
   : [];
-const GAME_LIMIT = 150;
+const generatedSystemModules = import.meta.glob<{
+  default: LibraryGame[];
+}>('./library/*.generated.json');
 
 export const hasLibrary = sourceSystems.length > 0;
 
@@ -78,34 +113,85 @@ function compareGames(left: LibraryGame, right: LibraryGame): number {
   );
 }
 
-const systemsById = new Map<string, LibrarySystem>();
+function resolveGameMedia(game: LibraryGame): LibraryGame {
+  return {
+    ...game,
+    art: mediaUrl(game.art),
+    screenshot: mediaUrl(game.screenshot),
+    video: mediaUrl(game.video),
+  };
+}
+
+const systemsById = new Map<string, LibrarySystemSummary>();
+const sourceIdsById = new Map<string, string[]>();
 for (const sourceSystem of sourceSystems) {
   const id = RETROBAT_PLATFORM_ID_MAP[sourceSystem.id] ?? sourceSystem.id;
+  const sourceIds = sourceIdsById.get(id);
+  if (sourceIds) {
+    sourceIds.push(sourceSystem.id);
+  } else {
+    sourceIdsById.set(id, [sourceSystem.id]);
+  }
+
   const current = systemsById.get(id);
   if (current) {
     current.gameCount += sourceSystem.gameCount;
-    current.games = [...current.games, ...sourceSystem.games]
-      .sort(compareGames)
-      .slice(0, GAME_LIMIT);
+    current.shelfCount += sourceSystem.shelfCount;
   } else {
     systemsById.set(id, {
       id,
       gameCount: sourceSystem.gameCount,
-      games: [...sourceSystem.games].sort(compareGames).slice(0, GAME_LIMIT),
+      shelfCount: sourceSystem.shelfCount,
     });
   }
 }
 
 const librarySystems = [...systemsById.values()];
+const systemPromises = new Map<string, Promise<LibrarySystem>>();
 
-export function getSystem(id: string): LibrarySystem | undefined {
-  return systemsById.get(RETROBAT_PLATFORM_ID_MAP[id] ?? id);
+async function importSystem(id: string): Promise<LibraryGame[]> {
+  const path = `./library/${id}.generated.json`;
+  const load = generatedSystemModules[path];
+  if (!load) {
+    throw new Error(`Missing generated library chunk: ${path}`);
+  }
+  const module = await load();
+  if (!Array.isArray(module.default)) {
+    throw new Error(`Invalid generated library chunk: ${path}`);
+  }
+  return module.default;
 }
 
-export function getGames(id: string): LibraryGame[] {
-  return getSystem(id)?.games ?? [];
+async function importMergedSystem(id: string): Promise<LibrarySystem> {
+  const summary = systemsById.get(id);
+  const sourceIds = sourceIdsById.get(id) ?? [];
+  const sourceGames = await Promise.all(sourceIds.map(importSystem));
+  const games = sourceGames
+    .flat()
+    .map(resolveGameMedia)
+    .sort(compareGames);
+  return {
+    id,
+    gameCount: summary?.gameCount ?? games.length,
+    games,
+  };
 }
 
-export function allSystems(): LibrarySystem[] {
+/**
+ * Load one console's shelf. The promise remains cached after it settles, so
+ * focus prefetch, opening the grid, and returning from the console row all
+ * share the same network request and parsed records.
+ */
+export async function loadSystem(id: string): Promise<LibrarySystem> {
+  const resolvedId = RETROBAT_PLATFORM_ID_MAP[id] ?? id;
+  let promise = systemPromises.get(resolvedId);
+  if (!promise) {
+    promise = importMergedSystem(resolvedId);
+    systemPromises.set(resolvedId, promise);
+  }
+  return promise;
+}
+
+export function allSystems(): LibrarySystemSummary[] {
   return librarySystems;
 }

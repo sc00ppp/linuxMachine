@@ -211,6 +211,41 @@ console does. This is where the scraped metadata finally pays off.
   (opens the remap room scoped to this console), and later Save states.
 - B returns to the shelf; the shelf remembers where you were.
 
+### Mods & hacks — launched from the game they modify
+
+A romhack belongs *with* its game, not scattered alphabetically across the
+shelf. Super Mario 64 and its mods are one thing you sit down to play, so the
+detail page carries a **Mods** row under the actions: each mod a small card,
+each one launchable, inheriting the base game's art when it has none of its own
+(hacks almost never do).
+
+**Detection is by metadata absence, not title shape.** A scraped release carries
+`desc`/`publisher`/`releasedate`/art from ScreenScraper; a romhack is in no
+database, so it arrives bare. That asymmetry is the signal. The obvious
+alternative — matching title prefixes — was measured against the real library
+and is actively wrong: it reads *Mega Man 2* as a mod of *Mega Man*, *Sonic The
+Hedgehog 2* as a mod of *Sonic*, and *Super Mario Bros. 3* as a mod of *Super
+Mario Bros.* Sequels are not mods.
+
+So a shelf entry is a mod when it is **unscraped** *and* an existing **scraped**
+entry's title appears inside it at a word boundary. Measured on the real
+library: **131 mods across 12 systems, no sequel false-positives.** The other
+437 unscraped entries matched nothing and stay on the shelf as themselves —
+they are standalone homebrew (*Among Us*, *AEW Wrestling*), not mods of
+anything.
+
+Guards, each earned from a real mismatch in the data:
+- The base title must be substantial — a generic word like "Challenge" or
+  "Dungeon" must not adopt everything that contains it.
+- PC-like systems (`windows`, `ports`) are excluded; there "X - Shortcut" is a
+  launcher artifact, not a mod.
+- Playlist and shortcut files (`.m3u`, `.lnk`) are excluded; a multi-disc `.m3u`
+  is the *same* game, which is dedupe's job, not this.
+
+Mods fold off the main shelf into their base game's page. A console that lists
+*Fire Emblem* five times because someone made five hacks of it is noise; one
+*Fire Emblem* with five mods under it is a library.
+
 ## 11c. Library sorting & favorites
 
 The shelf needs to be steerable once a system has hundreds of games:

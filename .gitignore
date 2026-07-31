@@ -1,5 +1,6 @@
 # Dependencies / build output
 node_modules/
+mediaserve/target/
 dist/
 consoled/target/
 *.tsbuildinfo
@@ -19,12 +20,14 @@ shell/public/media-art/
 shell/public/console-art/
 shell/public/controller-art/
 shell/public/game-video/
+shell/public/art-fill/
 shell/src/core/library/
 shell/src/core/boxAspects.generated.json
 
 # Importer scratch dirs (files appear/vanish mid-run and break `git add`)
 tools/.library-import-*/
 tools/*.log
+tools/.art-fill-cache.json
 
 # Local caches / logs
 *.log

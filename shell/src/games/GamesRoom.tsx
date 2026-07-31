@@ -1,8 +1,14 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import {
   CONSOLES,
   consoleById,
-  shelfFor,
+  loadShelf,
   type ConsoleEntry,
   type ShelfGame,
 } from '../core/consoles';
@@ -192,8 +198,14 @@ export function GamesRoom() {
   const userLibrary = useUserLibrary();
   const [activeId, setActiveId] = useState<string>(lastConsoleId);
   const platform: ConsoleEntry = consoleById(activeId) ?? CONSOLES[0];
-  // Real library entries (with scraped art) when the import has run.
-  const shelf = shelfFor(platform.id);
+  const [loadedShelf, setLoadedShelf] = useState<{
+    consoleId: string;
+    shelf: ShelfGame[];
+  } | null>(null);
+  // Real library entries (with scraped art) when this system's chunk arrives.
+  const shelf =
+    loadedShelf?.consoleId === platform.id ? loadedShelf.shelf : [];
+  const shelfPending = loadedShelf?.consoleId !== platform.id;
   const sortMode = userLibrary.sort[platform.id] ?? 'default';
   const favorites = new Set(userLibrary.favorites);
   const sortedShelf = sortShelf(shelf, sortMode, platform.id, favorites);
@@ -212,6 +224,38 @@ export function GamesRoom() {
   useLayoutEffect(() => {
     animateDrill(rootRef.current, 'deeper', tuning.drillInMs);
   }, []);
+
+  useEffect(() => {
+    if (level === 'consoles') return;
+
+    let current = true;
+    void loadShelf(platform.id).then(
+      (nextShelf) => {
+        if (current) {
+          setLoadedShelf({ consoleId: platform.id, shelf: nextShelf });
+        }
+      },
+      () => {
+        if (current) {
+          setLoadedShelf({ consoleId: platform.id, shelf: [] });
+        }
+      },
+    );
+    return () => {
+      current = false;
+    };
+  }, [level, platform.id]);
+
+  // A settled console focus quietly warms its chunk. Fast passes across the
+  // row do no work, and opening never waits for this best-effort prefetch.
+  useEffect(() => {
+    if (level !== 'consoles') return;
+
+    const timeout = window.setTimeout(() => {
+      void loadShelf(platform.id).catch(() => undefined);
+    }, 140);
+    return () => window.clearTimeout(timeout);
+  }, [level, platform.id]);
 
   // Level changes speak the same direction language: deeper (console →
   // library) arrives from the right, backing out arrives from the left. The
@@ -307,7 +351,9 @@ export function GamesRoom() {
             <span className="games-tally">
               {platform.gameCount.toLocaleString()}{' '}
               {platform.gameCount === 1 ? 'game' : 'games'}
-              {platform.gameCount > shelf.length && ` · showing ${shelf.length}`}
+              {!shelfPending &&
+                platform.gameCount > shelf.length &&
+                ` · showing ${shelf.length}`}
             </span>
             <SortControl mode={sortMode} />
           </>
@@ -320,7 +366,11 @@ export function GamesRoom() {
       {/* Keyed on the level so the outgoing screen's scroll position and focus
           registrations are torn down cleanly before the next one mounts. */}
       <div className="games-level" key={level} ref={levelRef}>
-        {inDetail && detailEntry ? (
+        {inDetail && shelfPending ? (
+          <div className='games-shelf'>
+            <div className='games-grid' aria-hidden='true' />
+          </div>
+        ) : inDetail && detailEntry ? (
           <GameDetail console={platform} entry={detailEntry} />
         ) : inDetail ? (
           <div className='games-missing-detail glass'>
@@ -329,7 +379,9 @@ export function GamesRoom() {
           </div>
         ) : inGrid ? (
           <div className="games-shelf">
-            {sortedShelf.length > 0 ? (
+            {shelfPending ? (
+              <div className='games-grid' aria-hidden='true' />
+            ) : sortedShelf.length > 0 ? (
               // Cells use the console's own packaging ratio (--box-aspect);
               // artwork is fitted inside, never stretched or cropped.
               <div className="games-grid">

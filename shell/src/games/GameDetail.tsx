@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react';
 import type { ConsoleEntry, ShelfGame } from '../core/consoles';
+import type { GameMod } from '../core/library';
 import {
   gameId,
   toggleFavorite,
@@ -147,32 +148,17 @@ function ratingStars(rating: number | null): string {
   return `${'★'.repeat(filled)}${'☆'.repeat(5 - filled)}`;
 }
 
-function slugify(value: string): string {
-  const slug = value
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .replace(/&/g, ' and ')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 80)
-    .replace(/-+$/g, '');
-  return slug || 'game';
-}
-
 /**
- * Art and preview files share the importer's assigned slug. Reading it back
- * from the public art path also preserves collision hashes, which cannot be
- * reconstructed from the title alone.
+ * The preview clip, already an absolute URL.
+ *
+ * This used to reconstruct a local `/game-video/<system>/<slug>.mp4` path from
+ * the art filename, back when the importer copied media into `public/`. Media
+ * is served off the media PC over the LAN now and `library.ts` resolves
+ * `video` through `mediaHost`, so rebuilding a path here only invented one
+ * that does not exist.
  */
 function previewVideo(entry: ShelfGame): string | null {
-  const game = entry.game;
-  if (!game?.video) return null;
-
-  const artMatch = /^\/art\/([^/]+)\/([^/?#]+)\.[^/?#]+/.exec(entry.art ?? '');
-  const system = artMatch?.[1] ?? game.systemId;
-  const slug = artMatch?.[2] ?? slugify(game.name);
-  return `/game-video/${encodeURIComponent(system)}/${encodeURIComponent(slug)}.mp4`;
+  return entry.game?.video ?? null;
 }
 
 function fact(label: string, value: string, stars = false): Fact | null {
@@ -182,6 +168,51 @@ function fact(label: string, value: string, stars = false): Fact | null {
 
 function compactFacts(facts: Array<Fact | null>): Fact[] {
   return facts.filter((item): item is Fact => item !== null);
+}
+
+/**
+ * One romhack, launchable from the page of the game it modifies.
+ *
+ * Mods carry no art of their own — nobody scrapes box art for a hack — so the
+ * card is typographic rather than a box with a hole in it.
+ */
+function ModCard({
+  mod,
+  index,
+  onPlay,
+}: {
+  mod: GameMod;
+  index: number;
+  onPlay: (mod: GameMod) => void;
+}) {
+  const latestPlay = useRef(onPlay);
+  latestPlay.current = onPlay;
+  const { ref, focused } = useFocusable({
+    id: `detail-mod-${index}`,
+    scope: 'games',
+    onAccept: () => latestPlay.current(mod),
+  });
+  const setRef = useCallback(
+    (element: HTMLButtonElement | null) => ref(element),
+    [ref],
+  );
+
+  return (
+    <button
+      ref={setRef}
+      className="game-detail-mod"
+      type="button"
+      tabIndex={-1}
+      data-focused={focused ? 'true' : undefined}
+      aria-label={`Play mod: ${mod.name}`}
+      onClick={() => onPlay(mod)}
+    >
+      <span className="game-detail-mod-glyph" aria-hidden="true">
+        ⎇
+      </span>
+      <span className="game-detail-mod-name">{mod.name}</span>
+    </button>
+  );
 }
 
 /** The metadata-rich console game page from DESIGN.md §11b. */
@@ -230,19 +261,33 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
     [game],
   );
 
-  const play = useCallback(async () => {
-    const hero = heroRef.current;
-    if (!hero || launching.current) return;
-    launching.current = true;
+  /**
+   * Launch this game, or one of its mods. A mod boots the same emulator with a
+   * different ROM, so it is the same choreography with a different title —
+   * there is no reason for it to feel like a lesser way to start playing.
+   */
+  const launch = useCallback(
+    async (title: string) => {
+      const hero = heroRef.current;
+      if (!hero || launching.current) return;
+      launching.current = true;
 
-    sound.play('launch');
-    sound.duck(true);
-    try {
-      await playLaunch(hero, consoleEntry.accent);
-    } finally {
-      useConsoleStore.getState().launchApp('games', entry.title);
-    }
-  }, [consoleEntry.accent, entry.title]);
+      sound.play('launch');
+      sound.duck(true);
+      try {
+        await playLaunch(hero, consoleEntry.accent);
+      } finally {
+        useConsoleStore.getState().launchApp('games', title);
+      }
+    },
+    [consoleEntry.accent],
+  );
+
+  const play = useCallback(() => launch(entry.title), [launch, entry.title]);
+  const playMod = useCallback(
+    (mod: GameMod) => void launch(mod.name),
+    [launch],
+  );
 
   const favoriteGame = useCallback(() => {
     toggleFavorite(consoleEntry.id, entry.key);
@@ -323,9 +368,6 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
           >
             {consoleEntry.glyph}
           </span>
-          {showVideo && (
-            <span className="game-detail-preview-label">Preview</span>
-          )}
         </div>
       </div>
 
@@ -411,6 +453,27 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
             pressed={pinned}
           />
         </div>
+
+        {game?.mods && game.mods.length > 0 && (
+          <section className="game-detail-mods">
+            <h2>
+              Mods
+              <span className="game-detail-mods-count">
+                {game.mods.length}
+              </span>
+            </h2>
+            <div className="game-detail-mod-row">
+              {game.mods.map((mod, index) => (
+                <ModCard
+                  key={mod.path || mod.name}
+                  mod={mod}
+                  index={index}
+                  onPlay={playMod}
+                />
+              ))}
+            </div>
+          </section>
+        )}
 
         <footer className="game-detail-hint">
           <span className="game-detail-hint-badge" aria-hidden="true">
