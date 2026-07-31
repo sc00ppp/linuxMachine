@@ -1,0 +1,759 @@
+/* Movies & TV — an amber-lit sibling of the Console Room. */
+
+.movies {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-sizing: border-box;
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+.movies *,
+.movies *::before,
+.movies *::after {
+  box-sizing: border-box;
+}
+
+.movies-light {
+  position: absolute;
+  z-index: 0;
+  inset: -18%;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      58% 76% at 54% 42%,
+      color-mix(in srgb, var(--accent) 18%, transparent) 0%,
+      color-mix(in srgb, var(--accent) 6%, transparent) 48%,
+      transparent 76%
+    ),
+    radial-gradient(
+      34% 46% at 10% 90%,
+      color-mix(in srgb, var(--accent) 9%, transparent),
+      transparent 74%
+    );
+  filter: blur(1.8rem);
+}
+
+/* Header stays slim so the art remains the room's furniture. */
+.movies-header {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  min-height: 5.5rem;
+  padding: 1.35rem 3rem 1rem;
+}
+
+.movies-titleline {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.movies-heading {
+  flex: 0 0 auto;
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-dim);
+}
+
+.movies-crumb {
+  flex: 0 0 auto;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--text-faint);
+}
+
+.movies-current {
+  overflow: hidden;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: color-mix(in srgb, var(--accent) 48%, var(--text));
+  text-overflow: ellipsis;
+  text-shadow: 0 0 1.6rem color-mix(in srgb, var(--accent) 40%, transparent);
+  white-space: nowrap;
+}
+
+.movies-tally {
+  flex: 0 0 auto;
+  margin-left: auto;
+  padding: 0.35rem 1.1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-chip);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 700;
+  backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  -webkit-backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+}
+
+.movies-level {
+  position: relative;
+  z-index: 2;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Level 1 — the unbounded poster shelf. */
+.movies-row-scroller {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  min-height: 0;
+  overflow-x: auto;
+  padding: 2.4rem 6rem 3.8rem;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 11rem;
+  scrollbar-width: none;
+}
+
+.movies-row-scroller::-webkit-scrollbar,
+.season-scroller::-webkit-scrollbar,
+.episode-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.movies-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.45rem;
+  width: max-content;
+  min-width: 100%;
+}
+
+.media-poster-slot {
+  flex: 0 0 15.5rem;
+  width: 15.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.9rem;
+  transition: margin var(--focus-ms) var(--focus-ease);
+}
+
+.media-poster-slot:has(.media-poster[data-focused='true']) {
+  margin-inline: 0.9rem;
+}
+
+.media-poster {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 2 / 3;
+  border-radius: var(--radius-tile);
+  outline: none;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    filter var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+  will-change: transform;
+}
+
+.media-poster:not([data-focused='true']) {
+  filter: saturate(0.82) brightness(0.76);
+}
+
+.media-poster[data-focused='true'] {
+  z-index: 3;
+  transform: scale(1.06);
+}
+
+.media-poster-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    radial-gradient(
+      110% 80% at 24% 4%,
+      color-mix(in srgb, var(--accent) 68%, var(--text)),
+      transparent 62%
+    ),
+    linear-gradient(
+      158deg,
+      color-mix(in srgb, var(--accent) 70%, var(--bg-1)),
+      color-mix(in srgb, var(--accent) 20%, var(--bg-0))
+    );
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.media-poster[data-focused='true'] .media-poster-face {
+  box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 74%, transparent);
+}
+
+.media-poster-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.media-poster-fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1.2rem;
+  padding: 1.6rem;
+  background:
+    repeating-linear-gradient(
+      118deg,
+      transparent 0 2.8rem,
+      color-mix(in srgb, var(--text) 5%, transparent) 2.8rem 2.95rem
+    ),
+    radial-gradient(
+      85% 42% at 52% 18%,
+      color-mix(in srgb, var(--text) 13%, transparent),
+      transparent 72%
+    );
+}
+
+.media-poster-mark {
+  position: absolute;
+  top: 1.4rem;
+  left: 1.35rem;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+  color: color-mix(in srgb, var(--text) 68%, transparent);
+}
+
+.media-poster-fallback-title {
+  font-size: 1.65rem;
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+  text-wrap: balance;
+  text-shadow: 0 0.15rem 0.9rem color-mix(in srgb, var(--bg-0) 70%, transparent);
+}
+
+.media-poster-kind {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.8rem;
+  z-index: 2;
+  padding: 0.28rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--text) 16%, transparent);
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--bg-0) 68%, transparent);
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+  font-size: 1.25rem;
+  font-weight: 800;
+  backdrop-filter: blur(1rem);
+  -webkit-backdrop-filter: blur(1rem);
+}
+
+.media-poster-sheen {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background: radial-gradient(
+    34% 34% at 32% 20%,
+    color-mix(in srgb, var(--text) 22%, transparent),
+    transparent 72%
+  );
+  opacity: 0.38;
+  animation: media-poster-drift 24s ease-in-out infinite alternate;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+.media-poster[data-focused='true'] .media-poster-sheen {
+  opacity: 0.76;
+  animation-duration: 12s;
+}
+
+@keyframes media-poster-drift {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8%, 6%, 0) scale(1.14);
+  }
+}
+
+.media-poster-rim {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 16%, transparent),
+    inset 0 0.0625rem 0 color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+/* The exact crisp cursor language from Home's tiles. */
+.media-poster::after,
+.episode-card::after {
+  content: '';
+  position: absolute;
+  inset: -0.55rem;
+  pointer-events: none;
+  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  border-radius: calc(var(--radius-tile) + 0.4rem);
+  opacity: 0;
+  transform: scale(0.985);
+  box-shadow:
+    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
+    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
+  transition:
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.media-poster[data-focused='true']::after,
+.episode-card[data-focused='true']::after {
+  opacity: 1;
+  transform: scale(1);
+  animation: movies-ring-breathe 2.1s ease-in-out infinite;
+}
+
+@keyframes movies-ring-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
+      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    filter: brightness(1.35);
+    box-shadow:
+      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
+      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
+
+.media-poster-label {
+  width: 118%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  overflow: hidden;
+  color: var(--text-dim);
+  opacity: 0;
+  text-align: center;
+  transform: translateY(0);
+  transition:
+    color var(--focus-ms) var(--focus-ease),
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.media-poster-label.is-focused {
+  color: var(--text);
+  opacity: 1;
+  transform: translateY(0.3rem);
+  text-shadow: 0 0 1.4rem color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.media-poster-label > span {
+  width: 100%;
+  overflow: hidden;
+  font-size: 1.35rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.media-poster-label small {
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* Level 2 — season rail over a five-column Wii U-style episode grid. */
+.series-library {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.season-scroller {
+  flex: 0 0 auto;
+  overflow-x: auto;
+  padding: 0.7rem 4.2rem 1.2rem;
+  scroll-behavior: smooth;
+  scroll-padding-inline: 8rem;
+  scrollbar-width: none;
+}
+
+.season-row {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: max-content;
+}
+
+.season-chip {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.2rem;
+  padding: 0.6rem 1.25rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-chip);
+  outline: none;
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 800;
+  transform: translateY(0);
+  transition:
+    background var(--focus-ms) var(--focus-ease),
+    border-color var(--focus-ms) var(--focus-ease),
+    color var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+  backdrop-filter: blur(2rem) saturate(180%);
+  -webkit-backdrop-filter: blur(2rem) saturate(180%);
+}
+
+.season-chip small {
+  display: grid;
+  place-items: center;
+  min-width: 1.9rem;
+  height: 1.9rem;
+  padding-inline: 0.35rem;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+}
+
+.season-chip[data-active='true'] {
+  color: color-mix(in srgb, var(--accent) 46%, var(--text));
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--glass-border));
+  background: color-mix(in srgb, var(--accent) 11%, var(--glass-bg));
+}
+
+.season-chip[data-focused='true'] {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--text));
+  transform: translateY(-0.12rem);
+  box-shadow:
+    0 0 0 0.16rem color-mix(in srgb, var(--accent) 50%, transparent),
+    0 0 1.35rem color-mix(in srgb, var(--accent) 38%, transparent),
+    var(--glass-inset);
+}
+
+.episode-scroller {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 4rem 2.5rem;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.episode-grid {
+  width: 100%;
+  max-width: 100rem;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-content: start;
+  gap: 1.65rem 1.55rem;
+}
+
+.episode-card {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  border-radius: var(--radius-card);
+  outline: none;
+  background: color-mix(in srgb, var(--bg-1) 80%, transparent);
+  box-shadow: var(--shadow-soft);
+  transform: translateY(0);
+  transition:
+    filter var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.episode-card:not([data-focused='true']) {
+  filter: saturate(0.82) brightness(0.8);
+}
+
+.episode-card[data-focused='true'] {
+  z-index: 2;
+  filter: none;
+  transform: translateY(-0.25rem);
+}
+
+.episode-card::after {
+  border-radius: calc(var(--radius-card) + 0.4rem);
+}
+
+.episode-card-art {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 8.8;
+  overflow: hidden;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  background:
+    radial-gradient(
+      75% 100% at 66% 8%,
+      color-mix(in srgb, var(--text) 13%, transparent),
+      transparent 64%
+    ),
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--accent) 62%, var(--bg-1)),
+      color-mix(in srgb, var(--accent) 16%, var(--bg-0))
+    );
+}
+
+.episode-number {
+  position: absolute;
+  left: 1rem;
+  bottom: 0.8rem;
+  font-size: 1.25rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--text) 84%, transparent);
+}
+
+.episode-play {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  padding-left: 0.2rem;
+  border: 0.12rem solid color-mix(in srgb, var(--text) 44%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--bg-0) 34%, transparent);
+  color: color-mix(in srgb, var(--text) 84%, transparent);
+  font-size: 1.35rem;
+  opacity: 0.72;
+  transform: scale(0.92);
+  transition:
+    background var(--focus-ms) var(--focus-ease),
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.episode-card[data-focused='true'] .episode-play {
+  background: color-mix(in srgb, var(--accent) 54%, var(--bg-0));
+  opacity: 1;
+  transform: scale(1);
+}
+
+.episode-film-hole {
+  position: absolute;
+  left: 0.65rem;
+  right: 0.65rem;
+  height: 0.28rem;
+  opacity: 0.22;
+  background: repeating-linear-gradient(
+    to right,
+    var(--text) 0 0.5rem,
+    transparent 0.5rem 1rem
+  );
+}
+
+.episode-film-hole--top {
+  top: 0.55rem;
+}
+
+.episode-film-hole--bottom {
+  bottom: 0.55rem;
+}
+
+.episode-card-copy {
+  min-height: 5.3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem 1rem;
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+}
+
+.episode-card-copy strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+.episode-card-copy small {
+  margin-top: auto;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.episodes-empty {
+  margin: 2rem 0 0;
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  font-weight: 700;
+}
+
+/* Empty states are deliberately spacious and quiet. */
+.movies-empty,
+.movies-series-empty {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  text-align: center;
+}
+
+.movies-empty-orbit {
+  position: relative;
+  width: 7rem;
+  height: 7rem;
+  margin-bottom: 1.7rem;
+  border: 0.15rem solid color-mix(in srgb, var(--accent) 44%, transparent);
+  border-radius: 50%;
+  box-shadow:
+    0 0 2rem color-mix(in srgb, var(--accent) 24%, transparent),
+    inset 0 0 1.4rem color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.movies-empty-orbit::before,
+.movies-empty-orbit::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 55%, var(--text));
+  box-shadow: 0 0 1rem color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.movies-empty-orbit::before {
+  width: 1rem;
+  height: 1rem;
+  left: -0.45rem;
+  top: 2rem;
+}
+
+.movies-empty-orbit::after {
+  width: 0.7rem;
+  height: 0.7rem;
+  right: 0.35rem;
+  bottom: 0.55rem;
+}
+
+.movies-empty h2 {
+  margin: 0 0 0.6rem;
+  color: var(--text);
+  font-size: 2.2rem;
+  font-weight: 800;
+}
+
+.movies-empty p,
+.movies-series-empty p {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.movies-series-empty small {
+  margin-top: 0.45rem;
+  color: var(--text-faint);
+  font-size: 1.25rem;
+}
+
+/* Shared floating hint pill. */
+.movies-hints {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 2.75rem;
+  width: fit-content;
+  min-height: 3.55rem;
+  margin-bottom: 1.55rem;
+  padding: 0.75rem 2.5rem;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-chip);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  -webkit-backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+}
+
+.movies-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.movies-hint-badge {
+  display: grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  box-shadow: inset 0 0 0 0.0938rem color-mix(in srgb, var(--text) 26%, transparent);
+  color: var(--text);
+  font-size: 1.0625rem;
+  font-weight: 800;
+}
+
+.movies-hint-label {
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .movies-row-scroller,
+  .season-scroller,
+  .episode-scroller {
+    scroll-behavior: auto;
+  }
+
+  .media-poster,
+  .media-poster-face,
+  .media-poster-sheen,
+  .media-poster-label,
+  .media-poster::after,
+  .season-chip,
+  .episode-card,
+  .episode-card::after,
+  .episode-play {
+    transition-duration: 1ms;
+  }
+
+  .media-poster-sheen,
+  .media-poster[data-focused='true']::after,
+  .episode-card[data-focused='true']::after {
+    animation: none;
+  }
+}

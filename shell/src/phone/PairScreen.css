@@ -1,0 +1,180 @@
+/* Pairing screen. Cozy dusk in the hand: dark warm ground, one glass panel
+   holding the code, a keypad of physical-feeling keys. */
+
+.pair {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  text-align: center;
+}
+
+.pair-head {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.pair-title {
+  font-size: 1.5rem;
+  font-weight: var(--weight-bold, 800);
+  letter-spacing: var(--tracking-tight);
+}
+
+.pair-sub {
+  font-size: 0.95rem;
+  color: var(--text-dim);
+  max-width: 20rem;
+}
+
+/* --- Code display --------------------------------------------------------- */
+
+.pair-code {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.35rem;
+  width: min(21rem, 100%);
+  padding: 0.7rem 0.6rem;
+  border-radius: var(--radius-card);
+}
+
+.pair-code[data-busy='true'] {
+  animation: pair-thinking 1.1s ease-in-out infinite;
+}
+
+/* A wrong code shakes the panel — the console shaking its head — instead of
+   printing a red field error. */
+.pair-code[data-shake='true'] {
+  animation: pair-shake 420ms var(--ease-soft);
+}
+
+.pair-cell {
+  display: grid;
+  place-items: center;
+  height: 3.1rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--bg-0) 42%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  font-size: 1.7rem;
+  font-weight: var(--weight-bold, 800);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  transition:
+    background 160ms var(--ease-soft),
+    box-shadow 160ms var(--ease-soft);
+}
+
+.pair-cell[data-filled='true'] {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent),
+    0 0 1.1rem -0.35rem var(--accent);
+}
+
+/* Resting cell: a small dash, not an empty hole. */
+.pair-cell-rest {
+  width: 0.85rem;
+  height: 0.15rem;
+  border-radius: 999px;
+  background: var(--text-faint, rgba(242, 238, 232, 0.34));
+}
+
+.pair-status {
+  min-height: 2.4rem;
+  max-width: 20rem;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--text) 82%, transparent);
+}
+
+/* --- Keypad --------------------------------------------------------------- */
+
+.pair-keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.6rem;
+  width: min(19rem, 100%);
+}
+
+.pair-key {
+  min-height: 3.6rem;
+  font-size: 1.55rem;
+  font-weight: var(--weight-medium, 600);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  backdrop-filter: blur(1.25rem) saturate(160%);
+  -webkit-backdrop-filter: blur(1.25rem) saturate(160%);
+  box-shadow:
+    var(--glass-inset),
+    0 0.35rem 1rem rgba(8, 6, 12, 0.32);
+  border: 1px solid var(--glass-border);
+}
+
+.pair-key--aux {
+  font-size: 1.2rem;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--bg-0) 30%, transparent);
+  box-shadow: none;
+}
+
+/* --- Footer --------------------------------------------------------------- */
+
+.pair-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 21rem;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+}
+
+.pair-foot b {
+  color: var(--text-dim);
+  font-weight: var(--weight-bold, 800);
+}
+
+.pair-host {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: var(--tracking-wide);
+}
+
+@keyframes pair-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  18% {
+    transform: translateX(-0.55rem);
+  }
+  38% {
+    transform: translateX(0.45rem);
+  }
+  58% {
+    transform: translateX(-0.3rem);
+  }
+  78% {
+    transform: translateX(0.18rem);
+  }
+}
+
+@keyframes pair-thinking {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pair-code[data-shake='true'],
+  .pair-code[data-busy='true'] {
+    animation: none;
+  }
+}

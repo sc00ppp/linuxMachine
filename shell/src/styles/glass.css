@@ -1,0 +1,30 @@
+/* Liquid-glass material, distilled from vAMP's "Glass" theme: a frosted
+   white-gradient film over a cool translucent base, hairline border, inset
+   top-light. Used for floating chrome — shelf, pills, chips — so they read
+   as physical panes sitting above the dusk rather than flat rectangles. */
+
+:root {
+  --glass-bg:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04)),
+    rgba(214, 226, 238, 0.11);
+  --glass-bg-strong:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.05)),
+    rgba(214, 226, 238, 0.15);
+  --glass-border: rgba(255, 255, 255, 0.15);
+  --glass-inset:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  --glass-shadow: 0 1.125rem 3.75rem rgba(0, 0, 0, 0.34);
+}
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  -webkit-backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+}
+
+.glass--strong {
+  background: var(--glass-bg-strong);
+}

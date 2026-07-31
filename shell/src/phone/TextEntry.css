@@ -1,0 +1,55 @@
+/* Text field — one glass pill at the bottom of the pad. */
+
+.text-entry {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.9rem;
+  border-radius: 999px;
+}
+
+.text-entry-field {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 2.6rem;
+  color: var(--text);
+  background: none;
+  border: none;
+  outline: none;
+  /* iOS Safari zooms the whole page when a focused input's text is under 16px.
+     The root is 16px × --ui-scale, so 1rem is the floor; max() keeps it there
+     even if someone scales the UI down. */
+  font-size: max(1rem, 16px);
+  font-weight: var(--weight-medium, 600);
+  /* The rest of the surface disables selection; typing needs it back. */
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.text-entry-field::placeholder {
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+  font-weight: var(--weight-regular, 500);
+}
+
+.text-entry-send {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 999px;
+  font-size: 1.25rem;
+  color: color-mix(in srgb, var(--bg-0) 88%, var(--text));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 92%, var(--text)) 0%,
+    color-mix(in srgb, var(--accent) 74%, var(--bg-1)) 100%
+  );
+  box-shadow: 0 0.25rem 0.7rem rgba(8, 6, 12, 0.38);
+}
+
+.text-entry-send:disabled {
+  /* Nothing to send: the button recedes into the glass instead of shouting. */
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  box-shadow: none;
+  opacity: 1;
+}

@@ -1,0 +1,60 @@
+/* Base touch target. Everything that can be pressed on the phone is one of
+   these; the surrounding component supplies size and skin. */
+
+.pad-btn {
+  /* Hard floor for a thumb — the whole phone surface honours it. */
+  min-width: 3rem;
+  min-height: 3rem;
+
+  display: grid;
+  place-items: center;
+  padding: 0;
+
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-weight: var(--weight-bold, 800);
+  line-height: 1;
+  border: none;
+  border-radius: var(--radius-card);
+  background: none;
+
+  /* A pad button is not a document: no scroll-from-here, no double-tap zoom,
+     no long-press selection or callout. `touch-action: none` is what lets the
+     press start firing on the first frame instead of after a gesture wait. */
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+
+  transform: translateZ(0) scale(1);
+  transition:
+    transform 130ms var(--ease-pop),
+    filter 130ms var(--ease-soft),
+    box-shadow 130ms var(--ease-soft),
+    opacity 130ms var(--ease-soft);
+}
+
+/* Press feedback: squash + light. Same gesture everywhere, so the surface
+   feels like one object rather than a set of widgets. */
+.pad-btn[data-pressed='true'] {
+  transform: translateZ(0) scale(0.93);
+  filter: brightness(1.4) saturate(1.15);
+}
+
+.pad-btn:disabled {
+  opacity: 0.4;
+  filter: saturate(0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pad-btn {
+    transition-duration: 1ms;
+  }
+
+  /* Keep the brightness answer — it is feedback, not decoration — but drop
+     the movement. */
+  .pad-btn[data-pressed='true'] {
+    transform: none;
+  }
+}

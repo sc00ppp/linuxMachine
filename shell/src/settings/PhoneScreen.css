@@ -1,0 +1,130 @@
+.phone-screen {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 1rem 3rem 2rem;
+}
+
+.phone-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  width: min(46rem, 100%);
+  padding: 2.5rem 3rem;
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.phone-eyebrow {
+  margin: 0;
+  color: var(--accent);
+  font-size: 1.125rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+/* The PIN: this is the number a person squints at from the couch, so it's
+   the single biggest text in the whole room. */
+.phone-pin {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.phone-pin span {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 4.4rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  box-shadow: inset 0 0 0 0.09rem color-mix(in srgb, var(--accent) 38%, transparent);
+  font-size: 2.75rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.phone-howto {
+  max-width: 30rem;
+  margin: 0.25rem 0 0;
+  color: var(--text-dim);
+  font-size: 1.1875rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.phone-howto b {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.phone-qr-wrap {
+  width: 12rem;
+  height: 12rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  background: var(--text);
+  box-shadow: var(--shadow-soft);
+}
+
+/* --- Offline state ----------------------------------------------------------
+   Calm, not alarmed: this is an expected state whenever the daemon isn't
+   running yet, not a broken screen. */
+
+.phone-offline {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 0;
+}
+
+.phone-offline-dot {
+  width: 0.85rem;
+  height: 0.85rem;
+  margin-bottom: 0.5rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--text) 30%, transparent);
+  animation: phone-offline-pulse 1.8s ease-in-out infinite;
+}
+
+.phone-offline h2 {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.phone-offline p {
+  max-width: 26rem;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+@keyframes phone-offline-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .phone-offline-dot {
+    animation: none;
+    opacity: 0.6;
+  }
+}

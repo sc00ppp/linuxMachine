@@ -1,0 +1,33 @@
+.coming-soon {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.coming-soon__glyph {
+  font-size: 5rem;
+  line-height: 1;
+  opacity: 0.7;
+  filter: saturate(0.7);
+}
+
+.coming-soon h2 {
+  margin: 0;
+  font-size: var(--text-heading);
+  font-weight: 800;
+  color: var(--text);
+}
+
+.coming-soon p {
+  max-width: 30rem;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.5;
+}

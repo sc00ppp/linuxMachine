@@ -1,0 +1,194 @@
+/* The pad. Dark warm plastic, lit by whatever the TV is looking at: every
+   button here inherits --accent from the root, so the cluster changes color as
+   focus moves across the wall — the lantern reaching your hands. */
+
+.cluster {
+  /* One thumb-key unit. Never below 3rem (the touch floor), grows on big
+     phones, shrinks its gaps rather than itself on small ones. */
+  --key: clamp(3rem, 13vw, 3.9rem);
+  --plastic: color-mix(in srgb, var(--bg-2, #262231) 82%, var(--accent) 18%);
+
+  display: grid;
+  grid-template-columns: auto auto;
+  justify-content: space-between;
+  align-items: center;
+  row-gap: 0.85rem;
+  /* Bleed into the screen edge padding so the two hands sit where thumbs
+     naturally land, even on a 320 px phone. */
+  margin-inline: calc(-0.5 * var(--phone-pad-x));
+  padding-block: 0.25rem;
+}
+
+/* --- D-pad ---------------------------------------------------------------- */
+
+.dpad {
+  display: grid;
+  grid-template-columns: repeat(3, var(--key));
+  grid-template-rows: repeat(3, var(--key));
+}
+
+.dpad-key {
+  min-width: var(--key);
+  min-height: var(--key);
+  width: var(--key);
+  height: var(--key);
+  color: color-mix(in srgb, var(--text) 78%, transparent);
+  background: var(--plastic);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.09),
+    inset 0 -2px 3px rgba(8, 6, 12, 0.35),
+    0 0.3rem 0.7rem rgba(8, 6, 12, 0.4);
+  border-radius: 0.55rem;
+}
+
+/* Cross shape: square keys with the outer corners rounded and the inner ones
+   squared off, so the four keys read as one plus-shaped pad. */
+.dpad-key--up {
+  grid-area: 1 / 2;
+  border-radius: 0.9rem 0.9rem 0 0;
+}
+.dpad-key--left {
+  grid-area: 2 / 1;
+  border-radius: 0.9rem 0 0 0.9rem;
+}
+.dpad-key--right {
+  grid-area: 2 / 3;
+  border-radius: 0 0.9rem 0.9rem 0;
+}
+.dpad-key--down {
+  grid-area: 3 / 2;
+  border-radius: 0 0 0.9rem 0.9rem;
+}
+
+/* Centre hub: not a button, just the plastic joining the four arms, with a
+   dished highlight so the cross looks moulded rather than assembled. */
+.dpad-hub {
+  grid-area: 2 / 2;
+  background: var(--plastic);
+  box-shadow:
+    inset 0 0 0.75rem rgba(8, 6, 12, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.dpad-arrow {
+  width: 0;
+  height: 0;
+  border-left: 0.4rem solid transparent;
+  border-right: 0.4rem solid transparent;
+  border-bottom: 0.52rem solid currentColor;
+  opacity: 0.85;
+}
+
+.dpad-key--right .dpad-arrow {
+  transform: rotate(90deg);
+}
+.dpad-key--down .dpad-arrow {
+  transform: rotate(180deg);
+}
+.dpad-key--left .dpad-arrow {
+  transform: rotate(-90deg);
+}
+
+.dpad-key[data-pressed='true'] {
+  background: color-mix(in srgb, var(--plastic) 62%, var(--accent) 38%);
+  color: var(--text);
+}
+
+/* --- Face buttons --------------------------------------------------------- */
+
+.face {
+  display: grid;
+  grid-template-columns: repeat(3, var(--key));
+  grid-template-rows: repeat(3, var(--key));
+  place-items: center;
+}
+
+.face-key {
+  min-width: var(--key);
+  min-height: var(--key);
+  width: var(--key);
+  height: var(--key);
+  border-radius: 999px;
+  font-size: 1.15rem;
+  letter-spacing: 0.02em;
+  background: var(--plastic);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -0.15rem 0.3rem rgba(8, 6, 12, 0.4),
+    0 0.3rem 0.75rem rgba(8, 6, 12, 0.42);
+}
+
+/* True Xbox positions — A bottom, B right, X left, Y top. */
+.face-key--a {
+  grid-area: 3 / 2;
+  /* The primary action gets the light; the others are glass around it. */
+  color: color-mix(in srgb, var(--bg-0) 88%, var(--text));
+  background: linear-gradient(
+    160deg,
+    color-mix(in srgb, var(--accent) 92%, var(--text)) 0%,
+    color-mix(in srgb, var(--accent) 74%, var(--bg-1)) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 0.3rem 0.9rem rgba(8, 6, 12, 0.45),
+    0 0 1.35rem -0.5rem var(--accent);
+}
+
+.face-key--b {
+  grid-area: 2 / 3;
+}
+
+.face-key--x {
+  grid-area: 2 / 1;
+  color: var(--text-dim);
+}
+
+.face-key[data-pressed='true'] {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 1.5rem -0.35rem var(--accent);
+}
+
+/* The unused Y slot, drawn as one of the wall's dashed sockets. */
+.face-socket {
+  grid-area: 1 / 2;
+  width: calc(var(--key) * 0.62);
+  height: calc(var(--key) * 0.62);
+  border-radius: 999px;
+  border: 0.1rem dashed color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+/* --- Home ----------------------------------------------------------------- */
+
+.home-key {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 3rem;
+  padding-inline: 2.4rem;
+  border-radius: 999px;
+  color: var(--text-dim);
+  background: var(--glass-bg);
+  backdrop-filter: blur(1.25rem) saturate(160%);
+  -webkit-backdrop-filter: blur(1.25rem) saturate(160%);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-inset), 0 0.35rem 1rem rgba(8, 6, 12, 0.3);
+}
+
+.home-glyph {
+  font-size: 1.4rem;
+  line-height: 1;
+  transform: translateY(-0.05rem);
+}
+
+.home-key[data-pressed='true'] {
+  color: var(--text);
+  box-shadow: var(--glass-inset), 0 0 1.6rem -0.4rem var(--accent);
+}
+
+/* Slightly wider phones: give the two hands more air. */
+@media (min-width: 26rem) {
+  .cluster {
+    margin-inline: 0;
+    row-gap: 1.1rem;
+  }
+}

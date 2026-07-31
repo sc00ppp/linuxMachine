@@ -1,0 +1,247 @@
+/* Console tile — the wall's tile language (home/Tile.css) applied to hardware:
+   accent-gradient face, crisp accent ring, label below revealed on focus,
+   neighbours making room. Landscape rather than square because the machines
+   themselves are landscape (ConsoleArt draws into a 240×160 viewBox). */
+
+.ctile-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+  flex: 0 0 var(--ctile-w, 21rem);
+  width: var(--ctile-w, 21rem);
+  transition: margin var(--focus-ms) var(--focus-ease);
+}
+
+/* The focused machine gently pushes its neighbours apart, so the scale-up and
+   the ring get air instead of kissing the next console. Same trick, same feel
+   as the channel wall. */
+.ctile-slot:has(.ctile[data-focused='true']) {
+  margin-inline: 1.1rem;
+}
+
+.ctile {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 7 / 5;
+  border-radius: var(--radius-tile);
+  outline: none;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--focus-ms) var(--focus-ease),
+    filter var(--focus-ms) var(--focus-ease);
+  will-change: transform;
+}
+
+/* Unfocused machines sit back a step — "the rest of the shelf recedes". */
+.ctile:not([data-focused='true']) {
+  filter: saturate(0.84) brightness(0.82);
+}
+
+.ctile[data-focused='true'] {
+  z-index: 3;
+  transform: scale(1.06);
+}
+
+.ctile-face {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  /* The wall's face recipe, pulled a shade deeper: here the illustration is
+     the hero and the accent is the card it is printed on, so the gradient
+     stays under the hardware instead of competing with it. */
+  background:
+    radial-gradient(
+      130% 105% at 22% 8%,
+      color-mix(in srgb, var(--accent) 70%, var(--text)) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--accent) 78%, var(--bg-1)) 0%,
+      color-mix(in srgb, var(--accent) 28%, var(--bg-0)) 100%
+    );
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.ctile[data-focused='true'] .ctile-face {
+  box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 72%, transparent);
+}
+
+/* Slow specular drift across the face — idle tiles shimmer, the focused one
+   fully (DESIGN.md §2 "idle tiles animate subtly"). */
+.ctile-sheen {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background: radial-gradient(
+    38% 38% at 32% 24%,
+    color-mix(in srgb, var(--text) 24%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0.42;
+  animation: ctile-sheen-drift 24s ease-in-out infinite alternate;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+.ctile[data-focused='true'] .ctile-sheen {
+  opacity: 0.8;
+  animation-duration: 12s;
+}
+
+@keyframes ctile-sheen-drift {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(9%, 6%, 0) scale(1.14);
+  }
+}
+
+/* --- The machine ---------------------------------------------------------- */
+
+.ctile-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.7rem 2rem;
+}
+
+.ctile-artwrap {
+  position: relative;
+  width: 100%;
+}
+
+.ctile-art {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Seats the machine on the face instead of letting it float flat. */
+  filter: drop-shadow(0 0.5rem 0.9rem color-mix(in srgb, var(--bg-0) 46%, transparent));
+  transition: transform var(--focus-ms) var(--focus-ease);
+}
+
+.ctile[data-focused='true'] .ctile-art {
+  transform: translateY(-0.2rem) scale(1.03);
+}
+
+/* Contact shadow on the shelf surface, under the hardware. */
+.ctile-shadow {
+  position: absolute;
+  left: 14%;
+  right: 14%;
+  bottom: -4%;
+  height: 11%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--bg-0) 62%, transparent) 0%,
+    transparent 78%
+  );
+  filter: blur(0.35rem);
+}
+
+/* Inner hairline keeps the face from bleeding into the room. */
+.ctile-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 16%, transparent),
+    inset 0 0.0625rem 0 0 color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+/* --- Focus ring (identical to home/Tile.css `.tile::after`) --------------- */
+
+.ctile::after {
+  content: '';
+  position: absolute;
+  inset: -0.55rem;
+  border-radius: calc(var(--radius-tile) + 0.4rem);
+  pointer-events: none;
+  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  box-shadow:
+    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
+    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.ctile[data-focused='true']::after {
+  opacity: 1;
+  transform: scale(1);
+  animation: ctile-ring-breathe 2.1s ease-in-out infinite;
+}
+
+/* Brightness swells; never position or size. */
+@keyframes ctile-ring-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
+      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    filter: brightness(1.35);
+    box-shadow:
+      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
+      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
+
+/* --- Label ---------------------------------------------------------------- */
+
+.ctile-label {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  color: var(--text-dim);
+  /* Switch-style: only the focused machine announces itself. */
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transition:
+    color var(--focus-ms) var(--focus-ease),
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease),
+    text-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.ctile-label.is-focused {
+  color: var(--text);
+  opacity: 1;
+  /* Follows the tile down a touch so the pair reads as one object. */
+  transform: translateY(0.35rem);
+  text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ctile,
+  .ctile-face,
+  .ctile-art,
+  .ctile-sheen,
+  .ctile-label,
+  .ctile::after {
+    transition-duration: 1ms;
+  }
+
+  .ctile-sheen,
+  .ctile[data-focused='true']::after {
+    animation: none;
+  }
+}

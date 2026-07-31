@@ -1,0 +1,243 @@
+/* Mirrored channel row. Same tile language as the TV wall (accent face, crisp
+   focus ring, label under the tile) shrunk to thumb scale. */
+
+.mirror {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  /* Bleed the scroller to the screen edges so tiles can peek past them like
+     they do on the TV, while the rest of the layout keeps its padding. */
+  margin-inline: calc(-1 * var(--phone-pad-x));
+}
+
+.mirror-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.55rem var(--phone-pad-x) 0.35rem;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scroll-padding-inline: 30%;
+  -webkit-overflow-scrolling: touch;
+  /* Never let a horizontal flick turn into browser back-navigation. */
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.mirror-row::-webkit-scrollbar {
+  display: none;
+}
+
+.mirror-row[data-steerable='false'] {
+  filter: saturate(0.55) brightness(0.72);
+  transition: filter var(--dur-focus) var(--ease-soft);
+}
+
+.mirror-tile {
+  flex: 0 0 auto;
+  width: 5.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0;
+  background: none;
+  border: none;
+  scroll-snap-align: center;
+  /* A finger on a tile must still be able to scroll the row sideways. */
+  touch-action: pan-x;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform var(--dur-focus) var(--ease-soft);
+}
+
+.mirror-face {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+  border-radius: 1.15rem;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      130% 105% at 22% 8%,
+      color-mix(in srgb, var(--accent) 88%, var(--text)) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--accent) 88%, var(--bg-1)) 0%,
+      color-mix(in srgb, var(--accent) 42%, var(--bg-0)) 100%
+    );
+  box-shadow: 0 0.35rem 1rem rgba(8, 6, 12, 0.42);
+  filter: saturate(0.8) brightness(0.78);
+  transition:
+    filter var(--dur-focus) var(--ease-soft),
+    box-shadow var(--dur-focus) var(--ease-soft),
+    transform 120ms var(--ease-pop);
+}
+
+.mirror-glyph {
+  font-size: 2.1rem;
+  line-height: 1;
+  text-shadow: 0 0.15rem 0.75rem color-mix(in srgb, var(--bg-0) 55%, transparent);
+}
+
+.mirror-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 16%, transparent),
+    inset 0 0.0625rem 0 0 color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+/* --- Focused (what the TV has under its lantern) -------------------------- */
+
+.mirror-tile[data-focused='true'] .mirror-face {
+  filter: none;
+  box-shadow:
+    0 0.4rem 1.25rem rgba(8, 6, 12, 0.5),
+    0 0 1.4rem -0.4rem var(--accent);
+}
+
+/* Crisp ring hugging the tile — an object, not a light leak (DESIGN.md §3). */
+.mirror-tile[data-focused='true'] .mirror-face::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 0.14rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  box-shadow: inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
+  animation: mirror-ring-breathe 2.1s ease-in-out infinite;
+}
+
+.mirror-tile[data-focused='true'] {
+  transform: translateY(-0.12rem) scale(1.05);
+}
+
+.mirror-tile[data-pressed='true'] .mirror-face {
+  transform: scale(0.94);
+  filter: brightness(1.3) saturate(1.1);
+}
+
+/* The channel whose app is currently running gets a small lit pip. */
+.mirror-tile[data-playing='true'] .mirror-face::before {
+  content: '';
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: var(--text);
+  box-shadow: 0 0 0.5rem var(--text);
+  animation: mirror-pip 2.4s ease-in-out infinite;
+}
+
+.mirror-label {
+  max-width: 100%;
+  font-size: 0.72rem;
+  font-weight: var(--weight-medium, 600);
+  line-height: 1.15;
+  text-align: center;
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--dur-focus) var(--ease-soft);
+}
+
+.mirror-tile[data-focused='true'] .mirror-label {
+  color: var(--text);
+}
+
+/* --- Placeholders + hint -------------------------------------------------- */
+
+.mirror-row--ghost {
+  gap: 0.6rem;
+}
+
+.mirror-socket {
+  flex: 0 0 auto;
+  width: 5.25rem;
+  aspect-ratio: 1 / 1;
+  border-radius: 1.15rem;
+  border: 0.11rem dashed color-mix(in srgb, var(--text) 11%, transparent);
+  background: color-mix(in srgb, var(--text) 2%, transparent);
+  animation: mirror-wait 2.6s ease-in-out infinite;
+}
+
+.mirror-socket:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.mirror-socket:nth-child(3) {
+  animation-delay: 0.4s;
+}
+.mirror-socket:nth-child(4) {
+  animation-delay: 0.6s;
+}
+
+.mirror-hint {
+  margin-inline: var(--phone-pad-x);
+  font-size: 0.78rem;
+  text-align: center;
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+  animation: mirror-hint-pulse 620ms var(--ease-soft);
+}
+
+@keyframes mirror-ring-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.35);
+  }
+}
+
+@keyframes mirror-pip {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes mirror-wait {
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+@keyframes mirror-hint-pulse {
+  0% {
+    color: var(--text);
+    transform: translateY(-0.15rem);
+  }
+  100% {
+    color: var(--text-faint, rgba(242, 238, 232, 0.34));
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mirror-tile,
+  .mirror-face {
+    transition-duration: 1ms;
+  }
+
+  .mirror-tile[data-focused='true'] .mirror-face::after,
+  .mirror-tile[data-playing='true'] .mirror-face::before,
+  .mirror-socket,
+  .mirror-hint {
+    animation: none;
+  }
+}

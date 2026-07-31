@@ -1,0 +1,43 @@
+/* Ambient room light — pure background, never interactive, always behind
+   the tile row and every screen. Cozy-dusk rules apply: felt, not seen. */
+
+.settings-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.settings-glow-pool,
+.settings-glow-brow {
+  position: absolute;
+}
+
+.settings-glow-pool {
+  left: -6%;
+  top: -22%;
+  width: 112%;
+  height: 138%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 11%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 4%, transparent) 50%,
+    transparent 76%
+  );
+  filter: blur(3rem);
+}
+
+.settings-glow-brow {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 20rem;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 8%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 3%, transparent) 38%,
+    transparent 100%
+  );
+}

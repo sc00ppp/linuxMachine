@@ -1,0 +1,271 @@
+/* Channel tile — 16:10 squircle face, label below (DESIGN.md §3). */
+
+.tile-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+  /* Fixed width in the scrolling row (set on .home-row). */
+  flex: 0 0 var(--tile-w, 21rem);
+  width: var(--tile-w, 21rem);
+  transition: margin var(--focus-ms) var(--focus-ease);
+}
+
+/* Switch-style breathing room: the focused tile gently pushes its neighbors
+   apart so the scale-up and the ring get air instead of kissing the next
+   tile. The row reflows under a transition, which reads as the wall making
+   space — exactly the Switch feel. */
+.tile-slot:has(.tile[data-focused='true']) {
+  margin-inline: 1.1rem;
+}
+
+.tile {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  /* Square, like the Switch's game wall. */
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-tile);
+  outline: none;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--focus-ms) var(--focus-ease),
+    filter var(--focus-ms) var(--focus-ease);
+  /* Focus scale is the most-animated property on this screen; keep it on the
+     compositor so a 4x2 wall of tiles never drops frames on weak TV hardware. */
+  will-change: transform;
+}
+
+/* Unfocused tiles sit slightly back: "the rest of the grid recedes". */
+.tile:not([data-focused='true']) {
+  filter: saturate(0.86) brightness(0.86);
+}
+
+.tile[data-focused='true'] {
+  z-index: 3;
+  transform: scale(1.08);
+}
+
+.tile-face {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      130% 105% at 22% 8%,
+      color-mix(in srgb, var(--accent) 88%, var(--text)) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--accent) 88%, var(--bg-1)) 0%,
+      color-mix(in srgb, var(--accent) 42%, var(--bg-0)) 100%
+    );
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+/* Focused face: just a grounded drop shadow — the ring does the talking. */
+.tile[data-focused='true'] .tile-face {
+  box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 72%, transparent);
+}
+
+/* Switch-style focus ring: a crisp accent band hugging the tile just outside
+   its edge, breathing slowly. Deliberately sharp — the selection cursor is
+   an object, not a light leak. */
+.tile::after {
+  content: '';
+  position: absolute;
+  inset: -0.55rem;
+  border-radius: calc(var(--radius-tile) + 0.4rem);
+  pointer-events: none;
+  border: 0.22rem solid
+    color-mix(in srgb, var(--accent) 62%, var(--text));
+  box-shadow:
+    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
+    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.tile[data-focused='true']::after {
+  opacity: 1;
+  transform: scale(1);
+  animation: tile-ring-breathe 2.1s ease-in-out infinite;
+}
+
+/* The Switch pulse: brightness swells, never position or size. */
+@keyframes tile-ring-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
+      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    filter: brightness(1.35);
+    box-shadow:
+      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
+      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
+
+/* Inner hairline keeps the face from bleeding into the background. */
+.tile-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 16%, transparent),
+    inset 0 0.0625rem 0 0 color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+/* Slow specular drift — idle tiles animate subtly, the focused one fully. */
+.tile-sheen {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background: radial-gradient(
+    38% 38% at 32% 24%,
+    color-mix(in srgb, var(--text) 26%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0.45;
+  animation: tile-sheen-drift 22s ease-in-out infinite alternate;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+.tile[data-focused='true'] .tile-sheen {
+  opacity: 0.85;
+  animation-duration: 11s;
+}
+
+@keyframes tile-sheen-drift {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(9%, 6%, 0) scale(1.14);
+  }
+}
+
+.tile-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.tile-glyph {
+  /* The icon IS the artwork — let it own the face, Switch-style, instead of
+     floating in a moat of margin. */
+  font-size: 8.5rem;
+  line-height: 1;
+  /* Emoji glyphs stand in for artwork; the shadow seats them on the face. */
+  text-shadow: 0 0.25rem 1.5rem color-mix(in srgb, var(--bg-0) 55%, transparent);
+  transition: transform var(--focus-ms) var(--focus-ease);
+}
+
+.tile[data-focused='true'] .tile-glyph {
+  transform: translateY(-0.15rem) scale(1.04);
+}
+
+/* --- Continue-with-nothing-yet state ------------------------------------- */
+
+.tile--empty .tile-face {
+  filter: saturate(0.55) brightness(0.82);
+}
+
+.tile--empty[data-focused='true'] .tile-face {
+  filter: saturate(0.8) brightness(0.95);
+}
+
+.tile-emptyhint {
+  max-width: 82%;
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: color-mix(in srgb, var(--text) 88%, transparent);
+  text-shadow: 0 0.125rem 0.75rem color-mix(in srgb, var(--bg-0) 70%, transparent);
+}
+
+/* --- Label ---------------------------------------------------------------- */
+
+.tile-label {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  color: var(--text-dim);
+  /* Switch-style: only the focused tile announces itself. */
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transform: translateY(0);
+  transition:
+    color var(--focus-ms) var(--focus-ease),
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease),
+    text-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.tile-label.is-focused {
+  color: var(--text);
+  opacity: 1;
+  /* Follows the tile down a touch so the pair reads as one object. */
+  transform: translateY(0.35rem);
+  text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+.tile-label--placeholder {
+  opacity: 0;
+}
+
+/* --- Empty socket --------------------------------------------------------- */
+
+.tile-socket {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-tile);
+  border: 0.125rem dashed color-mix(in srgb, var(--text) 11%, transparent);
+  background: color-mix(in srgb, var(--text) 2%, transparent);
+  display: grid;
+  place-items: center;
+}
+
+.tile-socket-mark {
+  font-size: 2.25rem;
+  font-weight: 300;
+  line-height: 1;
+  color: color-mix(in srgb, var(--text) 13%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile,
+  .tile-face,
+  .tile-glyph,
+  .tile-sheen,
+  .tile-label,
+  .tile::after {
+    transition-duration: 1ms;
+  }
+
+  .tile-sheen,
+  .tile[data-focused='true']::after {
+    animation: none;
+  }
+}

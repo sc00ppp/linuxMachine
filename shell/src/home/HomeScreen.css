@@ -1,0 +1,93 @@
+/* Home — the channel wall. Layout only; palette comes from the tokens. */
+
+.home {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  color: var(--text);
+  /* Clips the focus glow's spill at the screen edge (it is deliberately
+     larger than the stage so light reaches under the chrome). */
+  overflow: hidden;
+}
+
+.home,
+.home *,
+.home *::before,
+.home *::after {
+  box-sizing: border-box;
+}
+
+/* Chrome fades to a whisper when nobody has touched anything for a while. */
+.home-chrome {
+  transition: opacity var(--settle-ms) ease;
+}
+
+.home[data-awake='false'] .home-chrome {
+  opacity: 0.3;
+}
+
+.home-stage {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+/* A single Switch-style row that scrolls horizontally when the channels
+   outgrow the screen. The scrollbar is hidden; a gamepad is the scrollbar. */
+.home-scroller {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  /* Edge-scroll margins: focus roams freely in the middle of the screen and
+     only drags the row along when it pushes into these bands. */
+  scroll-padding-inline: 10rem;
+  /* Vertical breathing room so the focus scale, label lift, and the accent
+     bloom aren't sheared off by the scroll clip. */
+  padding: 4.5rem 6rem;
+  scrollbar-width: none;
+  /* No opacity transition here on purpose: the scroller is tagged
+     data-collapse="fade", so the launch/return choreography drives its
+     opacity with WAAPI and a competing CSS transition would fight it. */
+}
+
+.home-scroller::-webkit-scrollbar {
+  display: none;
+}
+
+.home-row {
+  display: flex;
+  align-items: flex-start;
+  /* Tight Switch-style gutters — the ring needs just enough room to breathe. */
+  gap: 1.5rem;
+  width: max-content;
+  /* Tiles are fixed-width in a row (the grid used to decide this). */
+  --tile-w: 16.5rem;
+}
+
+.home-underwall {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.1rem;
+  margin-top: 2.25rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-scroller {
+    scroll-behavior: auto;
+  }
+
+  .home-chrome {
+    transition-duration: 1ms;
+  }
+}

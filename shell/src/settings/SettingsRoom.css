@@ -1,0 +1,139 @@
+/* The Settings room (DESIGN.md §11 room language, CONTRACTS.md Round 3.5):
+   one accent throughout (slate-teal), a slim header with the channel glyph
+   anchored top-left (DESIGN.md §3), and a single row of tiles that each
+   expand into a full screen sharing this same frame. */
+
+.settings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--font-ui);
+  color: var(--text);
+  overflow: hidden;
+}
+
+.settings,
+.settings *,
+.settings *::before,
+.settings *::after {
+  box-sizing: border-box;
+}
+
+/* --- Header ----------------------------------------------------------------- */
+
+.settings-header {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  padding: 1.5rem 3rem 1.1rem 3rem;
+}
+
+/* "the channel glyph stays anchored top-left so you always know where you
+   are" (DESIGN.md §3) — this is that anchor. */
+.settings-header__glyph {
+  align-self: center;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--accent);
+  filter: drop-shadow(0 0 0.6rem color-mix(in srgb, var(--accent) 55%, transparent));
+}
+
+.settings-heading {
+  margin: 0;
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text-dim);
+}
+
+.settings-crumb {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: color-mix(in srgb, var(--text) 26%, transparent);
+}
+
+.settings-screen-name {
+  font-size: 1.9rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: color-mix(in srgb, var(--accent) 46%, var(--text));
+  text-shadow: 0 0 1.6rem color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+/* --- Level container --------------------------------------------------------- */
+
+.settings-level {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- Tile row ------------------------------------------------------------------
+   Five tiles never need to scroll at 1920 width, so unlike the wall/console
+   row this is just a centered flex row — no edge-scroll machinery. */
+
+.settings-row {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 2rem 3rem;
+}
+
+/* --- Bottom hints --------------------------------------------------------------
+   Same floating glass pill as every other room (games/GamesRoom.css,
+   home/HintBar.css) — one piece of shared chrome vocabulary. */
+
+.settings-hints {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 2.75rem;
+  width: fit-content;
+  padding: 0.8rem 2.6rem;
+  margin-bottom: 1.6rem;
+  border-radius: 999px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  -webkit-backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+}
+
+.settings-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.settings-hint-badge {
+  display: grid;
+  place-items: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  border-radius: 50%;
+  font-size: 1.0625rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  box-shadow: inset 0 0 0 0.0938rem color-mix(in srgb, var(--text) 26%, transparent);
+}
+
+.settings-hint-label {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--text-dim);
+}

@@ -1,0 +1,240 @@
+/* The Storage screen — CONTRACTS.md Round 3.5's marquee deliverable. Two
+   full-width drive cards: a big friendly free-space number, a horizontal
+   segment bar colored by category, and a legend that only earns its keep
+   (and its pixels) once a card is actually focused. */
+
+.storage-screen {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  gap: 1rem;
+  padding: 0.5rem 4rem 2rem;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.storage-screen::-webkit-scrollbar {
+  display: none;
+}
+
+.storage-drives {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  max-width: 74rem;
+  margin: 0 auto;
+}
+
+.storage-scannote {
+  max-width: 74rem;
+  margin: 0.25rem auto 0;
+  color: var(--text-faint);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* --- Drive card ------------------------------------------------------------ */
+
+.drive-card {
+  position: relative;
+  padding: 1.75rem 2rem 1.5rem;
+  border-radius: var(--radius-card);
+  outline: none;
+  transition:
+    transform var(--focus-ms) var(--focus-ease),
+    box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.drive-card[data-focused='true'] {
+  transform: translateY(-0.15rem) scale(1.008);
+}
+
+/* A soft accent ring, quieter than a tile's (this is a card, not a launch
+   target) — hugs the card instead of floating clear of it. */
+.drive-card::after {
+  content: '';
+  position: absolute;
+  inset: -0.1875rem;
+  border-radius: calc(var(--radius-card) + 0.1875rem);
+  pointer-events: none;
+  border: 0.125rem solid color-mix(in srgb, var(--accent) 58%, var(--text));
+  box-shadow: 0 0 1.75rem -0.25rem color-mix(in srgb, var(--accent) 55%, transparent);
+  opacity: 0;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+.drive-card[data-focused='true']::after {
+  opacity: 1;
+}
+
+.drive-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.drive-card__identity {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  min-width: 0;
+}
+
+.drive-card__glyph {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 50%;
+  font-size: 1.6rem;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  box-shadow: inset 0 0 0 0.09rem color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.drive-card__identity h3 {
+  margin: 0 0 0.2rem;
+  font-size: 1.625rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  color: var(--text);
+}
+
+.drive-card__kind {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+/* The big friendly number — this is the one thing you should be able to
+   read from across the room. */
+.drive-card__free {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+  gap: 0.15rem;
+}
+
+.drive-card__free strong {
+  font-size: 2.75rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 32%, var(--text));
+  text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.drive-card__free span {
+  color: var(--text-dim);
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+/* --- Segment bar ------------------------------------------------------------
+   flex-grow ratios do the proportional-width math; --seg-share is a plain
+   0..1 fraction of the drive's total capacity. */
+
+.drive-bar {
+  display: flex;
+  height: 1.5rem;
+  margin-top: 1.5rem;
+  border-radius: 999rem;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  box-shadow: inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.drive-bar__seg {
+  flex: var(--seg-share) 0 0;
+  min-width: 0.125rem;
+  background: var(--seg-color);
+  filter: brightness(0.92) saturate(0.92);
+  transition: filter var(--focus-ms) var(--focus-ease);
+}
+
+.drive-card[data-focused='true'] .drive-bar__seg {
+  filter: brightness(1.08) saturate(1.05);
+}
+
+.drive-bar__seg + .drive-bar__seg {
+  box-shadow: inset 1px 0 0 color-mix(in srgb, var(--bg-0) 35%, transparent);
+}
+
+.drive-bar__free {
+  flex: var(--seg-share) 0 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    color-mix(in srgb, var(--text) 8%, transparent) 0,
+    color-mix(in srgb, var(--text) 8%, transparent) 0.25rem,
+    transparent 0.25rem,
+    transparent 0.5rem
+  );
+}
+
+/* --- Legend ------------------------------------------------------------------
+   Hidden until the card is focused — DESIGN.md's "focus = light" principle
+   applied to information density: the wall of numbers only appears once
+   you've actually landed here. */
+
+.drive-card__legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.1rem;
+  margin-top: 1.1rem;
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition:
+    max-height var(--focus-ms) var(--focus-ease),
+    opacity var(--focus-ms) var(--focus-ease),
+    margin-top var(--focus-ms) var(--focus-ease);
+}
+
+.drive-card[data-focused='true'] .drive-card__legend {
+  max-height: 6rem;
+  opacity: 1;
+}
+
+.drive-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-dim);
+  font-size: 1.0625rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.drive-legend__item b {
+  color: var(--text);
+  font-weight: 800;
+}
+
+.drive-legend__dot {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 50%;
+  background: var(--seg-color);
+  box-shadow: 0 0 0.5rem color-mix(in srgb, var(--seg-color) 60%, transparent);
+}
+
+.drive-legend__dot--free {
+  background: color-mix(in srgb, var(--text) 22%, transparent);
+  box-shadow: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drive-card,
+  .drive-card::after,
+  .drive-bar__seg,
+  .drive-card__legend {
+    transition-duration: 1ms;
+  }
+}

@@ -1,0 +1,329 @@
+/**
+ * Global reset, atmosphere, and shared utility classes.
+ * Loaded after tokens.css (see src/main.tsx) — every value here comes from a
+ * token, nothing hard-codes palette colors.
+ *
+ * Contents:
+ *   1. Reset + document
+ *   2. Atmosphere (dusk gradient, vignette, film grain)
+ *   3. .console-root
+ *   4. Focus visuals
+ *   5. Utilities (.glow-accent, .chrome-fade, …)
+ *   6. Idle cursor
+ *   7. Reduced motion
+ */
+
+/* ── 1. Reset + document ─────────────────────────────────────────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* Every animation in the shell is soft-spring eased; nothing linear
+     (DESIGN.md §6). Durations still come from tuning.ts / per-component CSS. */
+  animation-timing-function: var(--ease-soft);
+}
+
+html {
+  /* The single lever that scales the whole 10-foot UI. Everything downstream
+     is expressed in rem, so changing --ui-scale on :root rescales the shell
+     without a single layout rewrite. */
+  font-size: calc(16px * var(--ui-scale, 1));
+  height: 100%;
+  color-scheme: dark;
+  background-color: var(--bg-0); /* covers overscroll / pre-paint flashes */
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  height: 100%;
+  min-height: 100dvh;
+  font-family: var(--font-ui);
+  font-weight: var(--weight-regular);
+  font-size: var(--text-body);
+  line-height: 1.35;
+  color: var(--text);
+
+  /* Cozy dusk: subtle navy→plum vertical gradient with a faint warm pool
+     low-centre (the lamp in the corner). `fixed` so the gradient belongs to
+     the room, not to any scrolling content. */
+  background-image: var(--bg-lamp), var(--bg-gradient);
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+
+  overflow: hidden; /* a TV shell never scrolls the document */
+  overscroll-behavior: none;
+
+  /* This is a controller-driven console, not a document: no text selection,
+     no tap flash, no long-press callouts. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+#root {
+  height: 100%;
+  isolation: isolate;
+}
+
+/* Inherit typography into replaced/form elements so components never have to
+   re-declare the font stack. */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+}
+
+button {
+  cursor: pointer;
+  text-align: inherit;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  max-width: 100%;
+}
+
+ul,
+ol {
+  list-style: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.15;
+}
+
+/* ── 2. Atmosphere ───────────────────────────────────────────────────── */
+/*
+ * Two fixed, pointer-events-none layers ride above the whole app:
+ *   body::before — gentle edge vignette (DESIGN.md §1 "gentle vignette")
+ *   body::after  — film grain / dither
+ *
+ * The grain sits on top of *everything*, including tiles and the shelf, on
+ * purpose: its job is to dither every large flat gradient in the UI so a
+ * consumer TV panel can't band it. `mix-blend-mode: overlay` keeps it neutral
+ * (it darkens and lightens equally rather than washing the blacks out to grey).
+ * Escape hatch: add `no-grain` to <html> to disable it wholesale.
+ */
+
+body::before,
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-atmosphere);
+}
+
+body::before {
+  background: var(--vignette);
+}
+
+body::after {
+  background-image: var(--grain-image);
+  background-repeat: repeat;
+  background-size: var(--grain-size) var(--grain-size);
+  opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
+}
+
+html.no-grain body::after {
+  display: none;
+}
+
+/* ── 3. .console-root ────────────────────────────────────────────────── */
+
+.console-root {
+  position: relative;
+  width: 100%;
+  height: 100dvh;
+  overflow: hidden;
+
+  /* Contain launch clones / overlay layers inside one stacking context so a
+     fullscreen zoom can never paint over the atmosphere layers. */
+  isolation: isolate;
+
+  color: var(--text);
+  font-family: var(--font-ui);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── 4. Focus visuals ────────────────────────────────────────────────── */
+/*
+ * The focus engine stamps `data-focused="true"` on the focused element
+ * (CONTRACTS: src/focus). Focus = light: the element glows in its own channel
+ * color and lifts slightly in brightness, as if a lantern moved onto it.
+ * Components layer their own specifics (scale, label brightening) on top.
+ */
+
+[data-focused='true'] {
+  box-shadow: var(--glow-accent), var(--shadow-lift);
+  filter: brightness(1.06) saturate(1.04);
+  transition: box-shadow var(--dur-focus) var(--ease-soft),
+    filter var(--dur-focus) var(--ease-soft),
+    transform var(--dur-focus) var(--ease-soft);
+}
+
+[data-focused='false'] {
+  transition: box-shadow var(--dur-focus) var(--ease-soft),
+    filter var(--dur-focus) var(--ease-soft),
+    transform var(--dur-focus) var(--ease-soft);
+}
+
+/* The DOM focus ring is redundant here — spatial focus is the real cursor —
+   but keep a visible ring for keyboard users who tab outside the focus engine. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--ring-accent);
+}
+
+/* ── 5. Utilities ────────────────────────────────────────────────────── */
+
+/** Soft ambient glow in the current --accent. Safe on any element. */
+.glow-accent {
+  box-shadow: var(--glow-accent);
+}
+
+.glow-accent--strong {
+  box-shadow: var(--glow-accent-strong);
+}
+
+/**
+ * Chrome that fades away when the user goes idle (top bar, button hints).
+ * Toggle with either `is-idle` or `data-idle="true"` — whichever is easier
+ * for the component — and override --chrome-idle-opacity to taste.
+ */
+.chrome-fade {
+  opacity: 1;
+  transition: opacity var(--dur-fade) var(--ease-soft);
+  will-change: opacity;
+}
+
+.chrome-fade.is-idle,
+.chrome-fade[data-idle='true'] {
+  opacity: var(--chrome-idle-opacity, 0.3);
+}
+
+/** Accent-tinted text / surface helpers, for badges and progress bars. */
+.text-accent {
+  color: var(--accent);
+}
+
+.surface-card {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+}
+
+/** Screen-reader-only, for labelling glyph-only chrome. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── 6. Idle cursor ──────────────────────────────────────────────────── */
+/*
+ * A living-room console shows no mouse pointer. The mechanism is pure CSS
+ * plus one class: src/styles/cursorIdle.ts adds `cursor-idle` to <html> after
+ * ~3s without pointer movement and removes it on the next move.
+ * `!important` because component styles legitimately set their own cursors.
+ */
+
+html.cursor-idle,
+html.cursor-idle *,
+html.cursor-idle *::before,
+html.cursor-idle *::after {
+  cursor: none !important;
+}
+
+/* ── 7. Reduced motion ───────────────────────────────────────────────── */
+/*
+ * Zero out every duration and delay globally. Not `animation: none` — some
+ * components rely on animationend/WAAPI finish callbacks firing, and those
+ * still fire for a ~0-length animation.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* The shell itself must never scroll: only designated inner strips do.
+   `clip` (unlike `hidden`) isn't a scroll container, so a stray
+   scrollIntoView can't shift the whole screen. */
+.console-root {
+  overflow: clip;
+}
+
+/* Channel error fallback — a failing channel never exposes the OS. */
+.channel-fallback {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 1.25rem;
+  justify-items: center;
+  text-align: center;
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg-0);
+}
+
+.channel-fallback h1 { font-size: 2.4rem; }
+.channel-fallback p { color: var(--text-dim); font-size: 1.35rem; }
+
+.channel-fallback button {
+  padding: 0.8rem 2rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 999px;
+  background: var(--glass-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 700;
+  cursor: pointer;
+}

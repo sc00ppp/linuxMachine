@@ -1,0 +1,31 @@
+/* Quiet zone in warm off-white, modules in the deep background color — reads
+   as a printed card rather than a harsh black-on-white sticker, while still
+   keeping the contrast a phone camera needs to focus and decode. */
+
+.qr-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.qr-svg__quiet {
+  fill: var(--text);
+}
+
+.qr-svg__modules {
+  fill: var(--bg-0);
+}
+
+.qr-fallback {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 1rem;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 1.125rem;
+  font-weight: 700;
+  word-break: break-all;
+}

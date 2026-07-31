@@ -1,0 +1,313 @@
+/* Fake box art (DESIGN.md §11). Portrait like a real case, with the title
+   printed on the cover rather than captioned beneath it — that is what makes
+   a grid of these read as boxes on a shelf instead of thumbnails in a list.
+
+   Focus language is deliberately identical to the channel wall's
+   (home/Tile.css `.tile::after`): a crisp accent band hugging the object,
+   breathing in brightness only. One selection cursor across the whole shell. */
+
+.boxart {
+  position: relative;
+  z-index: 1;
+  /* Box-art proportions. Against the shelf's five capped columns this puts
+     two full rows on a 1080p screen; a longer library scrolls. */
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-card);
+  outline: none;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--focus-ms) var(--focus-ease),
+    filter var(--focus-ms) var(--focus-ease);
+  /* The most-animated property on this screen; keep it off the paint path. */
+  will-change: transform;
+}
+
+/* Unfocused boxes sit back a step: "the rest of the grid recedes". */
+.boxart:not([data-focused='true']) {
+  filter: saturate(0.86) brightness(0.84);
+}
+
+.boxart[data-focused='true'] {
+  z-index: 3;
+  transform: scale(1.05);
+}
+
+.boxart-face {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.boxart[data-focused='true'] .boxart-face {
+  box-shadow: 0 1.1rem 2.5rem color-mix(in srgb, var(--bg-0) 74%, transparent);
+}
+
+/* --- The printed artwork ---------------------------------------------------
+   Everything below the plate is one accent gradient bent by the per-title
+   seed from coverArt.ts. The hue/saturation/brightness drift lives on THIS
+   layer only, so the title and the console glyph stay true to the room. */
+
+.boxart-art {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 92% at var(--cover-hx, 30%) var(--cover-hy, 12%),
+      color-mix(in srgb, var(--accent) 72%, var(--text)) 0%,
+      transparent 58%
+    ),
+    linear-gradient(
+      var(--cover-angle, 150deg),
+      color-mix(in srgb, var(--accent) 92%, var(--bg-1)) 0%,
+      color-mix(in srgb, var(--accent) 30%, var(--bg-0)) 100%
+    );
+  filter:
+    hue-rotate(var(--cover-hue, 0deg)) saturate(var(--cover-sat, 1))
+    brightness(var(--cover-lift, 1));
+}
+
+/* --- Decorative motifs -----------------------------------------------------
+   Four printed treatments, picked by the title seed, so covers differ in
+   *structure* and not just in hue. All pure gradients — no assets — blended
+   into the art so they read as ink on the print rather than stickers. */
+
+.boxart-motif {
+  position: absolute;
+  inset: 0;
+  mix-blend-mode: overlay;
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+/* 0 — concentric rings rising from the lower-left corner. */
+.boxart-motif[data-motif='0'] {
+  background: repeating-radial-gradient(
+    circle at 12% 96%,
+    color-mix(in srgb, var(--text) 22%, transparent) 0 0.1rem,
+    transparent 0.1rem 3.4rem
+  );
+}
+
+/* 1 — a wide diagonal band, like a foil stripe across the case. */
+.boxart-motif[data-motif='1'] {
+  background: linear-gradient(
+    var(--cover-sheen, 110deg),
+    transparent 34%,
+    color-mix(in srgb, var(--text) 26%, transparent) 44%,
+    color-mix(in srgb, var(--text) 10%, transparent) 51%,
+    transparent 62%
+  );
+}
+
+/* 2 — halftone dot field, fading out toward the plate. */
+.boxart-motif[data-motif='2'] {
+  background: radial-gradient(
+    color-mix(in srgb, var(--text) 30%, transparent) 0.09rem,
+    transparent 0.1rem
+  );
+  background-size: 1.35rem 1.35rem;
+  -webkit-mask-image: linear-gradient(to bottom, #000 8%, transparent 72%);
+  mask-image: linear-gradient(to bottom, #000 8%, transparent 72%);
+}
+
+/* 3 — a low horizon glow behind the title. */
+.boxart-motif[data-motif='3'] {
+  background: radial-gradient(
+    88% 46% at 50% 92%,
+    color-mix(in srgb, var(--text) 34%, transparent) 0%,
+    transparent 70%
+  );
+}
+
+/* Slow specular drift across the laminate — idle boxes shimmer faintly, the
+   focused one fully (same rule the wall's tiles follow). */
+.boxart-sheen {
+  position: absolute;
+  inset: -25%;
+  pointer-events: none;
+  background: radial-gradient(
+    36% 30% at 34% 22%,
+    color-mix(in srgb, var(--text) 22%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0.4;
+  animation: boxart-sheen-drift 26s ease-in-out infinite alternate;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+.boxart[data-focused='true'] .boxart-sheen {
+  opacity: 0.8;
+  animation-duration: 13s;
+}
+
+@keyframes boxart-sheen-drift {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(8%, 5%, 0) scale(1.12);
+  }
+}
+
+/* The spine: a darker strip down the left edge with a hairline highlight.
+   Small detail, but it is the single strongest cue that this is a *case*. */
+.boxart-spine {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 1.35rem;
+  pointer-events: none;
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--bg-0) 52%, transparent) 0%,
+    color-mix(in srgb, var(--bg-0) 22%, transparent) 62%,
+    transparent 100%
+  );
+  box-shadow: inset -0.0625rem 0 0 color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+/* --- Console mark ---------------------------------------------------------
+   Doubles as the launch transition's glyph (see BoxArt.tsx). Every property
+   Tile.css sets on `.tile-glyph` is restated here at higher specificity. */
+
+.boxart .boxart-glyph {
+  position: absolute;
+  top: 0.85rem;
+  right: 0.95rem;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  font-size: 1.35rem;
+  line-height: 1;
+  transform: none;
+  background: color-mix(in srgb, var(--bg-0) 46%, transparent);
+  box-shadow: inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 18%, transparent);
+  text-shadow: 0 0.125rem 0.5rem color-mix(in srgb, var(--bg-0) 60%, transparent);
+  opacity: 0.9;
+}
+
+/* --- Title plate ---------------------------------------------------------- */
+
+.boxart-plate {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 2.6rem 1.15rem 1.15rem 1.6rem;
+  /* Scrim so a bright gradient can never eat the title. */
+  background: linear-gradient(
+    to top,
+    color-mix(in srgb, var(--bg-0) 90%, transparent) 0%,
+    color-mix(in srgb, var(--bg-0) 62%, transparent) 46%,
+    transparent 100%
+  );
+}
+
+/* Publisher-band rule above the title — accent, printed, deliberate. */
+.boxart-band {
+  width: 2.4rem;
+  height: 0.22rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 74%, var(--text));
+  box-shadow: 0 0 0.75rem color-mix(in srgb, var(--accent) 60%, transparent);
+  transition: width var(--focus-ms) var(--focus-ease);
+}
+
+.boxart[data-focused='true'] .boxart-band {
+  width: 3.6rem;
+}
+
+.boxart-title {
+  /* Stepped by title length in coverArt.ts so long names still fit. */
+  font-size: var(--cover-title, 1.45rem);
+  font-weight: 800;
+  line-height: 1.14;
+  letter-spacing: -0.012em;
+  color: var(--text);
+  text-wrap: balance;
+  text-shadow: 0 0.125rem 0.9rem color-mix(in srgb, var(--bg-0) 78%, transparent);
+  /* Three lines is the plate's budget; the seeded size steps keep us inside
+     it, and the clamp is the belt-and-braces for a title nobody predicted. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+}
+
+/* Inner hairline stops the print bleeding into the room. */
+.boxart-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 15%, transparent),
+    inset 0 0.0625rem 0 0 color-mix(in srgb, var(--text) 20%, transparent);
+}
+
+/* --- Focus ring (the wall's cursor, unchanged) ---------------------------- */
+
+.boxart::after {
+  content: '';
+  position: absolute;
+  inset: -0.55rem;
+  border-radius: calc(var(--radius-card) + 0.4rem);
+  pointer-events: none;
+  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  box-shadow:
+    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
+    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.boxart[data-focused='true']::after {
+  opacity: 1;
+  transform: scale(1);
+  animation: boxart-ring-breathe 2.1s ease-in-out infinite;
+}
+
+/* Brightness swells; position and size never move. */
+@keyframes boxart-ring-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
+      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    filter: brightness(1.35);
+    box-shadow:
+      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
+      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boxart,
+  .boxart-face,
+  .boxart-band,
+  .boxart-sheen,
+  .boxart::after {
+    transition-duration: 1ms;
+  }
+
+  .boxart-sheen,
+  .boxart[data-focused='true']::after {
+    animation: none;
+  }
+}

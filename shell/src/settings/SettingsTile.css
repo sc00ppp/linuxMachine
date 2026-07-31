@@ -1,0 +1,229 @@
+/* Setting tile — home/Tile.css's squircle-face-plus-glyph language, all five
+   tiles sharing the room's one slate-teal accent instead of a per-item
+   color (there's no "channel" to individuate them, this is one room). */
+
+.stile-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+  flex: 0 0 var(--stile-w, 16.5rem);
+  width: var(--stile-w, 16.5rem);
+  transition: margin var(--focus-ms) var(--focus-ease);
+}
+
+.stile-slot:has(.stile[data-focused='true']) {
+  margin-inline: 1.1rem;
+}
+
+.stile {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: var(--radius-tile);
+  outline: none;
+  transform: scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform var(--focus-ms) var(--focus-ease),
+    filter var(--focus-ms) var(--focus-ease);
+  will-change: transform;
+}
+
+.stile:not([data-focused='true']) {
+  filter: saturate(0.86) brightness(0.86);
+}
+
+.stile[data-focused='true'] {
+  z-index: 3;
+  transform: scale(1.08);
+}
+
+.stile-face {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      130% 105% at 22% 8%,
+      color-mix(in srgb, var(--accent) 88%, var(--text)) 0%,
+      transparent 62%
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--accent) 88%, var(--bg-1)) 0%,
+      color-mix(in srgb, var(--accent) 42%, var(--bg-0)) 100%
+    );
+  box-shadow: var(--shadow-soft);
+  transition: box-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.stile[data-focused='true'] .stile-face {
+  box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 72%, transparent);
+}
+
+.stile-sheen {
+  position: absolute;
+  inset: -30%;
+  pointer-events: none;
+  background: radial-gradient(
+    38% 38% at 32% 24%,
+    color-mix(in srgb, var(--text) 26%, transparent) 0%,
+    transparent 70%
+  );
+  opacity: 0.45;
+  animation: stile-sheen-drift 22s ease-in-out infinite alternate;
+  transition: opacity var(--focus-ms) var(--focus-ease);
+}
+
+.stile[data-focused='true'] .stile-sheen {
+  opacity: 0.85;
+  animation-duration: 11s;
+}
+
+@keyframes stile-sheen-drift {
+  from {
+    transform: translate3d(-4%, -3%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(9%, 6%, 0) scale(1.14);
+  }
+}
+
+.stile-body {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+.stile-glyph {
+  font-size: 6.5rem;
+  line-height: 1;
+  text-shadow: 0 0.25rem 1.5rem color-mix(in srgb, var(--bg-0) 55%, transparent);
+  transition: transform var(--focus-ms) var(--focus-ease);
+}
+
+.stile[data-focused='true'] .stile-glyph {
+  transform: translateY(-0.15rem) scale(1.04);
+}
+
+.stile-rim {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 16%, transparent),
+    inset 0 0.0625rem 0 0 color-mix(in srgb, var(--text) 22%, transparent);
+}
+
+/* Focus ring, identical recipe to home/Tile.css's `.tile::after`. */
+.stile::after {
+  content: '';
+  position: absolute;
+  inset: -0.55rem;
+  border-radius: calc(var(--radius-tile) + 0.4rem);
+  pointer-events: none;
+  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  box-shadow:
+    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
+    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
+  opacity: 0;
+  transform: scale(0.985);
+  transition:
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.stile[data-focused='true']::after {
+  opacity: 1;
+  transform: scale(1);
+  animation: stile-ring-breathe 2.1s ease-in-out infinite;
+}
+
+@keyframes stile-ring-breathe {
+  0%,
+  100% {
+    filter: brightness(1);
+    box-shadow:
+      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
+      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+  }
+  50% {
+    filter: brightness(1.35);
+    box-shadow:
+      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
+      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+}
+
+.stile-label {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: 0.015em;
+  color: var(--text-dim);
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transform: translateY(0);
+  transition:
+    color var(--focus-ms) var(--focus-ease),
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease),
+    text-shadow var(--focus-ms) var(--focus-ease);
+}
+
+.stile-label.is-focused {
+  color: var(--text);
+  opacity: 1;
+  transform: translateY(0.35rem);
+  text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* One extra line the wall's tile doesn't have: a short "what this is" blurb,
+   revealed only alongside the label so an unfamiliar tile explains itself
+   the moment you land on it. */
+.stile-blurb {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  color: var(--text-faint);
+  opacity: 0;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    opacity var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+  transform: translateY(0.15rem);
+}
+
+.stile-blurb.is-focused {
+  opacity: 1;
+  transform: translateY(0.35rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stile,
+  .stile-face,
+  .stile-glyph,
+  .stile-sheen,
+  .stile-label,
+  .stile-blurb,
+  .stile::after {
+    transition-duration: 1ms;
+  }
+
+  .stile-sheen,
+  .stile[data-focused='true']::after {
+    animation: none;
+  }
+}

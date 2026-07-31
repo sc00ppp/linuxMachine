@@ -1,0 +1,266 @@
+.situation-globe {
+  position: relative;
+  width: min(55vw, 59rem);
+  min-width: 42rem;
+  aspect-ratio: 4 / 3;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.situation-globe__aura {
+  position: absolute;
+  inset: 14% 12%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--accent) 24%, transparent),
+    transparent 68%
+  );
+  filter: blur(2.5rem);
+  animation: situation-aura-breathe var(--ambient-slow-ms) var(--situation-ease)
+    infinite alternate;
+}
+
+.situation-globe__svg {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  overflow: visible;
+}
+
+.situation-globe__floor {
+  fill: color-mix(in srgb, var(--accent) 12%, transparent);
+  filter: blur(0.75rem);
+}
+
+.situation-globe__sphere {
+  fill: url('#situation-ocean');
+  stroke: color-mix(in srgb, var(--accent) 48%, var(--text));
+  stroke-width: 1.5;
+  filter: drop-shadow(
+    0 1.8rem 3.5rem color-mix(in srgb, var(--bg-0) 76%, transparent)
+  );
+}
+
+.situation-globe__grid {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 11%, transparent);
+  stroke-width: 1;
+}
+
+/* No drift animation here: the coastlines are real geography projected in the
+   same space as the markers, so any independent motion would slide the
+   continents out from under the events sitting on them. */
+.situation-globe__land {
+  fill: color-mix(in srgb, var(--accent) 22%, var(--text));
+  opacity: 0.55;
+  stroke: color-mix(in srgb, var(--text) 78%, transparent);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+.situation-globe__shade {
+  fill: url('#situation-shade');
+  pointer-events: none;
+}
+
+.situation-globe__shine {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 34%, transparent);
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: 0.52;
+  filter: blur(0.08rem);
+}
+
+.situation-globe__marker {
+  --marker-tone: var(--accent);
+  transform: translate(var(--marker-x), var(--marker-y))
+    scale(calc(0.72 + var(--marker-depth) * 0.34));
+  opacity: calc(0.34 + var(--marker-depth) * 0.66);
+  transition:
+    transform var(--situation-focus-ms) var(--situation-ease),
+    opacity var(--situation-focus-ms) var(--situation-ease);
+}
+
+.situation-globe__marker[data-kind='quake'],
+.situation-globe__marker[data-kind='volcano'] {
+  --marker-tone: color-mix(in srgb, var(--accent) 42%, var(--text));
+}
+
+.situation-globe__marker[data-kind='alert'],
+.situation-globe__marker[data-kind='flood'] {
+  --marker-tone: color-mix(in srgb, var(--accent) 58%, var(--text));
+}
+
+.situation-globe__marker[data-kind='air'] {
+  --marker-tone: color-mix(in srgb, var(--accent) 34%, var(--text-dim));
+}
+
+.situation-globe__marker[data-kind='orbit'],
+.situation-globe__marker[data-kind='signal'] {
+  --marker-tone: color-mix(in srgb, var(--accent) 72%, var(--text));
+}
+
+.situation-globe__marker[data-behind='true'] {
+  opacity: 0.16;
+}
+
+.situation-globe__marker-core {
+  fill: var(--marker-tone);
+  stroke: color-mix(in srgb, var(--text) 82%, transparent);
+  stroke-width: 1;
+  filter: drop-shadow(0 0 0.55rem var(--marker-tone));
+}
+
+.situation-globe__marker-wake {
+  fill: none;
+  stroke: var(--marker-tone);
+  stroke-width: 1.5;
+  opacity: 0.25;
+}
+
+.situation-globe__marker[data-selected='true'] .situation-globe__marker-wake {
+  animation: situation-marker-pulse
+    calc(var(--situation-settle-ms) * 2.4)
+    var(--situation-ease) infinite;
+}
+
+.situation-globe__marker[data-selected='true'] .situation-globe__marker-core {
+  filter: drop-shadow(0 0 1rem var(--marker-tone));
+}
+
+.situation-globe__traces {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 64%, var(--text));
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-dasharray: 0.08 0.04;
+  opacity: 0.56;
+  animation: situation-trace-flow
+    calc(var(--situation-settle-ms) * 3.4)
+    var(--situation-ease) infinite;
+}
+
+.situation-globe__orbit {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 54%, var(--text));
+  stroke-width: 1.5;
+  opacity: 0.74;
+}
+
+.situation-globe__satellite {
+  fill: color-mix(in srgb, var(--accent) 56%, var(--text));
+  stroke: var(--text);
+  stroke-width: 1.5;
+  transform-origin: 400px 300px;
+  transform: translate(648px, 230px) rotate(-18deg);
+  animation: situation-satellite-drift var(--ambient-orbit-ms)
+    var(--situation-ease) infinite alternate;
+  filter: drop-shadow(
+    0 0 0.85rem color-mix(in srgb, var(--accent) 70%, transparent)
+  );
+}
+
+@keyframes situation-aura-breathe {
+  from {
+    opacity: 0.52;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 0.86;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes situation-land-drift {
+  from {
+    transform: translate3d(-0.45rem, 0, 0);
+  }
+  to {
+    transform: translate3d(0.65rem, -0.2rem, 0);
+  }
+}
+
+@keyframes situation-marker-pulse {
+  0% {
+    r: 8;
+    opacity: 0.72;
+  }
+  100% {
+    r: 23;
+    opacity: 0;
+  }
+}
+
+@keyframes situation-trace-flow {
+  from {
+    stroke-dashoffset: 0;
+  }
+  to {
+    stroke-dashoffset: -0.48;
+  }
+}
+
+@keyframes situation-satellite-drift {
+  from {
+    transform: translate(648px, 230px) rotate(-18deg);
+  }
+  to {
+    transform: translate(599px, 176px) rotate(-10deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .situation-globe__aura,
+  .situation-globe__land,
+  .situation-globe__marker-wake,
+  .situation-globe__traces,
+  .situation-globe__satellite {
+    animation: none;
+  }
+}
+
+/* Layer symbols share the core class; rings are stroked, bodies filled. */
+.situation-globe__marker-core path {
+  fill: var(--marker-tone);
+  stroke: color-mix(in srgb, var(--text) 70%, transparent);
+  stroke-width: 1;
+  stroke-linejoin: round;
+}
+
+/* Line-art symbols (water, satellite panels, broadcast arcs) must not fill. */
+.situation-globe__marker[data-kind='flood'] .situation-globe__marker-core path,
+.situation-globe__marker[data-kind='orbit'] .situation-globe__marker-core path,
+.situation-globe__marker[data-kind='signal'] .situation-globe__marker-core path {
+  fill: none;
+  stroke: var(--marker-tone);
+  stroke-width: 1.8;
+  stroke-linecap: round;
+}
+
+.situation-globe__marker-ring {
+  fill: none;
+  stroke: var(--marker-tone);
+  stroke-width: 1.1;
+  opacity: 0.55;
+}
+
+/* Distinct hues per layer so a stacked globe stays readable. */
+.situation-globe__marker[data-kind='quake'] { --marker-tone: #f0655a; }
+.situation-globe__marker[data-kind='event'] { --marker-tone: #e8a33c; }
+.situation-globe__marker[data-kind='volcano'] { --marker-tone: #e0562f; }
+.situation-globe__marker[data-kind='alert'] { --marker-tone: #e8c84b; }
+.situation-globe__marker[data-kind='flood'] { --marker-tone: #4aa3d6; }
+.situation-globe__marker[data-kind='air'] { --marker-tone: #6fc39a; }
+.situation-globe__marker[data-kind='orbit'] { --marker-tone: #f2eee8; }
+.situation-globe__marker[data-kind='signal'] { --marker-tone: #a58ae0; }
+.situation-globe__marker[data-kind='traffic'] { --marker-tone: #7f9ec4; }
+
+/* Graticule: quiet, so coastlines and events read first. */
+.situation-globe__grid path {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 26%, transparent);
+  stroke-width: 0.6;
+}

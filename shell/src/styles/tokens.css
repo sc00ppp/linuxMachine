@@ -1,0 +1,140 @@
+/**
+ * Design tokens — "Cozy Dusk" (DESIGN.md §1).
+ *
+ * The whole shell reads as a warm lamp-lit living room at night: never pure
+ * black (pure black reads as "off" and crushes on OLED transitions), never
+ * pure white text, and every flat gradient carries a little grain so a 1080p
+ * TV panel can't band it into stripes.
+ *
+ * Every name in the CONTRACTS.md token table is defined here. Names not in
+ * that table are conveniences other workers MAY use but never have to.
+ *
+ * Note on `--accent`: it is deliberately declared on :root with a neutral
+ * warm-gold default so nothing looks broken before a channel color lands.
+ * Whoever renders a channel element sets `style={{ '--accent': ch.accent }}`
+ * inline, which shadows this value for that subtree.
+ */
+
+:root {
+  /* ── Scale ───────────────────────────────────────────────────────────── */
+  /* 1 | 1.25 | 1.5 | 1.75 — multiplies the root font-size; all sizes in rem
+     downstream, so bumping this rescales the entire 10-foot UI. */
+  --ui-scale: 1;
+
+  /* ── Core palette (CONTRACTS token table) ────────────────────────────── */
+  --bg-0: #17151f; /* deepest background — top of the dusk gradient (navy) */
+  --bg-1: #1e1b26; /* raised background — bottom of the gradient (plum)    */
+  --text: #f2eee8; /* warm off-white, never #fff                           */
+  --text-dim: rgba(242, 238, 232, 0.62); /* secondary text / idle labels    */
+
+  /* Per-element channel color. Overridden inline where a channel renders. */
+  --accent: #e8b84b; /* warm gold (Continue) — a sane, on-brand default */
+
+  /* ── Extended surfaces (optional) ────────────────────────────────────── */
+  --bg-2: #262231; /* card / shelf face, one step above --bg-1     */
+  --bg-3: #2f2a3c; /* hovered or raised card face                  */
+  --text-faint: rgba(242, 238, 232, 0.34); /* hints, empty sockets */
+
+  /* Hairlines. Warm-tinted so they don't read as cold grey on the plum. */
+  --line: rgba(242, 238, 232, 0.1);
+  --line-strong: rgba(242, 238, 232, 0.18);
+
+  /* Translucent scrims — for shelf backdrops and dimming a running app. */
+  --scrim: rgba(12, 10, 17, 0.62);
+  --scrim-soft: rgba(12, 10, 17, 0.34);
+
+  /* ── Typography ──────────────────────────────────────────────────────── */
+  /* Nunito Variable is loaded by main.tsx (@fontsource-variable/nunito);
+     we only reference the family. Fallbacks stay in the rounded-geometric
+     family (DESIGN.md §1) rather than dropping to Arial. */
+  --font-ui: 'Nunito Variable', 'Nunito', ui-rounded, 'SF Pro Rounded',
+    'Hiragino Maru Gothic ProN', 'Quicksand', 'Segoe UI Variable Text',
+    'Segoe UI', system-ui, -apple-system, sans-serif;
+
+  --weight-regular: 500; /* Nunito reads thin on a TV — 500 is our "book" */
+  --weight-medium: 600;
+  --weight-bold: 800;
+
+  /* 10-foot type scale. Nothing below --text-label is legible from a couch. */
+  --text-hero: 3.5rem;
+  --text-title: 2.25rem;
+  --text-heading: 1.75rem;
+  --text-body: 1.5rem;
+  --text-label: 1.25rem; /* hard floor per CONTRACTS rule 5 */
+
+  --tracking-tight: -0.01em;
+  --tracking-wide: 0.06em; /* small-caps-ish chrome labels */
+
+  /* ── Shape ───────────────────────────────────────────────────────────── */
+  /* Generous, continuous-curvature-feeling corners: friendly, not bubbly. */
+  --radius-tile: 1.5rem;
+  --radius-card: 1.125rem;
+  --radius-chip: 999px;
+  --radius-sm: 0.5rem;
+
+  /* ── Depth ───────────────────────────────────────────────────────────── */
+  /* Ambient shadow: layered + warm-black so tiles sit *in* the room rather
+     than float on a grey plane. */
+  --shadow-soft: 0 0.125rem 0.5rem rgba(8, 6, 12, 0.28),
+    0 1rem 2.5rem rgba(8, 6, 12, 0.42);
+  --shadow-lift: 0 0.25rem 0.75rem rgba(8, 6, 12, 0.34),
+    0 1.75rem 4rem rgba(8, 6, 12, 0.5);
+
+  /* Focus = light (DESIGN.md §1). These are accent-derived so a focused
+     element glows in its own channel color with zero extra plumbing. */
+  --glow-accent: 0 0 1.5rem -0.25rem var(--accent), 0 0 4rem -0.5rem var(--accent);
+  --glow-accent-strong: 0 0 1.25rem -0.125rem var(--accent),
+    0 0 6rem -0.5rem var(--accent);
+  --ring-accent: 0 0 0 0.1875rem color-mix(in srgb, var(--accent) 72%, transparent);
+
+  /* ── Background composition ──────────────────────────────────────────── */
+  /* Vertical navy→plum dusk, plus a barely-there warm pool low-centre that
+     stands in for the lamp in the corner of the room. */
+  --bg-gradient: linear-gradient(
+    177deg,
+    var(--bg-0) 0%,
+    #1a1722 46%,
+    var(--bg-1) 100%
+  );
+  --bg-lamp: radial-gradient(
+    120% 78% at 50% 108%,
+    rgba(232, 184, 75, 0.07) 0%,
+    rgba(232, 184, 75, 0.025) 38%,
+    transparent 72%
+  );
+
+  /* Gentle edge vignette — dark, warm, and soft enough to be felt not seen. */
+  --vignette: radial-gradient(
+    ellipse 118% 104% at 50% 46%,
+    transparent 38%,
+    rgba(9, 7, 14, 0.26) 76%,
+    rgba(9, 7, 14, 0.56) 100%
+  );
+
+  /* Film grain / dither. Inline SVG feTurbulence desaturated to luminance
+     noise; tiled at --grain-size and blended at a very low opacity so 8-bit
+     TV panels dither the gradient instead of banding it. Percent-encoded so
+     it survives every CSS parser. */
+  --grain-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140' viewBox='0 0 140 140'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23g)'/%3E%3C/svg%3E");
+  --grain-size: 140px;
+  --grain-opacity: 0.05;
+
+  /* ── Micro-interaction motion (CSS only) ─────────────────────────────── */
+  /* Choreographed motion lives in src/motion/tuning.ts — these exist purely
+     so small CSS transitions (hover/fade/idle chrome) share one feel. Keep
+     them in sync with tuning.focusEase / tuning.popEase. */
+  --ease-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-micro: 140ms;
+  --dur-focus: 200ms; /* tuning.focusMoveMs */
+  --dur-fade: 420ms;
+
+  /* How far idle chrome (top bar, button hints) fades — see .chrome-fade. */
+  --chrome-idle-opacity: 0.3;
+
+  /* ── Layers ──────────────────────────────────────────────────────────── */
+  --z-content: 1;
+  --z-chrome: 10;
+  --z-overlay: 100; /* shelf, launch clones */
+  --z-atmosphere: 2147483000; /* grain + vignette ride above everything */
+}

@@ -1,0 +1,94 @@
+/* Paired layout: status line, mirror, breathing room, pad, hints, text field.
+   Portrait-first — the pad is anchored to the bottom where thumbs live and the
+   gap absorbs whatever height is left over. */
+
+.gamepad {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* --- Head ----------------------------------------------------------------- */
+
+.gp-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 1.5rem;
+}
+
+.gp-context {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.88rem;
+  font-weight: var(--weight-medium, 600);
+  color: var(--text-dim);
+  letter-spacing: 0.01em;
+}
+
+.gp-forget {
+  flex: 0 0 auto;
+  /* Small on purpose — it is an escape hatch, not an action. Still gets a
+     comfortable tap area via padding. */
+  padding: 0.4rem 0.15rem 0.4rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+  background: none;
+  border: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 160ms var(--ease-soft);
+}
+
+.gp-forget[data-confirming='true'] {
+  color: color-mix(in srgb, var(--accent) 70%, var(--text));
+  animation: gp-forget-pulse 1.1s ease-in-out infinite;
+}
+
+/* --- Body ----------------------------------------------------------------- */
+
+.gp-gap {
+  flex: 1 1 auto;
+  min-height: 0.5rem;
+}
+
+.gp-hints {
+  display: flex;
+  justify-content: center;
+  gap: 1.1rem;
+  font-size: 0.72rem;
+  color: var(--text-faint, rgba(242, 238, 232, 0.34));
+}
+
+.gp-hints b {
+  display: inline-grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  margin-right: 0.25rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+  font-size: 0.62rem;
+  font-weight: var(--weight-bold, 800);
+  vertical-align: middle;
+}
+
+@keyframes gp-forget-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gp-forget[data-confirming='true'] {
+    animation: none;
+  }
+}

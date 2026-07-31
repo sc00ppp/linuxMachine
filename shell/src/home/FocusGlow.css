@@ -1,0 +1,69 @@
+/* The focus lantern: accent light spilled onto the background behind the wall. */
+
+.focus-glow-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  /* Not clipped here on purpose — the light is allowed to spill past the stage
+     and under the chrome. `.home` (overflow: hidden) clips it at the screen. */
+  overflow: visible;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--settle-ms) ease;
+}
+
+.focus-glow-layer[data-active='true'] {
+  opacity: 1;
+}
+
+.focus-glow {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  /* Colour crossfades slower than the move, so passing between two channels
+     reads as one light changing hue rather than two lights swapping. */
+  transition:
+    transform var(--glow-ms) var(--focus-ease),
+    background var(--glow-tint-ms) linear;
+  will-change: transform;
+}
+
+/* Quiet pool directly under the tile. The crisp focus ring is the selection
+   cursor; this layer only warms the wall behind it, so it stays far below
+   the threshold where it would read as a "glow effect". */
+.focus-glow--core {
+  width: 48rem;
+  height: 36rem;
+  margin-left: -24rem;
+  margin-top: -18rem;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 16%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 6%, transparent) 52%,
+    transparent 76%
+  );
+  filter: blur(2.5rem);
+}
+
+/* Wide ambient wash that lags behind. Barely-there by design. */
+.focus-glow--halo {
+  width: 104rem;
+  height: 76rem;
+  margin-left: -52rem;
+  margin-top: -38rem;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 7%, transparent) 0%,
+    transparent 70%
+  );
+  filter: blur(4rem);
+  transition-duration: var(--glow-halo-ms), var(--glow-tint-ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focus-glow-layer,
+  .focus-glow {
+    transition-duration: 1ms;
+  }
+}

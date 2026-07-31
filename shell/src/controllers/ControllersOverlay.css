@@ -1,0 +1,494 @@
+/* ControllersOverlay — a Wii-Home-style pane that stays translucent enough
+   for Home, a room, or a running app to remain visibly paused underneath. */
+
+.controllers-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 3rem;
+  color: var(--text);
+  font-family: var(--font-ui);
+}
+
+.controllers-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg-0) 58%, transparent);
+  backdrop-filter: blur(0.75rem) saturate(80%);
+  -webkit-backdrop-filter: blur(0.75rem) saturate(80%);
+  animation: controllers-backdrop-in var(--controllers-open-ms)
+    var(--controllers-enter-ease) both;
+}
+
+.controllers-overlay__panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(76rem, calc(100vw - 6rem));
+  max-height: calc(100vh - 6rem);
+  padding: 2rem 2.25rem 1.25rem;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  animation: controllers-panel-in var(--controllers-open-ms)
+    var(--controllers-enter-ease) both;
+}
+
+.controllers-overlay__header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 0.25rem 1.5rem;
+}
+
+.controllers-overlay__header h1 {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  line-height: 1.05;
+}
+
+.controllers-overlay__header p {
+  margin: 0.35rem 0 0;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.controllers-overlay__title-mark {
+  position: relative;
+  width: 3.5rem;
+  height: 3.5rem;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  box-shadow: inset 0 0 0 0.125rem
+    color-mix(in srgb, var(--accent) 42%, transparent);
+}
+
+.controllers-overlay__title-mark span {
+  position: absolute;
+  top: 1.125rem;
+  width: 0.75rem;
+  height: 1.25rem;
+  border: 0.125rem solid var(--accent);
+  border-radius: 0.75rem 0.75rem 0.5rem 0.5rem;
+}
+
+.controllers-overlay__title-mark span:first-child {
+  left: 0.8rem;
+  transform: rotate(-18deg);
+}
+
+.controllers-overlay__title-mark span:last-child {
+  right: 0.8rem;
+  transform: rotate(18deg);
+}
+
+.controllers-overlay__pads {
+  display: grid;
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.78fr);
+  gap: 1.5rem;
+  min-height: 27rem;
+}
+
+.controller-card {
+  min-width: 0;
+  border-radius: var(--radius-tile);
+}
+
+.controller-card--connected {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  background:
+    radial-gradient(
+      circle at 18% 24%,
+      color-mix(in srgb, var(--accent) 16%, transparent),
+      transparent 42%
+    ),
+    var(--glass-bg);
+}
+
+.controller-card__status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.controller-card__player-badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 3.25rem;
+  height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 999rem;
+  color: var(--bg-0);
+  background: var(--accent);
+  box-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.controller-card__player-badge--empty {
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  box-shadow: none;
+}
+
+.controller-card__connection,
+.controller-card__available {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.controller-card__connection-dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.controller-card__identity {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  align-items: center;
+  gap: 1.25rem;
+  margin: auto 0;
+}
+
+.controller-card__silhouette {
+  width: 11rem;
+  height: 7rem;
+  overflow: visible;
+  color: var(--text);
+  filter: drop-shadow(
+    0 0.75rem 1.25rem color-mix(in srgb, var(--bg-0) 55%, transparent)
+  );
+}
+
+.controller-card__silhouette-body,
+.controller-card__silhouette-control,
+.controller-card__silhouette-button,
+.controller-card__silhouette-stick {
+  fill: color-mix(in srgb, var(--text) 4%, transparent);
+  stroke: currentColor;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.controller-card__silhouette-control {
+  fill: none;
+  stroke-width: 4;
+}
+
+.controller-card__silhouette-guide {
+  fill: var(--accent);
+  filter: drop-shadow(
+    0 0 0.5rem color-mix(in srgb, var(--accent) 80%, transparent)
+  );
+}
+
+.controller-card__eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.controller-card__identity h2 {
+  max-width: 20rem;
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.controller-card__battery {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-card);
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.controller-card__battery strong {
+  color: var(--text);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.controller-battery-glyph {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 2rem;
+  height: 1rem;
+  padding: 0.15rem;
+  border: 0.125rem solid currentColor;
+  border-radius: 0.25rem;
+}
+
+.controller-battery-glyph__level {
+  width: 72%;
+  height: 100%;
+  border-radius: 0.1rem;
+  background: var(--accent);
+}
+
+.controller-battery-glyph__cap {
+  position: absolute;
+  top: 0.25rem;
+  right: -0.35rem;
+  width: 0.2rem;
+  height: 0.45rem;
+  border-radius: 0 0.15rem 0.15rem 0;
+  background: currentColor;
+}
+
+.controller-card__actions {
+  display: grid;
+  grid-template-columns: 1.45fr 1fr 1fr;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.controller-action {
+  min-width: 0;
+  min-height: 3.25rem;
+  padding: 0.75rem 0.9rem;
+  border: 0.125rem solid transparent;
+  border-radius: 999rem;
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  font: inherit;
+  font-size: 1.25rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--controllers-focus-ms) var(--controllers-focus-ease),
+    background var(--controllers-focus-ms) var(--controllers-focus-ease),
+    border-color var(--controllers-focus-ms) var(--controllers-focus-ease),
+    box-shadow var(--controllers-focus-ms) var(--controllers-focus-ease),
+    transform var(--controllers-focus-ms) var(--controllers-focus-ease);
+}
+
+.controller-action--primary {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.controller-action[data-focused='true'] {
+  z-index: 1;
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 78%, transparent);
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow:
+    0 0 0 0.125rem color-mix(in srgb, var(--accent) 25%, transparent),
+    0 0 1.75rem color-mix(in srgb, var(--accent) 32%, transparent);
+  transform: translateY(-0.125rem) scale(1.035);
+}
+
+.controller-card--empty {
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem;
+  border: 0.125rem dashed color-mix(in srgb, var(--text) 24%, transparent);
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+  box-shadow: var(--glass-inset);
+}
+
+.controller-card__pairing {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 2rem;
+  text-align: center;
+  animation: controllers-pairing-pulse var(--controllers-pair-pulse-ms)
+    var(--controllers-enter-ease) infinite alternate;
+}
+
+.controller-card__pairing p {
+  max-width: 18rem;
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.375rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.controller-card__pairing-icon {
+  position: relative;
+  width: 5.25rem;
+  height: 5.25rem;
+  border: 0.125rem dashed color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+.controller-card__pairing-icon::before,
+.controller-card__pairing-icon::after,
+.controller-card__pairing-icon span::before,
+.controller-card__pairing-icon span::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: var(--accent);
+  border-radius: 999rem;
+  transform: translate(-50%, -50%);
+}
+
+.controller-card__pairing-icon::before {
+  width: 2rem;
+  height: 0.2rem;
+}
+
+.controller-card__pairing-icon::after {
+  width: 0.2rem;
+  height: 2rem;
+}
+
+.controller-card__pairing-icon span::before,
+.controller-card__pairing-icon span::after {
+  width: 3.5rem;
+  height: 3.5rem;
+  background: transparent;
+  border: 0.1rem solid color-mix(in srgb, var(--accent) 38%, transparent);
+}
+
+.controller-card__pairing-icon span::before {
+  animation: controllers-pairing-ring var(--controllers-pair-pulse-ms)
+    var(--controllers-enter-ease) infinite;
+}
+
+.controller-card__pairing-icon span::after {
+  animation: controllers-pairing-ring var(--controllers-pair-pulse-ms)
+    var(--controllers-enter-ease) var(--controllers-pair-pulse-delay) infinite;
+}
+
+.controllers-overlay__hints {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1.75rem;
+  margin-top: 1.25rem;
+  padding: 1rem 0.5rem 0;
+  border-top: 0.0625rem solid color-mix(in srgb, var(--text) 12%, transparent);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.controllers-overlay__hints span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.controllers-overlay__hints b {
+  color: var(--text);
+  font-size: 1.375rem;
+  font-weight: 800;
+}
+
+@keyframes controllers-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes controllers-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(3rem) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes controllers-pairing-pulse {
+  from {
+    opacity: 0.58;
+    transform: translateY(0.125rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-0.125rem);
+  }
+}
+
+@keyframes controllers-pairing-ring {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+  35% {
+    opacity: 0.7;
+  }
+  to {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controllers-overlay__backdrop,
+  .controllers-overlay__panel,
+  .controller-card__pairing,
+  .controller-card__pairing-icon span::before,
+  .controller-card__pairing-icon span::after {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .controller-action {
+    transition: none;
+  }
+}
+
+@media (max-width: 68rem) {
+  .controllers-overlay {
+    padding: 2rem;
+  }
+
+  .controllers-overlay__panel {
+    width: calc(100vw - 4rem);
+    max-height: calc(100vh - 4rem);
+  }
+
+  .controllers-overlay__pads {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .controller-card--empty {
+    min-height: 18rem;
+  }
+}

@@ -1,0 +1,645 @@
+.remap-room {
+  position: fixed;
+  inset: 0;
+  z-index: calc(var(--z-overlay) + 8);
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  padding: 1.75rem 3.5rem;
+  overflow: hidden;
+  color: var(--text);
+  background: var(--scrim);
+  backdrop-filter: blur(1.25rem) saturate(135%);
+  -webkit-backdrop-filter: blur(1.25rem) saturate(135%);
+  isolation: isolate;
+}
+
+.remap-room__wash {
+  position: absolute;
+  inset: 8% 10%;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at 72% 48%,
+    color-mix(in srgb, var(--accent) 20%, transparent),
+    color-mix(in srgb, var(--accent) 5%, transparent) 39%,
+    transparent 72%
+  );
+  filter: blur(2.5rem);
+  opacity: 0.82;
+}
+
+.remap-room__workspace {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 1rem;
+  width: min(100%, 112rem);
+  height: min(100%, 64rem);
+}
+
+.remap-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  min-height: 5rem;
+}
+
+.remap-header h1 {
+  margin-top: 0.1rem;
+  font-size: 2.45rem;
+}
+
+.remap-header__eyebrow,
+.remap-pad-card__side {
+  color: var(--accent);
+  font-size: 1.25rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.remap-header__subtitle {
+  margin-top: 0.2rem;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+}
+
+.remap-header__profile {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.8rem;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-chip);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+
+.remap-header__profile-dot,
+.remap-platform-chip__light {
+  flex: 0 0 auto;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 1rem color-mix(in srgb, var(--accent) 72%, transparent);
+}
+
+.remap-platforms {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 3.25rem;
+}
+
+.remap-platform-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-width: 7.4rem;
+  min-height: 2.8rem;
+  padding: 0.45rem 1rem;
+  border-radius: var(--radius-chip);
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: var(--weight-bold);
+  transition:
+    transform var(--remap-focus-ms) var(--remap-focus-ease),
+    color var(--remap-focus-ms) var(--remap-focus-ease),
+    border-color var(--remap-focus-ms) var(--remap-focus-ease),
+    background var(--remap-focus-ms) var(--remap-focus-ease);
+}
+
+.remap-platform-chip[aria-pressed='true'] {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--glass-border));
+  background:
+    linear-gradient(
+      135deg,
+      color-mix(in srgb, var(--accent) 24%, transparent),
+      color-mix(in srgb, var(--accent) 7%, transparent)
+    ),
+    var(--glass-bg-strong);
+}
+
+.remap-platform-chip[data-focused='true'] {
+  z-index: 1;
+  color: var(--text);
+  transform: translateY(-0.12rem) scale(1.045);
+  box-shadow:
+    var(--ring-accent),
+    var(--glow-accent),
+    var(--glass-inset);
+}
+
+.remap-stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 9rem minmax(0, 1fr);
+  align-items: center;
+  min-height: 0;
+}
+
+.remap-pad-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 1.15rem 1.25rem 1rem;
+  overflow: hidden;
+  border-radius: calc(var(--radius-card) + 0.35rem);
+}
+
+.remap-pad-card::after {
+  content: '';
+  position: absolute;
+  inset: auto 8% -42% 8%;
+  height: 58%;
+  pointer-events: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 17%, transparent);
+  filter: blur(2.4rem);
+  opacity: 0;
+  transition: opacity var(--remap-focus-ms) var(--remap-focus-ease);
+}
+
+.remap-pad-card--emulated::after {
+  opacity: 0.65;
+}
+
+.remap-pad-card__header {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.8rem;
+  padding: 0 0.35rem;
+}
+
+.remap-pad-card__side {
+  color: var(--text-dim);
+  font-size: 1.05rem;
+}
+
+.remap-pad-card h2 {
+  margin-top: 0.08rem;
+  font-size: 1.65rem;
+}
+
+.remap-pad-card__badge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 3rem;
+  min-height: 2.2rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: var(--radius-chip);
+  color: var(--bg-0);
+  background: var(--accent);
+  font-size: 1.15rem;
+  font-weight: var(--weight-bold);
+}
+
+.remap-pad-card__badge--outline {
+  min-width: 5.4rem;
+  color: var(--text-dim);
+  background: transparent;
+  border: 0.0625rem solid var(--glass-border);
+}
+
+.remap-pad-canvas {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  aspect-ratio: 31 / 18;
+}
+
+.controller-diagram {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  color: var(--text-dim);
+}
+
+.pad-art__shell,
+.pad-art__seam,
+.pad-art__detail,
+.pad-art__well,
+.pad-art__screen-bezel,
+.pad-art__screen,
+.pad-art__dpad-bed {
+  vector-effect: non-scaling-stroke;
+  stroke: currentColor;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.pad-art__shell {
+  fill: color-mix(in srgb, var(--bg-1) 86%, transparent);
+}
+
+.pad-art__seam {
+  fill: none;
+  opacity: 0.48;
+}
+
+.pad-art__detail {
+  fill: none;
+  opacity: 0.55;
+}
+
+.pad-art__well {
+  fill: color-mix(in srgb, var(--bg-0) 54%, transparent);
+  opacity: 0.55;
+}
+
+.pad-art__screen-bezel {
+  fill: color-mix(in srgb, var(--bg-0) 72%, transparent);
+}
+
+.pad-art__screen {
+  fill: color-mix(in srgb, var(--accent) 10%, var(--bg-0));
+  opacity: 0.72;
+}
+
+.pad-art__dpad-bed {
+  fill: color-mix(in srgb, var(--bg-0) 78%, transparent);
+  opacity: 0.75;
+}
+
+/* Recessed button slots (SNES's rotated capsules). */
+.pad-art__slot {
+  vector-effect: non-scaling-stroke;
+  fill: color-mix(in srgb, var(--bg-0) 55%, transparent);
+  stroke: currentColor;
+  stroke-width: 1.5;
+  opacity: 0.5;
+}
+
+/* A d-pad is ONE object: the bed draws the cross, the four direction targets
+   become etched arrows that only grow a visible key-cap when active. */
+.pad-control--dpad .pad-control__shape {
+  fill: transparent;
+  stroke: transparent;
+}
+
+.pad-control--dpad .pad-control__label {
+  opacity: 0.6;
+}
+
+.pad-control--dpad.is-active .pad-control__shape {
+  fill: color-mix(in srgb, var(--accent) 30%, var(--bg-0));
+  stroke: currentColor;
+}
+
+.pad-control--dpad.is-active .pad-control__label {
+  opacity: 1;
+}
+
+/* …except PlayStation pads, whose four separate cross keys ARE the look. */
+.controller-diagram--ps1 .pad-control--dpad .pad-control__shape {
+  fill: color-mix(in srgb, var(--bg-0) 83%, transparent);
+  stroke: currentColor;
+}
+
+.controller-diagram--ps1 .pad-art__dpad-bed {
+  display: none;
+}
+
+.pad-art__brand {
+  fill: currentColor;
+  font-family: var(--font-ui);
+  font-size: 0.9375rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+  opacity: 0.5;
+}
+
+.pad-art__brand--small {
+  font-size: 0.5625rem;
+  letter-spacing: 0.13em;
+}
+
+.pad-control {
+  color: var(--text-dim);
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    color var(--remap-focus-ms) var(--remap-focus-ease),
+    filter var(--remap-focus-ms) var(--remap-focus-ease),
+    transform var(--remap-focus-ms) var(--remap-focus-ease);
+}
+
+.pad-control__shape,
+.pad-control__stick-ring {
+  vector-effect: non-scaling-stroke;
+  stroke: currentColor;
+  stroke-width: 2.4;
+}
+
+.pad-control__shape {
+  fill: color-mix(in srgb, var(--bg-0) 83%, transparent);
+}
+
+.pad-control__stick-ring {
+  fill: none;
+  stroke-width: 1.4;
+  opacity: 0.62;
+}
+
+.pad-control__label {
+  fill: currentColor;
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: var(--weight-bold);
+  pointer-events: none;
+}
+
+.pad-control__label--small {
+  font-size: 0.5625rem;
+  letter-spacing: 0.015em;
+}
+
+.pad-control.is-active {
+  color: var(--accent);
+  filter: drop-shadow(
+    0 0 0.75rem color-mix(in srgb, var(--accent) 82%, transparent)
+  );
+  transform: scale(1.13);
+}
+
+.pad-control.is-active .pad-control__shape {
+  fill: color-mix(in srgb, var(--accent) 30%, var(--bg-0));
+  stroke-width: 3.2;
+}
+
+.pad-control.is-listening {
+  animation: remap-control-pulse var(--remap-pulse-ms)
+    var(--remap-pop-ease) infinite alternate;
+}
+
+.remap-focus-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.remap-focus-target {
+  position: absolute;
+  z-index: 3;
+  min-width: 1.75rem;
+  min-height: 1.75rem;
+  padding: 0;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%);
+}
+
+.remap-focus-target[data-focused='true'] {
+  box-shadow: none;
+  filter: none;
+}
+
+.remap-connection {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+}
+
+.remap-connection__line {
+  position: absolute;
+  top: 50%;
+  width: 50%;
+  height: 0.12rem;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 74%, transparent)
+  );
+  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--accent) 48%, transparent);
+}
+
+.remap-connection__line:first-child {
+  right: 50%;
+}
+
+.remap-connection__line:last-child {
+  left: 50%;
+  transform: rotate(180deg);
+}
+
+.remap-connection__label {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 9.5rem;
+  min-height: 5.4rem;
+  padding: 0.65rem 0.5rem;
+  border-radius: var(--radius-card);
+  text-align: center;
+  transition:
+    transform var(--remap-focus-ms) var(--remap-focus-ease),
+    border-color var(--remap-focus-ms) var(--remap-focus-ease);
+}
+
+.remap-connection__value {
+  color: var(--text);
+  font-size: 1.45rem;
+  font-weight: var(--weight-bold);
+  line-height: 1.05;
+}
+
+.remap-connection__legend {
+  color: var(--text-dim);
+  font-size: 0.92rem;
+  line-height: 1.05;
+}
+
+.remap-connection.is-listening .remap-connection__label {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--glass-border));
+  animation: remap-bridge-pulse var(--remap-pulse-ms)
+    var(--remap-pop-ease) infinite alternate;
+}
+
+.remap-connection.is-listening .remap-connection__value {
+  color: var(--accent);
+}
+
+.remap-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 3.3rem;
+  padding: 0.15rem 0.35rem 0;
+}
+
+.remap-footer__selection {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.25rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remap-footer__selection span {
+  color: var(--text-dim);
+}
+
+.remap-footer__hints,
+.remap-hint {
+  display: flex;
+  align-items: center;
+}
+
+.remap-footer__hints {
+  gap: 1.35rem;
+}
+
+.remap-hint {
+  gap: 0.55rem;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  white-space: nowrap;
+}
+
+.remap-hint kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 0.42rem;
+  border: 0.0625rem solid var(--glass-border);
+  border-radius: var(--radius-chip);
+  color: var(--text);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  font-weight: var(--weight-bold);
+}
+
+@keyframes remap-control-pulse {
+  from {
+    filter: drop-shadow(
+      0 0 0.45rem color-mix(in srgb, var(--accent) 55%, transparent)
+    );
+    transform: scale(1.06);
+  }
+
+  to {
+    filter: drop-shadow(
+      0 0 1.15rem color-mix(in srgb, var(--accent) 95%, transparent)
+    );
+    transform: scale(1.2);
+  }
+}
+
+@keyframes remap-bridge-pulse {
+  from {
+    box-shadow: var(--glass-shadow), var(--glass-inset);
+    transform: scale(0.98);
+  }
+
+  to {
+    box-shadow:
+      var(--glow-accent),
+      var(--glass-inset);
+    transform: scale(1.035);
+  }
+}
+
+@media (max-width: 88rem) {
+  .remap-room {
+    padding-inline: 1.5rem;
+  }
+
+  .remap-stage {
+    grid-template-columns: minmax(0, 1fr) 7rem minmax(0, 1fr);
+  }
+
+  .remap-connection__label {
+    width: 7.8rem;
+  }
+
+  .remap-platform-chip {
+    min-width: 6.4rem;
+    padding-inline: 0.75rem;
+  }
+}
+
+@media (max-width: 70rem) {
+  .remap-room {
+    padding: 1rem;
+  }
+
+  .remap-room__workspace {
+    gap: 0.65rem;
+  }
+
+  .remap-header__profile,
+  .remap-platform-chip__light {
+    display: none;
+  }
+
+  .remap-platforms {
+    gap: 0.35rem;
+  }
+
+  .remap-platform-chip {
+    min-width: 0;
+    flex: 1 1 0;
+  }
+
+  .remap-stage {
+    grid-template-columns: minmax(0, 1fr) 5.2rem minmax(0, 1fr);
+  }
+
+  .remap-pad-card {
+    padding-inline: 0.65rem;
+  }
+
+  .remap-connection__label {
+    width: 6.6rem;
+    min-height: 4.8rem;
+  }
+
+  .remap-connection__value {
+    font-size: 1.2rem;
+  }
+
+  .remap-connection__legend {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .remap-room__wash {
+    filter: none;
+  }
+
+  .pad-control.is-listening,
+  .remap-connection.is-listening .remap-connection__label {
+    animation-iteration-count: 1;
+  }
+}
+
+/* Decluttered layout: chrome hugs the corners, pads own the screen. */
+.remap-header--minimal {
+  justify-content: flex-end;
+}
+
+.remap-footer--minimal {
+  justify-content: flex-end;
+}
+
+/* The Series ABXY cluster is tiny and tight; shrink labels to fit. */
+.controller-diagram--xbox .pad-control--face .pad-control__label {
+  font-size: 0.8rem;
+}

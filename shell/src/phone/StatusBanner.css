@@ -1,0 +1,74 @@
+/* Connection banner — a glass pill that drops in under the top safe area. */
+
+/* Sits in the flow above the pad. The gap between mirror and cluster absorbs
+   its height, so the buttons never move under a thumb when it appears. */
+.banner {
+  flex: 0 0 auto;
+  align-self: center;
+  z-index: var(--z-overlay, 100);
+
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+  padding: 0.45rem 0.95rem;
+  border-radius: 999px;
+
+  font-size: 0.82rem;
+  font-weight: var(--weight-medium, 600);
+  color: var(--text);
+  white-space: nowrap;
+  pointer-events: none;
+
+  animation: banner-drop 360ms var(--ease-pop) both;
+}
+
+.banner-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--text-dim);
+}
+
+/* Searching: an amber-ish pulse in the current accent, never an alarm red. */
+.banner[data-phase='lost'] .banner-dot {
+  background: var(--accent);
+  box-shadow: 0 0 0.5rem var(--accent);
+  animation: banner-pulse 1.15s ease-in-out infinite;
+}
+
+.banner[data-phase='restored'] .banner-dot {
+  background: color-mix(in srgb, var(--accent) 60%, var(--text));
+  box-shadow: 0 0 0.5rem color-mix(in srgb, var(--accent) 60%, var(--text));
+}
+
+@keyframes banner-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes banner-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+
+  .banner[data-phase='lost'] .banner-dot {
+    animation: none;
+  }
+}

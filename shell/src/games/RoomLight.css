@@ -1,0 +1,76 @@
+/* Room lighting for the console room. Pure background — never interactive,
+   never clipped by the shelf's scroller (it lives behind the whole room). */
+
+.room-light {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.room-light-pool,
+.room-light-spill,
+.room-light-brow {
+  position: absolute;
+  /* Gradients interpolate, so a plain `background` transition crossfades the
+     tint instead of cutting to it. Different durations per layer = the light
+     "catches up" (DESIGN.md §6). */
+  transition: background var(--tint-ms) linear;
+}
+
+/* Wide pool across the room, sitting behind the tiles / box art. */
+.room-light-pool {
+  left: -6%;
+  top: -22%;
+  width: 112%;
+  height: 138%;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 13%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 5%, transparent) 50%,
+    transparent 76%
+  );
+  filter: blur(3rem);
+}
+
+/* Low-left spill — the lamp in the corner of the living room. */
+.room-light-spill {
+  left: -16rem;
+  top: 18%;
+  width: 52rem;
+  height: 62rem;
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    color-mix(in srgb, var(--accent) 17%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 5%, transparent) 54%,
+    transparent 78%
+  );
+  filter: blur(2.5rem);
+  transition-duration: calc(var(--tint-ms) * 0.7);
+}
+
+/* Thin bloom under the header, so the chrome sits in the same light. */
+.room-light-brow {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 22rem;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--accent) 9%, transparent) 0%,
+    color-mix(in srgb, var(--accent) 3%, transparent) 38%,
+    transparent 100%
+  );
+  transition-duration: calc(var(--tint-ms) * 1.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .room-light-pool,
+  .room-light-spill,
+  .room-light-brow {
+    transition-duration: 1ms;
+  }
+}
