@@ -22,5 +22,15 @@
 .home-shelf__app-glyph .ui-icon {
   display: block;
   vertical-align: baseline;
-  filter: drop-shadow(0 0.25rem 1.25rem color-mix(in srgb, var(--bg-0, #17151f) 55%, transparent));
+  /* A blurred drop-shadow is re-rasterised every frame an element is scaled,
+     and the wall scales a tile on every focus move — with nine tiles that was
+     enough to drop frames on the TV. A tight radius keeps the icon seated
+     without asking the compositor to re-blur a large area each frame. */
+  filter: drop-shadow(0 0.15rem 0.35rem color-mix(in srgb, var(--bg-0, #17151f) 62%, transparent));
+}
+
+/* While a tile is actually moving, drop the shadow entirely: it is invisible
+   at speed and it is the single most expensive thing in the frame. */
+.tile[data-focused='true'] .tile-glyph .ui-icon {
+  filter: none;
 }

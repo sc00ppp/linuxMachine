@@ -10,7 +10,8 @@ use axum::{
     extract::{Path as AxumPath, State},
     http::{
         header::{
-            ACCEPT_RANGES, CACHE_CONTROL, CONTENT_LENGTH, CONTENT_RANGE, CONTENT_TYPE, RANGE,
+            ACCEPT_RANGES, ACCESS_CONTROL_ALLOW_ORIGIN, CACHE_CONTROL, CONTENT_LENGTH,
+            CONTENT_RANGE, CONTENT_TYPE, RANGE,
         },
         HeaderMap, HeaderValue, Method, StatusCode,
     },
@@ -293,6 +294,18 @@ async fn serve_file(
     *response.status_mut() = status;
     let response_headers = response.headers_mut();
     response_headers.insert(ACCEPT_RANGES, HeaderValue::from_static("bytes"));
+    // The shell is served from a different port than the media, so anything it
+    // reads with fetch() — the Custom TV catalog, the downloader's status — is
+    // a cross-origin request. Images and video never needed this (<img> and
+    // <video> are exempt), which is why the omission stayed invisible until a
+    // fetch was added and failed silently.
+    //
+    // `*` is right here: this is a read-only server for a LAN appliance, it
+    // holds nothing private, and it accepts no credentials.
+    response_headers.insert(
+        ACCESS_CONTROL_ALLOW_ORIGIN,
+        HeaderValue::from_static("*"),
+    );
     response_headers.insert(
         CACHE_CONTROL,
         HeaderValue::from_static(cache_policy(&canonical_path)),

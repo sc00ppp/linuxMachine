@@ -276,8 +276,11 @@ function buildFaceCover(accent: string, glyph: string, vw: number, vh: number): 
       fontSize: '11rem',
       lineHeight: '1',
       color: 'var(--text, #f2eee8)',
-      // drop-shadow (not text-shadow) so SVG icons are seated too.
-      filter: 'drop-shadow(0 0.5rem 3rem rgba(0, 0, 0, 0.45))',
+      // Deliberately NO drop-shadow. This element is scaled roughly six-fold
+      // across the launch, and a blurred filter on it forces the compositor to
+      // re-blur a very large area every single frame — the most expensive
+      // thing in the transition, on the one element that must stay smooth.
+      // The cover's own gradient already separates the glyph from the ground.
     });
     cover.appendChild(g);
   }
