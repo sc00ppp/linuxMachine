@@ -347,11 +347,29 @@ function uniqueCategoryIds(files) {
   return ids;
 }
 
-async function writeCatalog(catalog) {
+async function writeCatalog(catalog, downloadRoot) {
+  const body = `${JSON.stringify(catalog, null, 2)}\n`;
+
   await fs.mkdir(path.dirname(outputPath), { recursive: true });
   const partial = `${outputPath}.tmp`;
-  await fs.writeFile(partial, `${JSON.stringify(catalog, null, 2)}\n`, 'utf8');
+  await fs.writeFile(partial, body, 'utf8');
   await fs.rename(partial, outputPath);
+
+  // A second copy lands beside the media itself, where mediaserve already
+  // serves it. The bundled copy above is what makes the room open instantly
+  // and work offline; this one is what lets videos the bot downloaded AFTER
+  // the shell was built appear without rebuilding and redeploying anything.
+  try {
+    const beside = path.join(downloadRoot, 'catalog.json');
+    const besidePartial = `${beside}.tmp`;
+    await fs.writeFile(besidePartial, body, 'utf8');
+    await fs.rename(besidePartial, beside);
+    console.log(`Wrote ${beside}`);
+  } catch (error) {
+    // The media root may be a remote share the importer cannot write to. The
+    // bundled catalog still works; only live refresh is lost.
+    console.warn(`[catalog] could not publish beside the media: ${error.message}`);
+  }
 }
 
 async function main() {
@@ -448,7 +466,7 @@ async function main() {
       disk_videos_without_completed_row: diskVideosWithoutCompletedRow,
     },
   };
-  await writeCatalog(catalog);
+  await writeCatalog(catalog, downloadRoot);
 
   const durationsRead = videos.filter((video) => video.duration_seconds !== null).length;
   console.log(`Categories: ${categories.length}`);

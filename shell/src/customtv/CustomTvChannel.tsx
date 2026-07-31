@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -11,7 +12,13 @@ import { useConsoleStore } from '../core/store';
 import { focusManager } from '../focus';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
-import { customTvCatalog, type CustomTvVideo } from './catalog';
+import {
+  customTvCatalog,
+  refreshCustomTvCatalog,
+  useCustomTvCatalogVersion,
+  type CustomTvVideo,
+} from './catalog';
+import { customTvUrl } from '../core/customTvHost';
 import { CustomTvCard } from './CustomTvCard';
 import { CustomTvPlayer } from './CustomTvPlayer';
 import { LiveChannel } from './LiveChannel';
@@ -58,6 +65,16 @@ export function CustomTvChannel() {
   // live/guide/library live in the store so App's B handler can walk back up
   // them (guide → live → wall) instead of dumping you straight to the wall.
   // Playback stays local: it is tied to the selected video object.
+  // Opening the room pulls a fresh catalog, so videos the bot downloaded since
+  // this build was made show up without anyone rebuilding the shell.
+  const catalogVersion = useCustomTvCatalogVersion();
+  useEffect(() => {
+    const controller = new AbortController();
+    const url = customTvUrl('/catalog.json');
+    if (url) void refreshCustomTvCatalog(url, controller.signal);
+    return () => controller.abort();
+  }, []);
+
   const storeScreen = useConsoleStore((s) => s.customTvScreen);
   const [playbackOpen, setPlaybackOpen] = useState(false);
   const screen: Screen = playbackOpen ? 'playback' : storeScreen;
@@ -78,7 +95,8 @@ export function CustomTvChannel() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const categoryNames = useMemo(
     () => new Map(customTvCatalog.categories.map((category) => [category.id, category.display_name])),
-    [],
+    // Rebuilt when a runtime refresh swaps the catalog behind us.
+    [catalogVersion],
   );
 
   useLayoutEffect(() => {
