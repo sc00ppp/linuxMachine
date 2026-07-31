@@ -7,6 +7,7 @@ import {
   type ReactNode,
 } from 'react';
 import { useFocusable } from '../focus';
+import { PauseIcon, PlayIcon } from '../icons';
 import { sound } from '../sound';
 import type { MediaPlaybackItem } from './mediaPlayback';
 
@@ -271,7 +272,7 @@ export function MediaPlayer({
               autoFocus
               wide
             >
-              <span aria-hidden="true">▶</span>
+              <span aria-hidden="true"><PlayIcon /></span>
               <span>Continue</span>
             </TransportButton>
             <TransportButton
@@ -325,7 +326,7 @@ export function MediaPlayer({
                 onAccept={togglePlayback}
                 autoFocus
               >
-                <span aria-hidden="true">{playing ? 'Ⅱ' : '▶'}</span>
+                <span aria-hidden="true">{playing ? <PauseIcon /> : <PlayIcon />}</span>
               </TransportButton>
               <TransportButton
                 id="movies-player-forward"

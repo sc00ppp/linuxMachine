@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Channel } from '../core/types';
 import { useFocusable } from '../focus';
+import { Glyph } from '../icons';
 import { cssVars } from './util';
 import './Tile.css';
 
@@ -91,7 +92,9 @@ export function Tile({ channel, onFocus, onAccept, registerEl, autoFocus }: Tile
           )}
           <div className="tile-sheen" />
           <div className="tile-body">
-            <span className="tile-glyph">{channel.glyph}</span>
+            <span className="tile-glyph">
+              <Glyph id={channel.iconId ?? channel.id} fallback={channel.glyph} />
+            </span>
             {isEmpty && <span className="tile-emptyhint">{channel.emptyHint}</span>}
           </div>
           <div className="tile-rim" />

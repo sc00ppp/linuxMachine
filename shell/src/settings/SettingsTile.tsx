@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusable } from '../focus';
+import { Glyph } from '../icons';
 import type { SettingsTileDef } from './tiles';
 import { cssVars } from './util';
 import './SettingsTile.css';
@@ -47,7 +48,9 @@ export function SettingsTile({ tile, accent, onAccept, autoFocus }: SettingsTile
         <div className="stile-face">
           <div className="stile-sheen" />
           <div className="stile-body">
-            <span className="stile-glyph">{tile.glyph}</span>
+            <span className="stile-glyph">
+              <Glyph id={tile.id} fallback={tile.glyph} />
+            </span>
           </div>
           <div className="stile-rim" />
         </div>

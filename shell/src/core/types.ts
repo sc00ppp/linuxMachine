@@ -31,8 +31,13 @@ export interface Channel {
     | 'situation';
   /** Channel accent color (hex). Drives tile gradient, glow, badges. */
   accent: string;
-  /** Placeholder glyph (emoji/char) until real art exists. */
+  /** Fallback glyph (emoji/char) for surfaces without the drawn icon set. */
   glyph: string;
+  /**
+   * Icon id for src/icons when it differs from `id` — a pinned game's tile
+   * passes its console id here so the wall shows the maker's mark.
+   */
+  iconId?: string;
   /** Cover art, when the tile stands for something with real artwork (a pin). */
   art?: string | null;
   /** Grid slot, 0-based, row-major in a 4x2 page. */

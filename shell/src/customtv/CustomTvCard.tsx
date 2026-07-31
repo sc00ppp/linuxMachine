@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusable } from '../focus';
+import { PlayIcon } from '../icons';
 import type { CustomTvVideo } from './catalog';
 
 function prefersReducedMotion(): boolean {
@@ -105,7 +106,7 @@ export function CustomTvCard({
             <i />
             <i />
           </span>
-          <span className="ctv-card-play" aria-hidden="true">▶</span>
+          <span className="ctv-card-play" aria-hidden="true"><PlayIcon /></span>
           <span className="ctv-card-extension">{video.extension.toUpperCase()}</span>
           {duration && <span className="ctv-card-duration">{duration}</span>}
           {unavailable && <span className="ctv-card-unavailable">Off shelf</span>}

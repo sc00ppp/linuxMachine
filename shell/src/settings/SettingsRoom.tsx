@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { channelById } from '../core/channels';
 import { useConsoleStore } from '../core/store';
+import { GearIcon, WifiIcon, WrenchIcon } from '../icons';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
 import { ComingSoonScreen } from './ComingSoonScreen';
@@ -102,7 +103,7 @@ export function SettingsRoom() {
 
       <header className="settings-header" data-collapse="y">
         <span className="settings-header__glyph" aria-hidden="true">
-          ⚙
+          <GearIcon />
         </span>
         <h1 className="settings-heading">Settings</h1>
         {!inTiles && (
@@ -136,14 +137,14 @@ export function SettingsRoom() {
         {screen === 'phone' && <PhoneScreen />}
         {screen === 'network' && (
           <ComingSoonScreen
-            glyph="📶"
+            glyph={<WifiIcon />}
             title="Network"
             note="Wi-Fi and connection details will live here once the console can see the network."
           />
         )}
         {screen === 'system' && (
           <ComingSoonScreen
-            glyph="🛠"
+            glyph={<WrenchIcon />}
             title="System"
             note="Software version, updates, and reset options will live here."
           />

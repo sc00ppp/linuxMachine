@@ -5,7 +5,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import type { CSSProperties } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import type { ConsoleEntry, ShelfGame } from '../core/consoles';
 import type { GameMod } from '../core/library';
 import {
@@ -24,6 +24,14 @@ import {
 } from '../core/userLibrary';
 import { useConsoleStore } from '../core/store';
 import { useFocusable } from '../focus';
+import {
+  Glyph,
+  PinIcon,
+  PlayIcon,
+  SlidersIcon,
+  StarIcon,
+  StopIcon,
+} from '../icons';
 import { playLaunch } from '../motion/transitions';
 import { sound } from '../sound';
 import './GameDetail.css';
@@ -36,7 +44,7 @@ interface GameDetailProps {
 interface DetailActionProps {
   id: string;
   label: string;
-  icon: string;
+  icon: ReactNode;
   onAccept: () => void;
   autoFocus?: boolean;
   primary?: boolean;
@@ -169,6 +177,21 @@ function ratingStars(rating: number | null): string {
 }
 
 /**
+ * The star string above, drawn with the icon set. The ★/☆ text stays the
+ * source of truth (and the aria-label), this just renders it.
+ */
+function StarRow({ value }: { value: string }) {
+  const filled = (value.match(/★/g) ?? []).length;
+  return (
+    <span className="game-detail-stars" aria-hidden="true">
+      {Array.from({ length: 5 }, (_, i) => (
+        <StarIcon key={i} filled={i < filled} />
+      ))}
+    </span>
+  );
+}
+
+/**
  * The preview clip, already an absolute URL.
  *
  * This used to reconstruct a local `/game-video/<system>/<slug>.mp4` path from
@@ -279,7 +302,11 @@ function GameNowPlaying({
       <div className="game-now-playing-shade" />
       <section className="game-now-playing-card glass glass--strong" role="status">
         <span className="game-now-playing-glyph" aria-hidden="true">
-          {launch.phase === 'error' ? '!' : consoleEntry.glyph}
+          {launch.phase === 'error' ? (
+            '!'
+          ) : (
+            <Glyph id={consoleEntry.id} fallback={consoleEntry.glyph} />
+          )}
         </span>
         <p>{headline}</p>
         <h1>{launch.title}</h1>
@@ -291,7 +318,7 @@ function GameNowPlaying({
             <DetailAction
               id="detail-stop-game"
               label="Stop and return"
-              icon="■"
+              icon={<StopIcon />}
               onAccept={onStop}
               autoFocus
               primary
@@ -631,7 +658,9 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
             />
           ) : (
             <div className="game-detail-cover-fallback">
-              <span aria-hidden="true">{consoleEntry.glyph}</span>
+              <span aria-hidden="true">
+                <Glyph id={consoleEntry.id} fallback={consoleEntry.glyph} />
+              </span>
               <strong>{entry.title}</strong>
             </div>
           )}
@@ -640,7 +669,7 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
             className="game-detail-launch-glyph tile-glyph"
             aria-hidden="true"
           >
-            {consoleEntry.glyph}
+            <Glyph id={consoleEntry.id} fallback={consoleEntry.glyph} />
           </span>
         </div>
       </div>
@@ -648,7 +677,8 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
       <div className="game-detail-copy" data-collapse="fade">
         <header className="game-detail-heading">
           <p className="game-detail-eyebrow">
-            {consoleEntry.glyph} {consoleEntry.name}
+            <Glyph id={consoleEntry.id} fallback={consoleEntry.glyph} />{' '}
+            {consoleEntry.name}
           </p>
           <h1 id="game-detail-title">{entry.title}</h1>
         </header>
@@ -668,7 +698,7 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
                         item.stars ? `${item.value} rating` : undefined
                       }
                     >
-                      {item.value}
+                      {item.stars ? <StarRow value={item.value} /> : item.value}
                     </dd>
                   </div>
                 ))}
@@ -701,7 +731,7 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
           <DetailAction
             id="detail-play"
             label="Play"
-            icon="▶"
+            icon={<PlayIcon />}
             onAccept={play}
             autoFocus
             primary
@@ -709,20 +739,20 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
           <DetailAction
             id="detail-favorite"
             label={favorite ? 'Favorited' : 'Favorite'}
-            icon={favorite ? '★' : '☆'}
+            icon={<StarIcon filled={favorite} />}
             onAccept={favoriteGame}
             pressed={favorite}
           />
           <DetailAction
             id="detail-controls"
             label="Controls"
-            icon="⌁"
+            icon={<SlidersIcon />}
             onAccept={openControls}
           />
           <DetailAction
             id="detail-pin"
             label={pinned ? 'Pinned to Home' : 'Pin to Home'}
-            icon={pinned ? '◆' : '◇'}
+            icon={<PinIcon filled={pinned} />}
             onAccept={pinGame}
             pressed={pinned}
           />

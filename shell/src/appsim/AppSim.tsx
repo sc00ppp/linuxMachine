@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import { useConsoleStore } from '../core/store';
 import { channelById } from '../core/channels';
+import { Glyph } from '../icons';
 import './AppSim.css';
 
 /**
@@ -33,7 +34,9 @@ export function AppSim() {
       <div className="appsim__grain" aria-hidden="true" />
 
       <div className="appsim__content">
-        <div className="appsim__glyph" aria-hidden="true">{channel.glyph}</div>
+        <div className="appsim__glyph" aria-hidden="true">
+          <Glyph id={channel.id} fallback={channel.glyph} />
+        </div>
         <h1 className="appsim__title">{channel.title}</h1>
         <p className="appsim__hint">Press H — Home</p>
       </div>

@@ -43,6 +43,8 @@ function pinChannel(pin: PinnedGame, slot: number): Channel {
     title: pin.title,
     accent: pin.accent || '#f0655a',
     glyph: pin.glyph || '🎮',
+    // The wall's icon registry resolves a console id to its maker's mark.
+    iconId: pin.consoleId,
     art: pin.art,
     slot,
   };

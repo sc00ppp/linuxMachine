@@ -6,6 +6,7 @@ import {
   useState,
 } from 'react';
 import { useFocusable } from '../focus';
+import { PauseIcon, PlayIcon } from '../icons';
 import { sound } from '../sound';
 import {
   fetchDirectStream,
@@ -573,7 +574,7 @@ export function YouTubePlayer({
                 onAccept={togglePlayback}
                 autoFocus
               >
-                <span aria-hidden="true">{playing ? 'Ⅱ' : '▶'}</span>
+                <span aria-hidden="true">{playing ? <PauseIcon /> : <PlayIcon />}</span>
               </TransportButton>
               <TransportButton
                 id="yt-player-forward"

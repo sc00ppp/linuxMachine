@@ -267,20 +267,27 @@ function buildFaceCover(accent: string, glyph: string, vw: number, vh: number): 
 
   if (glyph) {
     const g = document.createElement('span');
-    g.textContent = glyph;
+    // `glyph` is the tile's own rendered markup (an inline SVG icon from
+    // src/icons, or a plain emoji for anything not drawn yet), so the cover
+    // repaints exactly what the face showed. Trusted content: it is read
+    // straight out of our own React-rendered tile.
+    g.innerHTML = glyph;
     Object.assign(g.style, {
       fontSize: '11rem',
       lineHeight: '1',
-      textShadow: '0 0.5rem 3rem rgba(0, 0, 0, 0.45)',
+      color: 'var(--text, #f2eee8)',
+      // drop-shadow (not text-shadow) so SVG icons are seated too.
+      filter: 'drop-shadow(0 0.5rem 3rem rgba(0, 0, 0, 0.45))',
     });
     cover.appendChild(g);
   }
   return cover;
 }
 
-/** The tile's glyph text, for painting onto the cover. */
+/** The tile's glyph markup (icon SVG or emoji), for painting onto the cover. */
 function glyphOf(tileEl: HTMLElement): string {
-  return tileEl.querySelector('.tile-glyph')?.textContent ?? '';
+  const el = tileEl.querySelector('.tile-glyph');
+  return el ? el.innerHTML : '';
 }
 
 /**

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { ConsoleEntry } from '../core/consoles';
 import { useFocusable } from '../focus';
+import { Glyph, StarIcon } from '../icons';
 import { coverArt } from './coverArt';
 import { cssVars, prefersReducedMotion } from './util';
 import './BoxArt.css';
@@ -124,28 +125,28 @@ export function BoxArt({
 
         {favorite && (
           <span className='boxart-favorite' aria-hidden='true'>
-            &#9733;
+            <StarIcon />
           </span>
         )}
 
         {rating !== null && rating > 0 && (
           <span className="boxart-rating" aria-hidden="true">
-            <span className="boxart-rating-star">&#9733;</span>
+            <span className="boxart-rating-star"><StarIcon /></span>
             {(rating * 10).toFixed(1)}
           </span>
         )}
 
         {/*
           `tile-glyph` is not decoration here: motion/transitions.ts paints the
-          launch cover by reading `.tile-glyph`'s text out of the element it is
-          given, so tagging the console glyph with that class is what makes the
-          console mark bloom to fullscreen on launch instead of a bare
+          launch cover by reading `.tile-glyph`'s markup out of the element it
+          is given, so tagging the console glyph with that class is what makes
+          the console mark bloom to fullscreen on launch instead of a bare
           gradient. BoxArt.css re-states every visual property Tile.css sets on
           that class, so the shared hook can't drag the wall's 8.5rem sizing in
           here.
         */}
         <span className="boxart-glyph tile-glyph" aria-hidden="true">
-          {platform.glyph}
+          <Glyph id={platform.id} fallback={platform.glyph} />
         </span>
 
         <div className="boxart-plate">

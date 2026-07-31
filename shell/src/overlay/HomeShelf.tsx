@@ -2,6 +2,7 @@ import { useRef, type CSSProperties } from 'react';
 import { useConsoleStore } from '../core/store';
 import { channelById } from '../core/channels';
 import { useFocusable } from '../focus';
+import { Glyph } from '../icons';
 import { sound } from '../sound';
 import { tuning } from '../motion/tuning';
 import './HomeShelf.css';
@@ -73,7 +74,11 @@ export function HomeShelf() {
         >
           <div className="home-shelf__accent-strip" />
           <div className="home-shelf__app-glyph" aria-hidden="true">
-            {channel?.glyph ?? '✦'}
+            {channel ? (
+              <Glyph id={channel.id} fallback={channel.glyph} />
+            ) : (
+              <Glyph id="spark" fallback="✦" />
+            )}
           </div>
           <h2 className="home-shelf__app-title">{channel?.title ?? 'Home'}</h2>
           <div className="home-shelf__app-actions">
@@ -155,7 +160,7 @@ function QuickChip({ id, label, glyph }: QuickChipProps) {
       onClick={pulse}
     >
       <span className="quick-chip__glyph" aria-hidden="true">
-        {glyph}
+        <Glyph id={id} fallback={glyph} />
       </span>
       <span className="quick-chip__label">{label}</span>
     </button>

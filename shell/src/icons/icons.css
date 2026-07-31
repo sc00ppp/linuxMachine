@@ -1,0 +1,26 @@
+/* Shell icon family (src/icons) — sizing + seating.
+   Icons are sized like the emoji they replaced: 1em square, driven by the
+   host's font-size, so every existing glyph container keeps its scale. */
+
+.ui-icon {
+  width: 1em;
+  height: 1em;
+  display: inline-block;
+  vertical-align: -0.125em;
+  flex: none;
+}
+
+/* Big "the icon IS the artwork" faces (tile, box-art placeholder, app sim,
+   settings tile, detail hero). The emoji were seated with text-shadow, which
+   does not reach SVG — drop-shadow is the equivalent for drawn icons. */
+.tile-glyph .ui-icon,
+.boxart-glyph .ui-icon,
+.stile-glyph .ui-icon,
+.appsim__glyph .ui-icon,
+.coming-soon__glyph .ui-icon,
+.game-detail-launch-glyph .ui-icon,
+.home-shelf__app-glyph .ui-icon {
+  display: block;
+  vertical-align: baseline;
+  filter: drop-shadow(0 0.25rem 1.25rem color-mix(in srgb, var(--bg-0, #17151f) 55%, transparent));
+}

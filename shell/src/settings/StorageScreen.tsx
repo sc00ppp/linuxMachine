@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusable } from '../focus';
+import { BoltIcon, DrivesIcon } from '../icons';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
 import { STORAGE_DRIVES, STORAGE_SCAN_NOTE, formatGb, type StorageDrive } from './storageData';
@@ -90,7 +91,7 @@ function DriveCard({ drive, autoFocus }: DriveCardProps) {
       <div className="drive-card__top">
         <div className="drive-card__identity">
           <span className="drive-card__glyph" aria-hidden="true">
-            {drive.kind === 'SSD' ? '⚡' : '🗄'}
+            {drive.kind === 'SSD' ? <BoltIcon /> : <DrivesIcon />}
           </span>
           <div>
             <h3>{drive.label}</h3>

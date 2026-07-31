@@ -7,6 +7,7 @@ import {
   type CSSProperties,
 } from 'react';
 import { useFocusable } from '../focus';
+import { PlayIcon } from '../icons';
 import { customTvCatalog, type CustomTvVideo } from './catalog';
 import { scheduleAt } from './schedule';
 import './guide.css';
@@ -136,7 +137,7 @@ function OnDemandButton({ onOpen }: { onOpen: () => void }) {
       data-focused={focused ? 'true' : undefined}
       onClick={onOpen}
     >
-      <span aria-hidden="true">▶</span>
+      <span aria-hidden="true"><PlayIcon /></span>
       <span>
         <strong>On demand</strong>
         <small>Pick from the library</small>

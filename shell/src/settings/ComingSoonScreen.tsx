@@ -1,7 +1,9 @@
+import type { ReactNode } from 'react';
 import './ComingSoonScreen.css';
 
 interface ComingSoonScreenProps {
-  glyph: string;
+  /** An icon from src/icons (or legacy emoji text). */
+  glyph: ReactNode;
   title: string;
   note: string;
 }

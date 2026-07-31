@@ -21,6 +21,7 @@ import {
   type SortMode,
 } from '../core/userLibrary';
 import { useFocusable } from '../focus';
+import { Glyph } from '../icons';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
 import { BoxArt } from './BoxArt';
@@ -344,7 +345,7 @@ export function GamesRoom() {
             </span>
             <span className="games-console">
               <span className="games-console-glyph" aria-hidden="true">
-                {platform.glyph}
+                <Glyph id={platform.id} fallback={platform.glyph} />
               </span>
               {platform.name}
             </span>

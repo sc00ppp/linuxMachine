@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusable } from '../focus';
+import { PlayIcon } from '../icons';
 import type { YouTubeVideo } from './types';
 
 function prefersReducedMotion(): boolean {
@@ -80,7 +81,7 @@ export function VideoCard({
             />
           ) : (
             <span className="yt-video-art-fallback" aria-hidden="true">
-              <span>▶</span>
+              <span><PlayIcon /></span>
             </span>
           )}
           <span className="yt-video-duration">

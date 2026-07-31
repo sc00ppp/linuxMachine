@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import './TopBar.css';
+import { DownloadStatus } from './DownloadStatus';
 
 const TIME_FMT = new Intl.DateTimeFormat(undefined, {
   hour: 'numeric',
@@ -104,6 +105,7 @@ export function TopBar() {
       </div>
 
       <div className="topbar-right">
+        <DownloadStatus />
         <div className="topbar-status" title="Living Room · connected">
           <WifiIcon />
         </div>
