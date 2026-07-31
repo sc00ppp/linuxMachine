@@ -9,7 +9,9 @@ export type ConsoleInput =
   | { type: 'back' }
   | { type: 'home' }
   /** X button / `x` key — summons the Controllers overlay (DESIGN.md §12). */
-  | { type: 'menu' };
+  | { type: 'menu' }
+  /** Y button / `y` key — contextual: cycles library sort (DESIGN.md §11c). */
+  | { type: 'sort' };
 
 export interface Channel {
   id: string;
@@ -18,7 +20,14 @@ export interface Channel {
    * In-shell screen this channel opens instead of launching an external app.
    * Matches HomeView in core/store.ts.
    */
-  view?: 'games' | 'movies' | 'settings' | 'weather' | 'news' | 'situation';
+  view?:
+    | 'games'
+    | 'movies'
+    | 'youtube'
+    | 'settings'
+    | 'weather'
+    | 'news'
+    | 'situation';
   /** Channel accent color (hex). Drives tile gradient, glow, badges. */
   accent: string;
   /** Placeholder glyph (emoji/char) until real art exists. */

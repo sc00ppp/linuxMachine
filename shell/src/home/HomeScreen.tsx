@@ -162,11 +162,22 @@ export function HomeScreen() {
       return;
     }
 
-    // Channels carrying a `view` drill into an in-shell room (Games,
-    // Settings, Weather, News, Situation) instead of launching an app.
+    // Channels carrying a `view` open an in-shell room (Games, Settings,
+    // Weather, News, Situation) rather than an external app — but they get
+    // the SAME tile-zoom launch choreography. Rooms previously only drilled
+    // in, so the real channels felt cheaper to open than the placeholder
+    // ones, which is exactly backwards.
     if (channel.view) {
-      sound.play('accept');
-      useConsoleStore.getState().openView(channel.view);
+      busy.current = true;
+      sound.play('launch');
+      sound.duck(true);
+      const view = channel.view;
+      try {
+        await playLaunch(el, channel.accent);
+      } finally {
+        useConsoleStore.getState().openView(view);
+        busy.current = false;
+      }
       return;
     }
 

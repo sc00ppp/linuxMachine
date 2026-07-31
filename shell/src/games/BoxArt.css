@@ -1,5 +1,5 @@
-/* Fake box art (DESIGN.md §11). Portrait like a real case, with the title
-   printed on the cover rather than captioned beneath it — that is what makes
+﻿/* Fake box art (DESIGN.md Â§11). Portrait like a real case, with the title
+   printed on the cover rather than captioned beneath it â€” that is what makes
    a grid of these read as boxes on a shelf instead of thumbnails in a list.
 
    Focus language is deliberately identical to the channel wall's
@@ -9,9 +9,10 @@
 .boxart {
   position: relative;
   z-index: 1;
-  /* Box-art proportions. Against the shelf's five capped columns this puts
-     two full rows on a 1080p screen; a longer library scrolls. */
-  aspect-ratio: 3 / 4;
+  /* Packaging proportions come from the console (GamesRoom sets --box-aspect):
+     SNES boxes are near-square, DS/GBA cases tall, Atari boxes wide. Forcing
+     one ratio letterboxed half of every shelf. */
+  aspect-ratio: var(--box-aspect, 0.75);
   border-radius: var(--radius-card);
   outline: none;
   transform: scale(1);
@@ -72,7 +73,7 @@
 
 /* --- Decorative motifs -----------------------------------------------------
    Four printed treatments, picked by the title seed, so covers differ in
-   *structure* and not just in hue. All pure gradients — no assets — blended
+   *structure* and not just in hue. All pure gradients â€” no assets â€” blended
    into the art so they read as ink on the print rather than stickers. */
 
 .boxart-motif {
@@ -83,7 +84,7 @@
   pointer-events: none;
 }
 
-/* 0 — concentric rings rising from the lower-left corner. */
+/* 0 â€” concentric rings rising from the lower-left corner. */
 .boxart-motif[data-motif='0'] {
   background: repeating-radial-gradient(
     circle at 12% 96%,
@@ -92,7 +93,7 @@
   );
 }
 
-/* 1 — a wide diagonal band, like a foil stripe across the case. */
+/* 1 â€” a wide diagonal band, like a foil stripe across the case. */
 .boxart-motif[data-motif='1'] {
   background: linear-gradient(
     var(--cover-sheen, 110deg),
@@ -103,7 +104,7 @@
   );
 }
 
-/* 2 — halftone dot field, fading out toward the plate. */
+/* 2 â€” halftone dot field, fading out toward the plate. */
 .boxart-motif[data-motif='2'] {
   background: radial-gradient(
     color-mix(in srgb, var(--text) 30%, transparent) 0.09rem,
@@ -114,7 +115,7 @@
   mask-image: linear-gradient(to bottom, #000 8%, transparent 72%);
 }
 
-/* 3 — a low horizon glow behind the title. */
+/* 3 â€” a low horizon glow behind the title. */
 .boxart-motif[data-motif='3'] {
   background: radial-gradient(
     88% 46% at 50% 92%,
@@ -123,7 +124,7 @@
   );
 }
 
-/* Slow specular drift across the laminate — idle boxes shimmer faintly, the
+/* Slow specular drift across the laminate â€” idle boxes shimmer faintly, the
    focused one fully (same rule the wall's tiles follow). */
 .boxart-sheen {
   position: absolute;
@@ -193,6 +194,26 @@
   opacity: 0.9;
 }
 
+.boxart-favorite {
+  position: absolute;
+  top: 0.85rem;
+  left: 0.95rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 0.75rem;
+  font-size: 1.55rem;
+  line-height: 1;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 20%, transparent),
+    0 0 1.1rem color-mix(in srgb, var(--accent) 38%, transparent);
+  text-shadow: 0 0 0.7rem color-mix(in srgb, var(--accent) 64%, transparent);
+}
+
 /* --- Title plate ---------------------------------------------------------- */
 
 .boxart-plate {
@@ -212,7 +233,7 @@
   );
 }
 
-/* Publisher-band rule above the title — accent, printed, deliberate. */
+/* Publisher-band rule above the title â€” accent, printed, deliberate. */
 .boxart-band {
   width: 2.4rem;
   height: 0.22rem;
@@ -263,7 +284,7 @@
   inset: -0.55rem;
   border-radius: calc(var(--radius-card) + 0.4rem);
   pointer-events: none;
-  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  border: 0.22rem solid var(--accent);
   box-shadow:
     0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
     inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
@@ -311,3 +332,144 @@
     animation: none;
   }
 }
+
+/* ---- Real scraped cover ------------------------------------------------- */
+
+/* `contain`, not `cover`: box art is the artwork, and cropping a cover to fit
+   a cell mangles logos and edges. The cell already carries the console's own
+   aspect ratio, so letterboxing is minimal â€” and what remains reads as the
+   shelf behind the box rather than a bug. */
+.boxart-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+}
+
+/* With real art the generated plate/band would sit on top of the cover; the
+   title lives under the box instead (the grid label handles it). */
+.boxart[data-real-art='true'] .boxart-plate,
+.boxart[data-real-art='true'] .boxart-glyph,
+.boxart[data-real-art='true'] .boxart-sheen,
+.boxart[data-real-art='true'] .boxart-spine {
+  display: none;
+}
+
+/* Rating badge â€” shown only while the shelf is sorted by rating, so the
+   ranking value is visible on the thing being ranked. */
+.boxart-rating {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0.85rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg-0) 82%, transparent);
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 18%, transparent),
+    0 0.3rem 0.9rem color-mix(in srgb, var(--bg-0) 60%, transparent);
+}
+
+.boxart-rating-star {
+  color: color-mix(in srgb, #e8c84b 78%, var(--text));
+  font-size: 1rem;
+}
+
+/* ---- True-shape boxes ---------------------------------------------------
+   Cartridge boxes are not one shape: Game Boy boxes are nearly square, SNES
+   boxes wide, DS cases tall, Atari boxes wider still. Forcing a single ratio
+   letterboxed most of the shelf.
+
+   So the ROW sets the height and each box takes its artwork's own width.
+   Real covers size from the image itself (no JS measurement needed â€” the
+   img is in flow at height:100%, width:auto), and boxes without art fall
+   back to the console's typical packaging ratio. */
+
+.games-grid[data-shape='natural'] {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+}
+
+.games-grid[data-shape='natural'] .boxart {
+  height: var(--box-h, 21rem);
+  width: auto;
+  aspect-ratio: auto;
+  flex: 0 0 auto;
+}
+
+/* With a real cover the face wraps the image in flow rather than filling an
+   absolutely-sized cell. */
+.games-grid[data-shape='natural'] .boxart[data-real-art='true'] .boxart-face {
+  position: relative;
+  inset: auto;
+  height: 100%;
+  width: auto;
+}
+
+.games-grid[data-shape='natural'] .boxart[data-real-art='true'] .boxart-photo {
+  position: relative;
+  inset: auto;
+  height: 100%;
+  width: auto;
+  max-width: none;
+  object-fit: contain;
+  background: none;
+}
+
+/* No scraped art: keep a plausible case shape for that console so the shelf
+   still reads as boxes rather than ragged rectangles. */
+.games-grid[data-shape='natural'] .boxart:not([data-real-art='true']) {
+  aspect-ratio: var(--box-aspect, 0.75);
+}
+
+/* â”€â”€ Focus fixes for clamped cells â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   With per-console cell ratios the focused box scales up inside a fixed
+   grid cell, so it must not collide with its neighbours and the ring must
+   hug the cell rather than the artwork's letterboxed bounds. */
+
+/* Sit the focused box above its neighbours while it is scaled. */
+.games-grid .boxart[data-focused='true'] {
+  z-index: 5;
+}
+
+/* Real covers fill the cell that the console's ratio defines. `contain`
+   keeps artwork undistorted and uncropped; the cell ratio is close enough
+   to the real packaging that letterboxing is minimal. */
+.games-grid .boxart[data-real-art='true'] .boxart-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: color-mix(in srgb, var(--bg-0) 55%, transparent);
+}
+
+/* The ring sits 0.55rem OUTSIDE the box, so it needs a correspondingly
+   larger radius to stay concentric. Inheriting the box's own radius pulled
+   the corners in and made the focused state look pinched â€” the "hover looks
+   bad" bug. */
+.games-grid .boxart::after {
+  border-radius: calc(var(--radius-card) + 0.55rem);
+}
+
+
+/* Selector rings stand OFF their object (matches the channel wall): a ring
+   hugging the edge reads as a border, one floating around it reads as a
+   cursor. Radius grows by the same amount so it stays concentric. */
+.boxart::after { inset: -0.6rem; border-radius: calc(var(--radius-card) + 0.6rem); }
+.boxart[data-focused='true'] { box-shadow: none; filter: none; }
+.boxart[data-focused='true'] .boxart-face { box-shadow: none; }
+

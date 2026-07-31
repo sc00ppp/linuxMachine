@@ -581,6 +581,49 @@ Same shared rules as Round 5. Focus scope stays `'weather'`; App owns back.
 Keep everything cached in localStorage so the channel opens instantly
 offline. Report honestly which of radar/cameras actually work end-to-end.
 
+## Round 7 — Game detail page, sorting, favorites, pinning
+
+Design: DESIGN.md §11b (detail page), §11c (sorting/favorites), §11d (pinning).
+
+Integrator has added to `core/store.ts`: `gamesLevel` now includes `'detail'`,
+plus `selectedGameKey`, `openGameDetail(key)`, and `closeGameDetail()`. App
+routes back: detail → grid → consoles → wall. A new `core/userLibrary.ts`
+(integrator-owned, read it) persists favorites, pins and per-console sort in
+localStorage and exposes a `useUserLibrary()` hook.
+
+### `src/games/GameDetail.tsx` + CSS — [WORKER: detail]
+
+Full-screen page inside the Games room for the selected `LibraryGame`
+(`shelfFor(consoleId)` gives you the entry; `core/library.ts` has the type).
+
+- **Hero**: if `game.video` exists, the importer copies it to
+  `/game-video/<system>/<slug>.mp4` — play it muted, looped, autoplay,
+  `playsInline`, with the box art as poster and as fallback when absent.
+- **Facts row**: developer · publisher · year (from `releasedate`, format it)
+  · genre · players · rating (as ★ out of 5). Then *your* history: last
+  played (relative), total playtime (`gametime` seconds → "12h 04m"),
+  times played. Omit anything empty rather than printing "—" everywhere.
+- **Description**: `game.desc`, clamped to a readable block, scrollable if long.
+- **Actions** (focusable, scope `'games'`, Play autoFocus): **Play** →
+  existing launch flow (`playLaunch` on the hero element, then
+  `launchApp('games', title)`); **Favorite** → `toggleFavorite(key)`;
+  **Controls** → `openRemap(consoleId)` (the remap room already exists);
+  **Pin to Home** → `togglePin(...)`.
+- Cozy-dusk + glass language, console accent, drill-in entrance. No back
+  handling — App owns it.
+
+### Shelf changes in `src/games/` — [same worker]
+
+- Accept on a box now calls `openGameDetail(entry.key)` instead of launching.
+- **Sort control** in the games header: cycles Recently played · Most played
+  · Favorites · A–Z · Year (persist per console via `userLibrary`), with a
+  visible chip showing the current mode. Bind to the **Y button** as well —
+  the input layer emits `{type:'sort'}` for Y (integrator adds it).
+- **★ badge** on favorited box art (BoxArt gains an optional `favorite` prop).
+- Keep everything else about the shelf intact.
+
+Boundaries: only `src/games/`. No npm deps. Type-clean.
+
 ## Definition of done (each worker)
 
 - `npx tsc --noEmit` clean for your files (run it; ignore errors from other

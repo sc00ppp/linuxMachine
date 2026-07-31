@@ -57,3 +57,6 @@
   letter-spacing: 0.01em;
   color: var(--text-dim);
 }
+
+/* The pill stays — it's the shell's chrome vocabulary. What was removed is
+   the full-width tint band that sat behind it across the bottom edge. */

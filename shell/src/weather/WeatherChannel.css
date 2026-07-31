@@ -1,4 +1,4 @@
-.weather {
+﻿.weather {
   --weather-sky-top: color-mix(in srgb, var(--accent) 18%, var(--bg-0));
   --weather-sky-bottom: color-mix(in srgb, var(--accent) 10%, var(--bg-1));
   --weather-haze: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -145,7 +145,7 @@
   inset: -0.28rem;
   z-index: 3;
   pointer-events: none;
-  border: 0.16rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  border: 0.16rem solid var(--accent);
   border-radius: inherit;
   opacity: 0;
   transform: scale(0.985);
@@ -238,7 +238,7 @@
 .weather-search__intro > p:last-child { margin: 0; color: var(--text-dim); font-size: 1.25rem; font-weight: 650; }
 .weather-search__query { width: min(54rem, 80vw); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; color: var(--text-dim); font-size: 1.25rem; font-weight: 750; }
 .weather-search__query input { min-height: 3.5rem; padding: 0.55rem 1.2rem; border: 0.0625rem solid color-mix(in srgb, var(--text) 18%, transparent); border-radius: var(--radius-chip); outline: none; color: var(--text); background: var(--glass-bg); box-shadow: var(--glass-inset); font: inherit; font-size: 1.4rem; }
-.weather-search__query input:focus { border-color: color-mix(in srgb, var(--accent) 62%, var(--text)); box-shadow: 0 0 1rem color-mix(in srgb, var(--accent) 28%, transparent); }
+.weather-search__query input:focus { border-color: var(--accent); box-shadow: 0 0 1rem color-mix(in srgb, var(--accent) 28%, transparent); }
 .weather-keyboard { display: grid; grid-template-columns: repeat(10, minmax(4rem, 1fr)); gap: 0.65rem; width: min(53rem, 86vw); }
 .weather-key { min-height: 3.3rem; border-radius: var(--radius-card); background: linear-gradient(145deg, color-mix(in srgb, var(--text) 9%, transparent), color-mix(in srgb, var(--bg-0) 20%, transparent)); box-shadow: var(--glass-inset); font-size: 1.3rem; font-weight: 850; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
 .weather-key--wide { grid-column: span 2; }
@@ -300,7 +300,7 @@
 .weather-symbol__drop--three, .weather-symbol__flake--three { animation-delay: calc(-2 * var(--weather-settle-delay)); }
 .weather-symbol__flake { fill: none; stroke: color-mix(in srgb, var(--text) 82%, var(--accent)); stroke-linecap: round; stroke-width: 2.5; transform-origin: center; animation: weather-snow-fall var(--weather-fall-ms) var(--weather-focus-ease) infinite; }
 .weather-symbol__bolt-glow { fill: none; stroke: var(--accent); stroke-linejoin: round; stroke-width: 10; opacity: 0.25; filter: blur(0.1875rem); }
-.weather-symbol__bolt { fill: color-mix(in srgb, var(--accent) 62%, var(--text)); stroke: color-mix(in srgb, var(--text) 65%, transparent); stroke-linejoin: round; stroke-width: 1.5; animation: weather-storm-glow var(--weather-breathe-ms) var(--weather-focus-ease) infinite; }
+.weather-symbol__bolt { fill: var(--accent); stroke: color-mix(in srgb, var(--text) 65%, transparent); stroke-linejoin: round; stroke-width: 1.5; animation: weather-storm-glow var(--weather-breathe-ms) var(--weather-focus-ease) infinite; }
 .weather-symbol__fogline { fill: none; stroke: color-mix(in srgb, var(--text) 66%, transparent); stroke-linecap: round; stroke-width: 8; animation: weather-fog-drift var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate; }
 .weather-symbol__fogline--two { animation-direction: alternate-reverse; }
 .weather-symbol__fogline--three { animation-delay: calc(-2 * var(--weather-settle-delay)); }
@@ -326,3 +326,78 @@
   .weather-symbol__bolt, .weather-symbol__fogline { animation: none; }
   .weather-locations-scroll, .weather-hours-scroll, .weather-days-scroll { scroll-behavior: auto; }
 }
+
+/* â”€â”€ Fable layout pass â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+   The channel was packing everything into the top ~730px of a 1080p screen
+   and leaving the bottom third empty, which is what made it feel unfinished.
+
+   The content column is now a grid that OWNS the full height: the hero takes
+   the space it deserves, the two strips sit on their own generous bands, and
+   the summary line anchors the bottom. Nothing floats in a void. */
+
+.weather-content {
+  display: grid !important;
+  grid-template-rows:
+    minmax(0, 1.15fr)   /* hero: current conditions + art  */
+    auto                /* hourly strip                    */
+    auto                /* daily strip                     */
+    auto;               /* day summary                     */
+  row-gap: clamp(1.5rem, 3.2vh, 3.25rem);
+  padding: clamp(1rem, 2.4vh, 2.5rem) 4rem clamp(1.5rem, 3vh, 3rem) !important;
+}
+
+/* Hero grows with the room instead of being pinned to 14rem. */
+.weather-hero {
+  flex: 1 1 auto !important;
+  min-height: 0;
+  align-self: center;
+  max-width: none !important;
+}
+
+/* Strips span the full content width so the week doesn't sit off-centre. */
+.weather-hourly,
+.weather-outlook {
+  min-width: 0;
+}
+
+.weather-days {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Day cards share the row evenly rather than clustering in the middle. */
+.weather-days > * {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* Conditions text was truncating ("Passing showâ€¦"); let it wrap to two lines
+   inside the taller card instead. */
+.weather-day .weather-day__label,
+.weather-day [class*='label'],
+.weather-day [class*='summary'] {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
+}
+
+/* Hourly cards get a little more air now that there is room for it. */
+.weather-hour {
+  min-width: 8.5rem;
+}
+
+/* "Remove city" was floating loose in the middle of the hero. Park it with
+   the tabs, where the other per-city controls live. */
+.weather-remove-city {
+  position: absolute;
+  top: 0.6rem;
+  right: 4rem;
+  z-index: 5;
+}
+
+/* Strip headings sit closer to their strip than to the block above. */
+.weather-strip-heading {
+  margin-bottom: 0.55rem;
+}
+

@@ -16,6 +16,15 @@ shell/src/core/library.generated.json
 shell/src/core/media.generated.json
 shell/public/art/
 shell/public/media-art/
+shell/public/console-art/
+shell/public/controller-art/
+shell/public/game-video/
+shell/src/core/library/
+shell/src/core/boxAspects.generated.json
+
+# Importer scratch dirs (files appear/vanish mid-run and break `git add`)
+tools/.library-import-*/
+tools/*.log
 
 # Local caches / logs
 *.log

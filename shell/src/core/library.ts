@@ -6,7 +6,7 @@ export interface LibraryGame {
   image: string;
   thumbnail: string;
   marquee: string;
-  video: string;
+  video: string | null;
   rating: number | null;
   releasedate: string;
   developer: string;
@@ -19,6 +19,7 @@ export interface LibraryGame {
   lastplayed: string;
   gametime: number;
   art: string | null;
+  screenshot: string | null;
 }
 
 export interface LibrarySystem {
@@ -58,6 +59,7 @@ const generatedLibrary = generatedModules['./library.generated.json'];
 const sourceSystems = Array.isArray(generatedLibrary?.systems)
   ? generatedLibrary.systems
   : [];
+const GAME_LIMIT = 150;
 
 export const hasLibrary = sourceSystems.length > 0;
 
@@ -84,12 +86,12 @@ for (const sourceSystem of sourceSystems) {
     current.gameCount += sourceSystem.gameCount;
     current.games = [...current.games, ...sourceSystem.games]
       .sort(compareGames)
-      .slice(0, 60);
+      .slice(0, GAME_LIMIT);
   } else {
     systemsById.set(id, {
       id,
       gameCount: sourceSystem.gameCount,
-      games: [...sourceSystem.games].sort(compareGames).slice(0, 60),
+      games: [...sourceSystem.games].sort(compareGames).slice(0, GAME_LIMIT),
     });
   }
 }

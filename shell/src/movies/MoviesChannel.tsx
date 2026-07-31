@@ -21,17 +21,16 @@ import { useFocusable } from '../focus';
 import { tuning } from '../motion/tuning';
 import { playLaunch } from '../motion/transitions';
 import { sound } from '../sound';
+import {
+  MOVIE_SORT_LABELS,
+  cycleMovieSort,
+  useMovieLibrary,
+  type MovieSortMode,
+} from './movieLibrary';
 import './MoviesChannel.css';
 
 type MoviesLevel = 'library' | 'episodes';
 
-/*
- * The integrator owns Back and may add these fields to the store when the
- * route lands. Until then the room still works: accepting a series uses local
- * level state, and Back leaves the channel through App's existing closeView.
- * Once wired, App can change moviesLevel and the component follows it without
- * any input listener of its own.
- */
 interface MoviesStoreBridge {
   moviesLevel?: MoviesLevel;
   setMoviesLevel?: (level: MoviesLevel) => void;
@@ -41,7 +40,21 @@ type LibraryItem =
   | { kind: 'series'; value: MediaSeries }
   | { kind: 'movie'; value: MediaMovie };
 
+interface MediaRow {
+  id: string;
+  title: string;
+  items: LibraryItem[];
+}
+
+const MIN_GENRE_ROW_ITEMS = 3;
+const titleCollator = new Intl.Collator('en', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
 let lastSeriesId = media.series[0]?.id ?? null;
+let lastLibraryFocusId: string | null = null;
+let lastRowId = 'tv-shows';
 
 const cssVars = (vars: Record<string, string | number>): CSSProperties =>
   vars as CSSProperties;
@@ -49,6 +62,117 @@ const cssVars = (vars: Record<string, string | number>): CSSProperties =>
 const prefersReducedMotion = (): boolean =>
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const itemKey = (item: LibraryItem): string =>
+  `${item.kind}-${item.value.id}`;
+
+const posterFocusId = (rowId: string, item: LibraryItem): string =>
+  `media-${rowId}-${itemKey(item)}`;
+
+function genreId(genre: string): string {
+  return genre
+    .toLocaleLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function buildMediaRows(): MediaRow[] {
+  const shows: LibraryItem[] = media.series.map((value) => ({
+    kind: 'series',
+    value,
+  }));
+  const movies: LibraryItem[] = media.movies.map((value) => ({
+    kind: 'movie',
+    value,
+  }));
+  const all = [...shows, ...movies];
+  const rows: MediaRow[] = [];
+  const continuing = all.filter((item) => item.value.resume);
+
+  if (continuing.length > 0) {
+    rows.push({ id: 'continue', title: 'Continue watching', items: continuing });
+  }
+  if (shows.length > 0) {
+    rows.push({ id: 'tv-shows', title: 'TV Shows', items: shows });
+  }
+  if (movies.length > 0) {
+    rows.push({ id: 'movies', title: 'Movies', items: movies });
+  }
+
+  const byGenre = new Map<string, LibraryItem[]>();
+  for (const item of all) {
+    for (const genre of item.value.genres ?? []) {
+      const items = byGenre.get(genre) ?? [];
+      if (!items.some((candidate) => itemKey(candidate) === itemKey(item))) {
+        items.push(item);
+      }
+      byGenre.set(genre, items);
+    }
+  }
+
+  const genreRows = [...byGenre.entries()]
+    .filter(([, items]) => items.length >= MIN_GENRE_ROW_ITEMS)
+    .sort(([left], [right]) => titleCollator.compare(left, right))
+    .map(([title, items]) => ({
+      id: `genre-${genreId(title)}`,
+      title,
+      items,
+    }));
+
+  return [...rows, ...genreRows];
+}
+
+function dateRank(value: string | null): number {
+  if (!value) return 0;
+  const parsed = Date.parse(value.replace(' ', 'T') + (value.includes('Z') ? '' : 'Z'));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+export function sortMediaItems(
+  items: LibraryItem[],
+  mode: MovieSortMode,
+): LibraryItem[] {
+  const decorated = items.map((item, index) => ({ item, index }));
+  const alpha = (left: LibraryItem, right: LibraryItem) =>
+    titleCollator.compare(left.value.title, right.value.title) ||
+    titleCollator.compare(itemKey(left), itemKey(right));
+
+  decorated.sort((left, right) => {
+    switch (mode) {
+      case 'recent':
+        return (
+          dateRank(right.item.value.addedAt) -
+            dateRank(left.item.value.addedAt) ||
+          alpha(left.item, right.item) ||
+          left.index - right.index
+        );
+      case 'year':
+        return (
+          (right.item.value.year ?? -1) - (left.item.value.year ?? -1) ||
+          alpha(left.item, right.item) ||
+          left.index - right.index
+        );
+      case 'rating':
+        return (
+          (right.item.value.rating ?? -1) -
+            (left.item.value.rating ?? -1) ||
+          alpha(left.item, right.item) ||
+          left.index - right.index
+        );
+      case 'alpha':
+        return alpha(left.item, right.item) || left.index - right.index;
+    }
+  });
+
+  return decorated.map(({ item }) => item);
+}
+
+export function handleMoviesSortInput(): void {
+  if (!lastRowId) return;
+  cycleMovieSort(lastRowId);
+  sound.play('accept');
+}
 
 export function MoviesChannel() {
   const wiredLevel = useConsoleStore(
@@ -59,6 +183,8 @@ export function MoviesChannel() {
   );
   const [localLevel, setLocalLevel] = useState<MoviesLevel>('library');
   const level = wiredLevel ?? localLevel;
+  const preferences = useMovieLibrary();
+  const rows = useMemo(buildMediaRows, []);
 
   const [selectedSeriesId, setSelectedSeriesId] = useState<string | null>(
     lastSeriesId,
@@ -77,15 +203,9 @@ export function MoviesChannel() {
     selectedSeries?.seasons[0] ??
     null;
 
-  const libraryItems = useMemo<LibraryItem[]>(
-    () => [
-      ...media.series.map((value) => ({ kind: 'series' as const, value })),
-      ...media.movies.map((value) => ({ kind: 'movie' as const, value })),
-    ],
-    [],
-  );
+  const firstItem = rows[0]?.items[0] ?? null;
   const [highlightedItem, setHighlightedItem] = useState<LibraryItem | null>(
-    libraryItems[0] ?? null,
+    firstItem,
   );
 
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -127,10 +247,8 @@ export function MoviesChannel() {
     sound.play('launch');
     sound.duck(true);
     try {
-      await playLaunch(element, channelById('movies')?.accent ?? 'var(--accent)');
+      await playLaunch(element, channelById('movies')?.accent ?? '#e89a3c');
     } finally {
-      // This is intentionally the app simulator for now. Actual file playback
-      // needs the daemon to resolve and launch the remote library path.
       useConsoleStore.getState().launchApp('movies', title);
     }
   }, []);
@@ -138,21 +256,28 @@ export function MoviesChannel() {
   const launchEpisode = useCallback(
     (episode: MediaEpisode, element: HTMLElement) => {
       const title = selectedSeries
-        ? `${selectedSeries.title} · ${episode.title}`
+        ? `${selectedSeries.title} / ${episode.title}`
         : episode.title;
       void launchTitle(title, element);
     },
     [launchTitle, selectedSeries],
   );
 
-  const accent = channelById('movies')?.accent ?? 'var(--accent)';
+  const accent = channelById('movies')?.accent ?? '#e89a3c';
   const isEpisodes = level === 'episodes' && selectedSeries !== null;
   const headerTitle = isEpisodes
     ? selectedSeries.title
     : highlightedItem?.value.title ?? 'Movies & TV';
   const headerMeta = isEpisodes
-    ? `${selectedSeries.episodeCount} episodes · ${formatBytes(selectedSeries.totalBytes)}`
-    : librarySummary();
+    ? `${selectedSeries.episodeCount} episodes / ${formatBytes(selectedSeries.totalBytes)}`
+    : highlightedItem
+      ? itemSummary(highlightedItem)
+      : librarySummary();
+  const backdrop = isEpisodes
+    ? selectedSeries.fanart
+    : highlightedItem?.kind === 'series'
+      ? highlightedItem.value.fanart
+      : null;
 
   return (
     <main
@@ -165,18 +290,27 @@ export function MoviesChannel() {
         '--focus-ease': tuning.focusEase,
       })}
     >
+      {backdrop && (
+        <div className="movies-backdrop" aria-hidden="true">
+          <img src={backdrop} alt="" />
+        </div>
+      )}
       <div className="movies-light" aria-hidden="true" />
 
       <header className="movies-header" data-collapse="y">
         <div className="movies-titleline">
           <h1 className="movies-heading">Movies &amp; TV</h1>
-          {isEpisodes && <span className="movies-crumb">›</span>}
+          {isEpisodes && <span className="movies-crumb">&rsaquo;</span>}
           <span className="movies-current">{headerTitle}</span>
         </div>
         <span className="movies-tally">{headerMeta}</span>
       </header>
 
-      <div className="movies-level" key={isEpisodes ? 'episodes' : 'library'} ref={levelRef}>
+      <div
+        className="movies-level"
+        key={isEpisodes ? 'episodes' : 'library'}
+        ref={levelRef}
+      >
         {!hasMedia ? (
           <EmptyLibrary />
         ) : isEpisodes ? (
@@ -187,54 +321,159 @@ export function MoviesChannel() {
             onEpisodeAccept={launchEpisode}
           />
         ) : (
-          <div className="movies-row-scroller">
-            <div className="movies-row">
-              {libraryItems.map((item, index) => (
-                <MediaPoster
-                  key={`${item.kind}-${item.value.id}`}
-                  item={item}
-                  autoFocus={
-                    item.kind === 'series'
-                      ? item.value.id === (lastSeriesId ?? media.series[0]?.id)
-                      : index === 0 && media.series.length === 0
-                  }
-                  onFocus={setHighlightedItem}
-                  onAccept={(element) => {
-                    if (item.kind === 'series') {
-                      openSeries(item.value);
-                    } else {
-                      void launchTitle(item.value.title, element);
-                    }
-                  }}
-                />
-              ))}
-            </div>
-          </div>
+          <MediaRows
+            rows={rows}
+            sortByRow={preferences.sort}
+            highlightedFocusId={lastLibraryFocusId}
+            onFocusItem={setHighlightedItem}
+            onOpenSeries={openSeries}
+            onLaunchMovie={launchTitle}
+          />
         )}
       </div>
 
       <footer className="movies-hints" data-collapse="y">
-        {hasMedia && (
-          <Hint badge="A" label={isEpisodes ? 'Watch' : 'Open'} />
-        )}
-        <Hint
-          badge="B"
-          label={
-            isEpisodes && setWiredLevel ? 'Library' : 'Back'
-          }
-        />
+        {hasMedia && <Hint badge="A" label={isEpisodes ? 'Watch' : 'Open'} />}
+        {!isEpisodes && hasMedia && <Hint badge="Y" label="Sort row" />}
+        <Hint badge="B" label={isEpisodes && setWiredLevel ? 'Library' : 'Back'} />
       </footer>
     </main>
   );
 }
 
+function MediaRows({
+  rows,
+  sortByRow,
+  highlightedFocusId,
+  onFocusItem,
+  onOpenSeries,
+  onLaunchMovie,
+}: {
+  rows: MediaRow[];
+  sortByRow: Record<string, MovieSortMode>;
+  highlightedFocusId: string | null;
+  onFocusItem: (item: LibraryItem) => void;
+  onOpenSeries: (series: MediaSeries) => void;
+  onLaunchMovie: (title: string, element: HTMLElement) => void;
+}) {
+  const fallbackFocusId = rows[0]?.items[0]
+    ? posterFocusId(rows[0].id, rows[0].items[0])
+    : null;
+
+  return (
+    <div className="media-rows-scroll">
+      <div className="media-rows-stack">
+        {rows.map((row) => {
+          const mode = sortByRow[row.id] ?? 'alpha';
+          const sorted = sortMediaItems(row.items, mode);
+          return (
+            <section className="media-shelf" key={row.id}>
+              <h2 className="media-shelf-heading">
+                <span>{row.title}</span>
+                <small>{row.items.length}</small>
+              </h2>
+              <div className="media-shelf-scroller">
+                <div className="media-shelf-row">
+                  <MovieSortControl rowId={row.id} mode={mode} />
+                  {sorted.map((item) => {
+                    const focusId = posterFocusId(row.id, item);
+                    return (
+                      <MediaPoster
+                        key={itemKey(item)}
+                        rowId={row.id}
+                        item={item}
+                        sortMode={mode}
+                        autoFocus={
+                          focusId === (highlightedFocusId ?? fallbackFocusId)
+                        }
+                        onFocus={(focusedItem) => {
+                          lastRowId = row.id;
+                          lastLibraryFocusId = focusId;
+                          onFocusItem(focusedItem);
+                        }}
+                        onAccept={(element) => {
+                          if (item.kind === 'series') {
+                            onOpenSeries(item.value);
+                          } else {
+                            onLaunchMovie(item.value.title, element);
+                          }
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function MovieSortControl({
+  rowId,
+  mode,
+}: {
+  rowId: string;
+  mode: MovieSortMode;
+}) {
+  const elementRef = useRef<HTMLButtonElement | null>(null);
+  const cycle = useCallback(() => {
+    lastRowId = rowId;
+    cycleMovieSort(rowId);
+    sound.play('accept');
+  }, [rowId]);
+  const { ref: focusRef, focused } = useFocusable({
+    id: `movies-sort-${rowId}`,
+    scope: 'movies',
+    onAccept: cycle,
+  });
+  const setRef = useCallback(
+    (element: HTMLButtonElement | null) => {
+      elementRef.current = element;
+      focusRef(element);
+    },
+    [focusRef],
+  );
+
+  useEffect(() => {
+    if (!focused) return;
+    lastRowId = rowId;
+    elementRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+      inline: 'nearest',
+      block: 'nearest',
+    });
+  }, [focused, rowId]);
+
+  return (
+    <button
+      ref={setRef}
+      type="button"
+      className="movies-sort"
+      data-focused={focused ? 'true' : undefined}
+      aria-label={`Sort ${rowId}: ${MOVIE_SORT_LABELS[mode]}. Select for next mode.`}
+      onClick={cycle}
+    >
+      <span className="movies-sort-button" aria-hidden="true">Y</span>
+      <span className="movies-sort-caption">Sort</span>
+      <strong>{MOVIE_SORT_LABELS[mode]}</strong>
+    </button>
+  );
+}
+
 function MediaPoster({
+  rowId,
   item,
+  sortMode,
   autoFocus,
   onFocus,
   onAccept,
 }: {
+  rowId: string;
   item: LibraryItem;
+  sortMode: MovieSortMode;
   autoFocus: boolean;
   onFocus: (item: LibraryItem) => void;
   onAccept: (element: HTMLElement) => void;
@@ -250,7 +489,7 @@ function MediaPoster({
     if (elementRef.current) latest.current.onAccept(elementRef.current);
   }, []);
   const { ref: focusRef, focused } = useFocusable({
-    id: `media-${item.kind}-${item.value.id}`,
+    id: posterFocusId(rowId, item),
     scope: 'movies',
     onAccept: accept,
     autoFocus,
@@ -276,8 +515,19 @@ function MediaPoster({
   const poster = item.value.poster;
   const details =
     item.kind === 'series'
-      ? `${item.value.episodeCount} episodes`
+      ? `${item.value.year ?? 'TV'} / ${item.value.episodeCount} episodes`
       : item.value.year?.toString() ?? formatBytes(item.value.sizeBytes);
+  const progress = item.value.resume
+    ? Math.max(
+        0,
+        Math.min(
+          100,
+          (item.value.resume.positionSeconds /
+            item.value.resume.totalSeconds) *
+            100,
+        ),
+      )
+    : null;
 
   return (
     <article className="media-poster-slot">
@@ -301,19 +551,33 @@ function MediaPoster({
               <span className="media-poster-mark" aria-hidden="true">
                 {item.kind === 'series' ? 'TV' : 'FILM'}
               </span>
-              <span className="media-poster-fallback-title">{item.value.title}</span>
+              <span className="media-poster-fallback-title">
+                {item.value.title}
+              </span>
             </div>
+          )}
+          {sortMode === 'rating' && item.value.rating !== null && (
+            <span className="media-poster-rating">
+              {'\u2605'} {item.value.rating.toFixed(1)}
+            </span>
           )}
           <span className="media-poster-kind">
             {item.kind === 'series' ? 'Series' : 'Movie'}
           </span>
+          {progress !== null && (
+            <span className="media-poster-progress" aria-hidden="true">
+              <span style={{ width: `${progress}%` }} />
+            </span>
+          )}
           <div className="media-poster-sheen" />
           <div className="media-poster-rim" />
         </div>
       </div>
       <div className={`media-poster-label${focused ? ' is-focused' : ''}`}>
         <span>{item.value.title}</span>
-        <small>{details}</small>
+        <small>
+          {progress !== null ? `${Math.round(progress)}% watched` : details}
+        </small>
       </div>
     </article>
   );
@@ -401,7 +665,6 @@ function SeasonChip({
     },
     autoFocus,
   });
-
   const setRef = useCallback(
     (element: HTMLDivElement | null) => {
       elementRef.current = element;
@@ -483,7 +746,7 @@ function EpisodeCard({
       ? 'Episode'
       : seasonNumber === 0
         ? `Special ${episode.episodeNumber}`
-        : `S${seasonNumber} · E${episode.episodeNumber}`;
+        : `S${seasonNumber} / E${episode.episodeNumber}`;
 
   return (
     <div
@@ -498,7 +761,7 @@ function EpisodeCard({
         <span className="episode-film-hole episode-film-hole--bottom" />
         <span className="episode-number">{number}</span>
         <span className="episode-play" aria-hidden="true">
-          ▶
+          {'\u25b6'}
         </span>
       </div>
       <div className="episode-card-copy">
@@ -514,7 +777,7 @@ function EmptyLibrary() {
     <div className="movies-empty">
       <span className="movies-empty-orbit" aria-hidden="true" />
       <h2>Your library is resting.</h2>
-      <p>Import the Kodi collection when you’re ready to fill this room.</p>
+      <p>Import the Kodi collection when you are ready to fill this room.</p>
     </div>
   );
 }
@@ -530,19 +793,21 @@ function Hint({ badge, label }: { badge: string; label: string }) {
   );
 }
 
+function itemSummary(item: LibraryItem): string {
+  const parts: string[] = [];
+  if (item.value.year) parts.push(String(item.value.year));
+  if (item.value.genres?.[0]) parts.push(item.value.genres[0]);
+  if (item.value.rating !== null) {
+    parts.push(`${item.value.rating.toFixed(1)} rating`);
+  }
+  return parts.join(' / ') || librarySummary();
+}
+
 function librarySummary(): string {
   const parts = [];
-  if (media.series.length > 0) {
-    parts.push(
-      `${media.series.length} ${media.series.length === 1 ? 'series' : 'series'}`,
-    );
-  }
-  if (media.movies.length > 0) {
-    parts.push(
-      `${media.movies.length} ${media.movies.length === 1 ? 'movie' : 'movies'}`,
-    );
-  }
-  return parts.join(' · ') || 'Library';
+  if (media.series.length > 0) parts.push(`${media.series.length} series`);
+  if (media.movies.length > 0) parts.push(`${media.movies.length} movies`);
+  return parts.join(' / ') || 'Library';
 }
 
 function formatBytes(bytes: number): string {
@@ -563,8 +828,7 @@ function animateDrill(
 ): void {
   if (!element) return;
   const reduced = prefersReducedMotion();
-  const offset =
-    direction === 'deeper' ? tuning.drillSlidePx : -tuning.drillSlidePx;
+  const offset = direction === 'deeper' ? tuning.drillSlidePx : -tuning.drillSlidePx;
   const frames: Keyframe[] = reduced
     ? [{ opacity: 0 }, { opacity: 1 }]
     : [
@@ -577,6 +841,6 @@ function animateDrill(
       easing: tuning.drillInEase,
     });
   } catch {
-    // Cosmetic only; the room remains fully usable without WAAPI.
+    // Cosmetic only; the room remains usable without WAAPI.
   }
 }

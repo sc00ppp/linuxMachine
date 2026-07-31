@@ -1,11 +1,25 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { CONSOLES, consoleById, shelfFor, type ConsoleEntry } from '../core/consoles';
+import { useCallback, useLayoutEffect, useRef, useState } from 'react';
+import {
+  CONSOLES,
+  consoleById,
+  shelfFor,
+  type ConsoleEntry,
+  type ShelfGame,
+} from '../core/consoles';
 import { useConsoleStore } from '../core/store';
-import { playLaunch } from '../motion/transitions';
+import {
+  SORT_LABELS,
+  cycleSort,
+  gameId,
+  useUserLibrary,
+  type SortMode,
+} from '../core/userLibrary';
+import { useFocusable } from '../focus';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
 import { BoxArt } from './BoxArt';
 import { ConsoleRow } from './ConsoleRow';
+import { GameDetail } from './GameDetail';
 import { RoomLight } from './RoomLight';
 import { cssVars, prefersReducedMotion } from './util';
 import './GamesRoom.css';
@@ -24,12 +38,143 @@ import './GamesRoom.css';
  * engine falls through to the autoFocus entry).
  */
 let lastConsoleId = CONSOLES[0]?.id ?? '';
+let lastGameKey: string | null = null;
+
+const titleCollator = new Intl.Collator('en', {
+  numeric: true,
+  sensitivity: 'base',
+});
+
+function dateRank(value: string | undefined): number {
+  if (!value) return 0;
+  const match = /^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2}))?/.exec(
+    value,
+  );
+  if (!match) return 0;
+  return Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4] ?? 0),
+    Number(match[5] ?? 0),
+    Number(match[6] ?? 0),
+  );
+}
+
+function releaseYear(value: string | undefined): number {
+  const match = /^(\d{4})/.exec(value ?? '');
+  return match ? Number(match[1]) : 0;
+}
+
+/**
+ * Sort a decorated copy so equal or missing metadata falls back to import
+ * order. The importer already ranks that order thoughtfully, so it is a much
+ * better tie-breaker than reshuffling shelves unpredictably.
+ */
+export function sortShelf(
+  shelf: ShelfGame[],
+  mode: SortMode,
+  consoleId: string,
+  favorites: ReadonlySet<string>,
+): ShelfGame[] {
+  const decorated = shelf.map((entry, index) => ({ entry, index }));
+  const alpha = (left: ShelfGame, right: ShelfGame) =>
+    titleCollator.compare(left.title, right.title) ||
+    titleCollator.compare(left.key, right.key);
+  const favorite = (entry: ShelfGame) =>
+    favorites.has(gameId(consoleId, entry.key));
+
+  decorated.sort((left, right) => {
+    switch (mode) {
+      case 'recent':
+        return (
+          dateRank(right.entry.game?.lastplayed) -
+            dateRank(left.entry.game?.lastplayed) ||
+          left.index - right.index
+        );
+      case 'played':
+        return (
+          (right.entry.game?.playcount ?? 0) -
+            (left.entry.game?.playcount ?? 0) ||
+          (right.entry.game?.gametime ?? 0) -
+            (left.entry.game?.gametime ?? 0) ||
+          left.index - right.index
+        );
+      case 'favorites':
+        return (
+          Number(favorite(right.entry)) - Number(favorite(left.entry)) ||
+          left.index - right.index
+        );
+      case 'rating':
+        // Scraped 0–1 rating, best first. Unrated titles sink rather than
+        // scattering through the shelf.
+        return (
+          (right.entry.game?.rating ?? -1) - (left.entry.game?.rating ?? -1) ||
+          alpha(left.entry, right.entry) ||
+          left.index - right.index
+        );
+      case 'alpha':
+        return alpha(left.entry, right.entry) || left.index - right.index;
+      case 'year':
+        return (
+          releaseYear(right.entry.game?.releasedate) -
+            releaseYear(left.entry.game?.releasedate) ||
+          alpha(left.entry, right.entry) ||
+          left.index - right.index
+        );
+      case 'default':
+        return left.index - right.index;
+    }
+  });
+
+  return decorated.map(({ entry }) => entry);
+}
+
+/** Contextual Y-button target; App may forward sort input here. */
+export function handleGamesSortInput(): void {
+  if (useConsoleStore.getState().gamesLevel !== 'grid' || !lastConsoleId) return;
+  cycleSort(lastConsoleId);
+  sound.play('accept');
+}
+
+interface SortControlProps {
+  mode: SortMode;
+}
+
+function SortControl({ mode }: SortControlProps) {
+  const { ref, focused } = useFocusable({
+    id: 'games-sort',
+    scope: 'games',
+    onAccept: handleGamesSortInput,
+  });
+  const setRef = useCallback(
+    (element: HTMLButtonElement | null) => ref(element),
+    [ref],
+  );
+
+  return (
+    <button
+      ref={setRef}
+      type='button'
+      className='games-sort'
+      data-focused={focused ? 'true' : undefined}
+      aria-label={`Sort: ${SORT_LABELS[mode]}. Select for next sort mode.`}
+      onClick={handleGamesSortInput}
+    >
+      <span className='games-sort-button' aria-hidden='true'>
+        Y
+      </span>
+      <span className='games-sort-caption'>Sort</span>
+      <span className='games-sort-value'>{SORT_LABELS[mode]}</span>
+    </button>
+  );
+}
 
 /**
  * The Console Room (DESIGN.md §11) — the full-screen in-shell room that
  * replaces the channel wall while `view === 'games'`.
  *
- * Two levels, both living in the single focus scope 'games' that App
+ * Three levels, all living in the single focus scope 'games' that App
  * activates for this view:
  *
  *   1. `gamesLevel === 'consoles'` — a scrolling row of console tiles,
@@ -43,20 +188,20 @@ let lastConsoleId = CONSOLES[0]?.id ?? '';
  */
 export function GamesRoom() {
   const level = useConsoleStore((s) => s.gamesLevel);
+  const selectedGameKey = useConsoleStore((s) => s.selectedGameKey);
+  const userLibrary = useUserLibrary();
   const [activeId, setActiveId] = useState<string>(lastConsoleId);
   const platform: ConsoleEntry = consoleById(activeId) ?? CONSOLES[0];
   // Real library entries (with scraped art) when the import has run.
   const shelf = shelfFor(platform.id);
+  const sortMode = userLibrary.sort[platform.id] ?? 'default';
+  const favorites = new Set(userLibrary.favorites);
+  const sortedShelf = sortShelf(shelf, sortMode, platform.id, favorites);
+  const detailEntry =
+    shelf.find((entry) => entry.key === selectedGameKey) ?? null;
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const levelRef = useRef<HTMLDivElement | null>(null);
-  /** Blocks a second accept while a launch transition is in flight. */
-  const busy = useRef(false);
-  /** Current platform for the stable, engine-held accept callbacks. */
-  const platformRef = useRef(platform);
-  useEffect(() => {
-    platformRef.current = platform;
-  });
 
   // --- entrance ------------------------------------------------------------
 
@@ -77,7 +222,8 @@ export function GamesRoom() {
     prevLevel.current = level;
     if (from === null || from === level) return;
 
-    const deeper = level === 'grid';
+    const depth = { consoles: 0, grid: 1, detail: 2 } as const;
+    const deeper = depth[level] > depth[from as keyof typeof depth];
     animateDrill(
       levelRef.current,
       deeper ? 'deeper' : 'shallower',
@@ -94,31 +240,22 @@ export function GamesRoom() {
 
   const handleOpenConsole = useCallback((platformId: string) => {
     lastConsoleId = platformId;
+    lastGameKey = null;
     setActiveId(platformId);
     sound.play('accept');
     useConsoleStore.getState().setGamesLevel('grid');
   }, []);
 
-  // --- level 2: launch ------------------------------------------------------
+  // --- level 2: shelf -------------------------------------------------------
 
-  const handlePlay = useCallback(async (title: string, el: HTMLElement) => {
-    if (busy.current) return;
-    busy.current = true;
-
-    const accent = platformRef.current.accent;
-    sound.play('launch');
-    // Stay ducked past the transition; the return flow un-ducks on the wall.
-    sound.duck(true);
-    try {
-      await playLaunch(el, accent);
-    } finally {
-      // Even if the choreography fails, never strand the user in a
-      // half-collapsed room.
-      useConsoleStore.getState().launchApp('games', title);
-    }
+  const handleOpenGame = useCallback((key: string) => {
+    lastGameKey = key;
+    sound.play('accept');
+    useConsoleStore.getState().openGameDetail(key);
   }, []);
 
   const inGrid = level === 'grid';
+  const inDetail = level === 'detail';
 
   return (
     <div
@@ -133,13 +270,30 @@ export function GamesRoom() {
         '--focus-ms': `${tuning.focusMoveMs}ms`,
         '--focus-ease': tuning.focusEase,
         '--tint-ms': `${Math.round(tuning.focusMoveMs * 2.4)}ms`,
+        // Per-system packaging shape: SNES boxes are near-square, DS/GBA
+        // cases are tall, Atari boxes are wide. One ratio letterboxes half
+        // the shelf, so the grid takes the console's own aspect.
+        '--box-aspect': String(platform.boxAspect),
+        // Columns follow the shape: wide N64/PS1 wraps get rows of 3, square
+        // SNES/Game Boy boxes 5, tall DS/Switch covers 6. A fixed column
+        // count made wide shelves tiny and tall shelves gigantic.
+        '--box-cols': String(
+          platform.boxAspect >= 1.9
+            ? 3
+            : platform.boxAspect >= 1.25
+              ? 4
+              : platform.boxAspect >= 0.85
+                ? 5
+                : 6,
+        ),
       })}
     >
       <RoomLight accent={platform.accent} />
 
+      {!inDetail && (
       <header className="games-header" data-collapse="y">
         <h1 className="games-heading">Games</h1>
-        {inGrid ? (
+        {inGrid && !inDetail ? (
           <>
             <span className="games-crumb" aria-hidden="true">
               ›
@@ -155,29 +309,45 @@ export function GamesRoom() {
               {platform.gameCount === 1 ? 'game' : 'games'}
               {platform.gameCount > shelf.length && ` · showing ${shelf.length}`}
             </span>
+            <SortControl mode={sortMode} />
           </>
         ) : (
           <span className="games-subhead">Choose a console</span>
         )}
       </header>
+      )}
 
       {/* Keyed on the level so the outgoing screen's scroll position and focus
           registrations are torn down cleanly before the next one mounts. */}
       <div className="games-level" key={level} ref={levelRef}>
-        {inGrid ? (
+        {inDetail && detailEntry ? (
+          <GameDetail console={platform} entry={detailEntry} />
+        ) : inDetail ? (
+          <div className='games-missing-detail glass'>
+            <h1>That game moved</h1>
+            <p>Press B to return to the library.</p>
+          </div>
+        ) : inGrid ? (
           <div className="games-shelf">
-            {shelf.length > 0 ? (
+            {sortedShelf.length > 0 ? (
+              // Cells use the console's own packaging ratio (--box-aspect);
+              // artwork is fitted inside, never stretched or cropped.
               <div className="games-grid">
-                {shelf.map((entry, i) => (
+                {sortedShelf.map((entry, i) => (
                   <BoxArt
                     key={entry.key}
-                    id={`game-${i}`}
+                    id={`game-${entry.key}`}
                     title={entry.title}
                     art={entry.art}
+                    favorite={favorites.has(gameId(platform.id, entry.key))}
+                    // Sorting by rating is meaningless if you can't see the
+                    // ratings — show them on the art while that sort is on.
+                    rating={sortMode === 'rating' ? (entry.game?.rating ?? null) : null}
                     platform={platform}
-                    onAccept={handlePlay}
-                    // Drilling into a library always lands on the first box.
-                    autoFocus={i === 0}
+                    onAccept={() => handleOpenGame(entry.key)}
+                    // Backing out of detail lands on the game that opened it;
+                    // a fresh console still starts at the first box.
+                    autoFocus={lastGameKey ? entry.key === lastGameKey : i === 0}
                   />
                 ))}
               </div>
@@ -194,6 +364,7 @@ export function GamesRoom() {
         )}
       </div>
 
+      {!inDetail && (
       <footer className="games-hints" data-collapse="y">
         <span className="games-hint">
           <span className="games-hint-badge" aria-hidden="true">
@@ -208,6 +379,7 @@ export function GamesRoom() {
           <span className="games-hint-label">{inGrid ? 'Consoles' : 'Back'}</span>
         </span>
       </footer>
+      )}
     </div>
   );
 }

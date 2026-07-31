@@ -1,11 +1,68 @@
-/* Level 1 — the console shelf: one unbounded scrolling row. */
+/* Level 1 — the console picker: one independently scrolling row per maker. */
 
 .crow {
   flex: 1 1 auto;
   min-height: 0;
+  width: 100%;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+  scroll-padding-block: 2rem;
+  overscroll-behavior-block: contain;
+  scrollbar-width: none;
+}
+
+.crow::-webkit-scrollbar {
+  display: none;
+}
+
+.crow-stack {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding-block: 1rem 2.5rem;
+}
+
+.crow-group {
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
+.crow-maker {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin: 0;
+  padding-inline: 6rem;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.crow-maker::after {
+  content: '';
+  flex: 1 1 auto;
+  min-width: 3rem;
+  height: 0.0625rem;
+  background: linear-gradient(
+    to right,
+    var(--line-strong),
+    color-mix(in srgb, var(--text) 2%, transparent)
+  );
+}
+
+.crow-maker-name {
+  font-weight: 800;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--text) 42%, transparent);
+}
+
+.crow-maker-count {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: color-mix(in srgb, var(--text) 25%, transparent);
 }
 
 /* Horizontal scroller with Switch-style edge margins: focus roams the middle
@@ -16,11 +73,13 @@
   z-index: 1;
   width: 100%;
   overflow-x: auto;
+  overflow-y: hidden;
   scroll-behavior: smooth;
-  scroll-padding-inline: 12rem;
+  scroll-padding-inline: 10rem;
+  overscroll-behavior-inline: contain;
   /* Vertical breathing room so the focus scale, the ring and the label lift
      are not sheared off by the scroll clip. */
-  padding: 3.5rem 6rem;
+  padding: 1.3rem 6rem 2.6rem;
   scrollbar-width: none;
 }
 
@@ -28,60 +87,40 @@
   display: none;
 }
 
-.crow-track {
+.crow-tiles {
+  position: relative;
+  isolation: isolate;
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
+  gap: 1.5rem;
   width: max-content;
+  min-width: 100%;
+  min-height: 17.5rem;
   /* Fixed tile width — tiles never shrink to fit the console count. */
   --ctile-w: 21rem;
 }
 
-.crow-group {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-}
-
-.crow-group + .crow-group {
-  margin-left: 3.4rem;
-}
-
-/* Shelf divider between makers: a hairline that fades out at both ends, so it
-   reads as a partition in the furniture rather than a table border. */
-.crow-group + .crow-group::before {
+/* The rail continues through gaps and beyond short rows, so a one-machine PC
+   row still reads as a shelf with room to fill. */
+.crow-tiles::before {
   content: '';
   position: absolute;
-  left: -1.7rem;
-  top: 2.6rem;
-  bottom: 1.2rem;
-  width: 0.0625rem;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  top: 14.7rem;
+  height: 0.0625rem;
   background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    var(--line) 18%,
-    var(--line) 80%,
-    transparent 100%
+    to right,
+    color-mix(in srgb, var(--text) 4%, transparent),
+    var(--line-strong) 12%,
+    var(--line) 88%,
+    transparent
   );
 }
 
-.crow-maker {
-  margin: 0 0 1rem 0.5rem;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: var(--tracking-wide);
-  text-transform: uppercase;
-  white-space: nowrap;
-  color: color-mix(in srgb, var(--text) 34%, transparent);
-}
-
-.crow-tiles {
-  display: flex;
-  align-items: flex-start;
-  /* Tight Switch-style gutters — the ring needs just enough room to breathe. */
-  gap: 1.5rem;
-}
-
 @media (prefers-reduced-motion: reduce) {
+  .crow,
   .crow-scroller {
     scroll-behavior: auto;
   }

@@ -19,6 +19,9 @@ const GamesRoom = lazy(() => import('./games/GamesRoom').then((m) => ({ default:
 const MoviesChannel = lazy(() =>
   import('./movies/MoviesChannel').then((m) => ({ default: m.MoviesChannel })),
 );
+const YouTubeChannel = lazy(() =>
+  import('./youtube/YouTubeChannel').then((m) => ({ default: m.YouTubeChannel })),
+);
 const SettingsRoom = lazy(() =>
   import('./settings/SettingsRoom').then((m) => ({ default: m.SettingsRoom })),
 );
@@ -128,6 +131,10 @@ export default function App() {
           // Reader → headline view, not out of the channel.
           st.setNewsReading(false);
           sound.play('back');
+        } else if (st.mode === 'home' && st.view === 'games' && st.gamesLevel === 'detail') {
+          // Game page → back to the shelf.
+          st.closeGameDetail();
+          sound.play('back');
         } else if (st.mode === 'home' && st.view === 'games' && st.gamesLevel === 'grid') {
           // Wii U grid → back up to the console row, not out of the room.
           st.setGamesLevel('consoles');
@@ -174,6 +181,9 @@ export default function App() {
       )}
       {mode === 'home' && view === 'movies' && (
         <Room name="Movies & TV"><MoviesChannel /></Room>
+      )}
+      {mode === 'home' && view === 'youtube' && (
+        <Room name="YouTube"><YouTubeChannel /></Room>
       )}
       {mode === 'home' && view === 'settings' && (
         <Room name="Settings"><SettingsRoom /></Room>

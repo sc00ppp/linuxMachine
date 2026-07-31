@@ -1,4 +1,4 @@
-/* Setting tile — home/Tile.css's squircle-face-plus-glyph language, all five
+﻿/* Setting tile â€” home/Tile.css's squircle-face-plus-glyph language, all five
    tiles sharing the room's one slate-teal accent instead of a per-item
    color (there's no "channel" to individuate them, this is one room). */
 
@@ -130,7 +130,7 @@
   inset: -0.55rem;
   border-radius: calc(var(--radius-tile) + 0.4rem);
   pointer-events: none;
-  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  border: 0.22rem solid var(--accent);
   box-shadow:
     0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
     inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
@@ -227,3 +227,8 @@
     animation: none;
   }
 }
+
+
+.settings-tile::after { inset: -0.7rem; border-radius: calc(var(--radius-tile) + 0.7rem); }
+.settings-tile[data-focused='true'] { box-shadow: none; filter: none; }
+

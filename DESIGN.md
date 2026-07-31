@@ -176,13 +176,19 @@ rail, which read as a settings screen rather than a place)*
 
 Opening Games drills into a room organized **by console**, in two levels:
 
-- **Level 1 — console picker**: a single scrolling row of console tiles,
-  the same interaction language as the Home wall (crisp ring, edge
-  scrolling, neighbors make room). Each tile is an **SVG illustration of
-  the actual hardware** (NES, SNES, N64, GameCube, Wii, Game Boy, Genesis,
-  Saturn, Dreamcast, PS1, PS2, PSP, a PC tower) tinted in that console's
-  accent. **PC is just another console** whose library is Steam. Nintendo /
-  Sega / PlayStation / PC ordering, maker labels kept subtle.
+- **Level 1 — console picker**: a **grid, one maker per row** — Nintendo on
+  top, then PlayStation, Sega, Xbox, and **PC last**. Each row scrolls
+  horizontally on its own; up/down moves between makers, left/right along a
+  maker's machines. A quiet maker label sits at the head of each row.
+  **A maker only earns a row once it has 3+ machines**, except the four
+  majors (Nintendo, PlayStation, Sega, Xbox) which always keep their own row
+  however few machines they hold. Atari, NEC, SNK, Coleco and friends share
+  a single "Other" row rather than each getting a near-empty shelf.
+  Tiles use **real console hardware images** harvested from RetroBat's theme
+  art, falling back to our hand-drawn SVGs for anything unmatched.
+  **PC is a row, not a single tile** — Steam is one library among others
+  (GOG, Epic, standalone installs), so it gets the same shelf treatment as
+  any console.
 - **Level 2 — "Wii U mode"**: accepting a console fills the screen with a
   big dense grid of box art — Wii U home menu energy, 5-ish columns,
   vertical scroll. The room's lighting takes the console's accent.
@@ -190,6 +196,40 @@ Opening Games drills into a room organized **by console**, in two levels:
 - Later: per-console "insert cartridge" launch sounds, real box art from
   RetroArch's Named_Boxarts thumbnails (already on disk — see
   ARCHITECTURE.md library sources).
+
+## 11b. Game detail page
+
+Selecting a game does **not** launch it — it opens the game's page, the way a
+console does. This is where the scraped metadata finally pays off.
+
+- **Hero**: the scraped preview **video** plays muted on a loop behind/beside
+  the box art (RetroBat has one per game); falls back to the cover if absent.
+- **Facts**: developer, publisher, year, genre, players, rating — and *your*
+  history from the gamelist: last played, total playtime, playcount.
+- **Description**: the scraped `desc`, at readable size.
+- **Actions**: **Play** (primary), **Favorite** (toggle, ★), **Controls**
+  (opens the remap room scoped to this console), and later Save states.
+- B returns to the shelf; the shelf remembers where you were.
+
+## 11c. Library sorting & favorites
+
+The shelf needs to be steerable once a system has hundreds of games:
+
+- **Sort** (Y cycles, or a chip in the header): Recently played · Most played
+  · Favorites first · A–Z · Year. Default is the importer's ranking (played,
+  then favorites, then alphabetical).
+- **Favorites** are read from the gamelist's `favorite` flag and toggled
+  locally; a ★ badge sits on the corner of favorited box art.
+- **Filter**: a Favorites-only toggle.
+- Sort/filter choices persist per console.
+
+## 11d. Pinning to Home
+
+Any game (or channel screen) can be **pinned to the channel wall** so it sits
+next to Games/Movies/YouTube — the console equivalent of "add to home
+screen". Pinned games appear as tiles using their box art, launch directly,
+and can be reordered or unpinned. This is what makes the wall *yours* rather
+than a fixed menu.
 
 ## 12. Controllers overlay — Wii Home spirit
 

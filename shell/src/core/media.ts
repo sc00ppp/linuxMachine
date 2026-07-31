@@ -14,19 +14,38 @@ export interface MediaSeason {
   episodes: MediaEpisode[];
 }
 
+export interface MediaResume {
+  positionSeconds: number;
+  totalSeconds: number;
+  lastPlayed: string | null;
+  episodeTitle?: string;
+  seasonNumber?: number | null;
+  episodeNumber?: number | null;
+}
+
 export interface MediaSeries {
   id: string;
   title: string;
+  year: number | null;
+  rating: number | null;
+  genres: string[];
+  addedAt: string | null;
+  resume: MediaResume | null;
   seasons: MediaSeason[];
   episodeCount: number;
   totalBytes: number;
   poster: string | null;
+  fanart: string | null;
 }
 
 export interface MediaMovie {
   id: string;
   title: string;
   year: number | null;
+  rating: number | null;
+  genres: string[];
+  addedAt: string | null;
+  resume: MediaResume | null;
   fileName: string;
   sizeBytes: number;
   poster: string | null;

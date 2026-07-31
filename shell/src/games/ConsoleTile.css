@@ -1,7 +1,7 @@
-/* Console tile — the wall's tile language (home/Tile.css) applied to hardware:
+﻿/* Console tile â€” the wall's tile language (home/Tile.css) applied to hardware:
    accent-gradient face, crisp accent ring, label below revealed on focus,
    neighbours making room. Landscape rather than square because the machines
-   themselves are landscape (ConsoleArt draws into a 240×160 viewBox). */
+   themselves are landscape (ConsoleArt draws into a 240Ã—160 viewBox). */
 
 .ctile-slot {
   display: flex;
@@ -36,7 +36,7 @@
   will-change: transform;
 }
 
-/* Unfocused machines sit back a step — "the rest of the shelf recedes". */
+/* Unfocused machines sit back a step â€” "the rest of the shelf recedes". */
 .ctile:not([data-focused='true']) {
   filter: saturate(0.84) brightness(0.82);
 }
@@ -73,8 +73,8 @@
   box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 72%, transparent);
 }
 
-/* Slow specular drift across the face — idle tiles shimmer, the focused one
-   fully (DESIGN.md §2 "idle tiles animate subtly"). */
+/* Slow specular drift across the face â€” idle tiles shimmer, the focused one
+   fully (DESIGN.md Â§2 "idle tiles animate subtly"). */
 .ctile-sheen {
   position: absolute;
   inset: -30%;
@@ -129,6 +129,11 @@
   transition: transform var(--focus-ms) var(--focus-ease);
 }
 
+.ctile-art-real {
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+}
+
 .ctile[data-focused='true'] .ctile-art {
   transform: translateY(-0.2rem) scale(1.03);
 }
@@ -168,7 +173,7 @@
   inset: -0.55rem;
   border-radius: calc(var(--radius-tile) + 0.4rem);
   pointer-events: none;
-  border: 0.22rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  border: 0.22rem solid var(--accent);
   box-shadow:
     0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
     inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
@@ -245,3 +250,12 @@
     animation: none;
   }
 }
+
+
+/* Selector rings stand OFF their object (matches the channel wall): a ring
+   hugging the edge reads as a border, one floating around it reads as a
+   cursor. Radius grows by the same amount so it stays concentric. */
+.ctile::after { inset: -0.7rem; border-radius: calc(var(--radius-tile) + 0.7rem); }
+.ctile[data-focused='true'] { box-shadow: none; filter: none; }
+.ctile[data-focused='true'] .ctile-face { box-shadow: none; }
+

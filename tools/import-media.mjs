@@ -5,7 +5,7 @@
  *
  * There are deliberately no npm dependencies here. The remote machine's
  * default SSH shell is cmd.exe, so the inventory is sent as a UTF-16LE
- * PowerShell EncodedCommand. Only local generated metadata and poster files
+ * PowerShell EncodedCommand. Only local generated metadata and artwork files
  * are written; the media PC is never modified.
  */
 import { execFile as execFileCallback } from 'node:child_process';
@@ -47,6 +47,7 @@ $ProgressPreference = 'SilentlyContinue'
 
 $tvRoot = 'S:\Kodi\Collection\TV Shows'
 $movieRoot = 'S:\Kodi\Collection\Movies'
+$kodiUserdata = Join-Path $env:APPDATA 'Kodi\userdata'
 $videoExtensions = @(
   '.3gp', '.avi', '.divx', '.flv', '.iso', '.m2ts', '.m4v', '.mkv',
   '.mov', '.mp4', '.mpeg', '.mpg', '.mts', '.ogm', '.ts', '.vob',
@@ -62,34 +63,6 @@ function Get-VideoFiles([string] $root) {
     Get-ChildItem -LiteralPath $root -Recurse -File -ErrorAction SilentlyContinue |
       Where-Object { $videoExtensions -contains $_.Extension.ToLowerInvariant() }
   )
-}
-
-function Get-FirstArtwork([string] $directory, [string] $stem) {
-  $candidates = @()
-  if ($stem) {
-    $candidates += @(
-      "$stem-poster.jpg",
-      "$stem-poster.jpeg",
-      "$stem.jpg",
-      "$stem.jpeg"
-    )
-  }
-  $candidates += @(
-    'poster.jpg',
-    'poster.jpeg',
-    'folder.jpg',
-    'folder.jpeg',
-    'fanart.jpg',
-    'fanart.jpeg'
-  )
-
-  foreach ($name in $candidates) {
-    $candidate = Join-Path $directory $name
-    if (Test-Path -LiteralPath $candidate -PathType Leaf) {
-      return $candidate
-    }
-  }
-  return $null
 }
 
 function Get-SeasonNumber([System.IO.FileInfo] $file, [string] $seriesRoot) {
@@ -163,7 +136,6 @@ if (Test-Path -LiteralPath $tvRoot -PathType Container) {
       Title = $seriesDirectory.Name
       EpisodeCount = $episodeRows.Count
       TotalBytes = [int64] (($episodeRows | Measure-Object SizeBytes -Sum).Sum)
-      PosterSource = Get-FirstArtwork $seriesDirectory.FullName $null
       Seasons = $seasons
     }
   }
@@ -176,11 +148,11 @@ foreach ($file in @(Get-VideoFiles $movieRoot)) {
     BaseName = $file.BaseName
     ParentName = $file.Directory.Name
     SizeBytes = [int64] $file.Length
-    PosterSource = Get-FirstArtwork $file.DirectoryName $file.BaseName
   }
 }
 
 [pscustomobject] @{
+  KodiUserdata = $kodiUserdata
   Series = $series
   Movies = $movies
 } | ConvertTo-Json -Depth 9 -Compress
@@ -310,10 +282,564 @@ async function runInventory() {
   }
 }
 
+/**
+ * Neither import machine has a sqlite3 executable. This reader implements
+ * only the read-only SQLite pieces Kodi needs here: table b-trees, overflow
+ * payloads, records, varints, and scalar serial types. It does not implement
+ * SQL and never mutates pages.
+ */
+class ReadOnlySqlite {
+  constructor(buffer, label) {
+    this.buffer = buffer;
+    this.label = label;
+    if (buffer.subarray(0, 16).toString('binary') !== 'SQLite format 3\0') {
+      throw new Error(`${label} is not a SQLite 3 database.`);
+    }
+
+    const encodedPageSize = buffer.readUInt16BE(16);
+    this.pageSize = encodedPageSize === 1 ? 65536 : encodedPageSize;
+    this.usableSize = this.pageSize - buffer[20];
+    this.textEncoding = buffer.readUInt32BE(56) || 1;
+    this.tables = new Map();
+
+    for (const { values } of this.readBtree(1)) {
+      if (values[0] !== 'table' || !values[1] || !values[3]) continue;
+      this.tables.set(String(values[1]), Number(values[3]));
+    }
+  }
+
+  static async open(filePath) {
+    return new ReadOnlySqlite(await fs.readFile(filePath), path.basename(filePath));
+  }
+
+  table(name) {
+    const rootPage = this.tables.get(name);
+    if (!rootPage) throw new Error(`${this.label} has no ${name} table.`);
+    return this.readBtree(rootPage);
+  }
+
+  page(pageNumber) {
+    const start = (pageNumber - 1) * this.pageSize;
+    const end = start + this.pageSize;
+    if (pageNumber < 1 || end > this.buffer.length) {
+      throw new Error(`${this.label} references invalid page ${pageNumber}.`);
+    }
+    return this.buffer.subarray(start, end);
+  }
+
+  readVarint(buffer, start) {
+    let value = 0n;
+    for (let index = 0; index < 8; index += 1) {
+      const byte = buffer[start + index];
+      value = (value << 7n) | BigInt(byte & 0x7f);
+      if ((byte & 0x80) === 0) return [Number(value), index + 1];
+    }
+    value = (value << 8n) | BigInt(buffer[start + 8]);
+    return [Number(value), 9];
+  }
+
+  readSignedInteger(buffer, start, byteCount) {
+    let value = 0n;
+    for (let index = 0; index < byteCount; index += 1) {
+      value = (value << 8n) | BigInt(buffer[start + index]);
+    }
+    const bits = BigInt(byteCount * 8);
+    if (value & (1n << (bits - 1n))) value -= 1n << bits;
+    return Number(value);
+  }
+
+  decodeText(bytes) {
+    if (this.textEncoding === 2) return bytes.toString('utf16le');
+    if (this.textEncoding === 3) {
+      const swapped = Buffer.allocUnsafe(bytes.length);
+      for (let index = 0; index < bytes.length; index += 2) {
+        swapped[index] = bytes[index + 1];
+        swapped[index + 1] = bytes[index];
+      }
+      return swapped.toString('utf16le');
+    }
+    return bytes.toString('utf8');
+  }
+
+  decodeRecord(payload) {
+    const [headerSize, headerVarintSize] = this.readVarint(payload, 0);
+    const serialTypes = [];
+    let headerOffset = headerVarintSize;
+    while (headerOffset < headerSize) {
+      const [serialType, length] = this.readVarint(payload, headerOffset);
+      serialTypes.push(serialType);
+      headerOffset += length;
+    }
+
+    let valueOffset = headerSize;
+    return serialTypes.map((serialType) => {
+      if (serialType === 0) return null;
+      if (serialType >= 1 && serialType <= 6) {
+        const byteCount = [0, 1, 2, 3, 4, 6, 8][serialType];
+        const value = this.readSignedInteger(payload, valueOffset, byteCount);
+        valueOffset += byteCount;
+        return value;
+      }
+      if (serialType === 7) {
+        const value = payload.readDoubleBE(valueOffset);
+        valueOffset += 8;
+        return value;
+      }
+      if (serialType === 8) return 0;
+      if (serialType === 9) return 1;
+      if (serialType === 10 || serialType === 11) {
+        throw new Error(`${this.label} contains a reserved SQLite serial type.`);
+      }
+
+      const byteCount =
+        serialType % 2 === 0
+          ? (serialType - 12) / 2
+          : (serialType - 13) / 2;
+      const bytes = payload.subarray(valueOffset, valueOffset + byteCount);
+      valueOffset += byteCount;
+      return serialType % 2 === 0 ? Buffer.from(bytes) : this.decodeText(bytes);
+    });
+  }
+
+  readCellPayload(pageBuffer, cellOffset, payloadSize, cellHeaderSize) {
+    const maxLocal = this.usableSize - 35;
+    let localSize = payloadSize;
+    if (payloadSize > maxLocal) {
+      const minLocal = Math.floor(((this.usableSize - 12) * 32) / 255) - 23;
+      const candidate =
+        minLocal + ((payloadSize - minLocal) % (this.usableSize - 4));
+      localSize = candidate <= maxLocal ? candidate : minLocal;
+    }
+
+    const chunks = [
+      pageBuffer.subarray(
+        cellOffset + cellHeaderSize,
+        cellOffset + cellHeaderSize + localSize,
+      ),
+    ];
+    let remaining = payloadSize - localSize;
+    let overflowPage =
+      remaining > 0
+        ? pageBuffer.readUInt32BE(cellOffset + cellHeaderSize + localSize)
+        : 0;
+
+    while (remaining > 0) {
+      const overflow = this.page(overflowPage);
+      overflowPage = overflow.readUInt32BE(0);
+      const chunkSize = Math.min(remaining, this.usableSize - 4);
+      chunks.push(overflow.subarray(4, 4 + chunkSize));
+      remaining -= chunkSize;
+    }
+
+    return Buffer.concat(chunks, payloadSize);
+  }
+
+  readBtree(rootPage) {
+    const rows = [];
+    const visited = new Set();
+    const walk = (pageNumber) => {
+      if (visited.has(pageNumber)) {
+        throw new Error(`${this.label} contains a cyclic b-tree.`);
+      }
+      visited.add(pageNumber);
+
+      const pageBuffer = this.page(pageNumber);
+      const base = pageNumber === 1 ? 100 : 0;
+      const type = pageBuffer[base];
+      const cellCount = pageBuffer.readUInt16BE(base + 3);
+      const headerSize = type === 0x05 ? 12 : 8;
+
+      if (type === 0x05) {
+        for (let index = 0; index < cellCount; index += 1) {
+          const cellOffset = pageBuffer.readUInt16BE(
+            base + headerSize + index * 2,
+          );
+          walk(pageBuffer.readUInt32BE(cellOffset));
+        }
+        walk(pageBuffer.readUInt32BE(base + 8));
+        return;
+      }
+
+      if (type !== 0x0d) {
+        throw new Error(
+          `${this.label} uses unsupported b-tree page type 0x${type.toString(16)}.`,
+        );
+      }
+
+      for (let index = 0; index < cellCount; index += 1) {
+        const cellOffset = pageBuffer.readUInt16BE(
+          base + headerSize + index * 2,
+        );
+        const [payloadSize, payloadVarintSize] = this.readVarint(
+          pageBuffer,
+          cellOffset,
+        );
+        const [rowid, rowidVarintSize] = this.readVarint(
+          pageBuffer,
+          cellOffset + payloadVarintSize,
+        );
+        const cellHeaderSize = payloadVarintSize + rowidVarintSize;
+        const payload = this.readCellPayload(
+          pageBuffer,
+          cellOffset,
+          payloadSize,
+          cellHeaderSize,
+        );
+        rows.push({ rowid, values: this.decodeRecord(payload) });
+      }
+    };
+
+    walk(rootPage);
+    return rows;
+  }
+}
+
+function mediaMatchKey(value) {
+  return String(value ?? '')
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s*\((?:19|20)\d{2}\)\s*$/, '')
+    .replace(/&/g, ' and ')
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+function yearFromDate(value) {
+  const match = /^((?:19|20)\d{2})/.exec(String(value ?? ''));
+  return match ? Number(match[1]) : null;
+}
+
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function splitLegacyGenres(value) {
+  return String(value ?? '')
+    .split(/\s*\/\s*|\s*,\s*/)
+    .map((genre) => genre.trim())
+    .filter(Boolean);
+}
+
+function bestTimestamp(values) {
+  return (
+    values
+      .filter((value) => typeof value === 'string' && value)
+      .sort((left, right) => right.localeCompare(left))[0] ?? null
+  );
+}
+
+function createKodiMetadata(videoDb, textureDb) {
+  const files = new Map(
+    videoDb.table('files').map(({ rowid, values }) => [
+      rowid,
+      {
+        id: rowid,
+        pathId: Number(values[1]),
+        fileName: String(values[2] ?? ''),
+        playCount: finiteNumber(values[3]) ?? 0,
+        lastPlayed: values[4] ? String(values[4]) : null,
+        addedAt: values[5] ? String(values[5]) : null,
+      },
+    ]),
+  );
+  const paths = new Map(
+    videoDb.table('path').map(({ rowid, values }) => [
+      rowid,
+      {
+        value: String(values[1] ?? ''),
+        addedAt: values[11] ? String(values[11]) : null,
+      },
+    ]),
+  );
+
+  const textureSizes = new Map();
+  for (const { values } of textureDb.table('sizes')) {
+    textureSizes.set(Number(values[0]), {
+      width: finiteNumber(values[2]) ?? 0,
+      height: finiteNumber(values[3]) ?? 0,
+      useCount: finiteNumber(values[4]) ?? 0,
+    });
+  }
+
+  const texturesByUrl = new Map();
+  for (const { rowid, values } of textureDb.table('texture')) {
+    const url = String(values[1] ?? '');
+    const cachedUrl = String(values[2] ?? '').replaceAll('\\', '/');
+    if (!url || !/^[0-9a-f]\/[0-9a-f]+\.jpe?g$/i.test(cachedUrl)) continue;
+    const texture = {
+      cachedUrl,
+      ...(textureSizes.get(rowid) ?? { width: 0, height: 0, useCount: 0 }),
+    };
+    const existing = texturesByUrl.get(url);
+    if (
+      !existing ||
+      texture.width * texture.height > existing.width * existing.height
+    ) {
+      texturesByUrl.set(url, texture);
+    }
+  }
+
+  const artByMedia = new Map();
+  for (const { values } of videoDb.table('art')) {
+    const mediaId = Number(values[1]);
+    const mediaType = String(values[2] ?? '');
+    const type = String(values[3] ?? '');
+    const url = String(values[4] ?? '');
+    const texture = texturesByUrl.get(url);
+    if (!mediaId || !mediaType || !type || !texture) continue;
+    const key = `${mediaType}:${mediaId}`;
+    const entries = artByMedia.get(key) ?? [];
+    entries.push({ type, ...texture });
+    artByMedia.set(key, entries);
+  }
+
+  const pickArtwork = (mediaType, mediaId, priorities, shape) => {
+    const entries = artByMedia.get(`${mediaType}:${mediaId}`) ?? [];
+    for (const type of priorities) {
+      const matches = entries
+        .filter((entry) => entry.type === type)
+        .sort((left, right) => {
+          const leftShape =
+            shape === 'portrait'
+              ? left.height - left.width
+              : left.width - left.height;
+          const rightShape =
+            shape === 'portrait'
+              ? right.height - right.width
+              : right.width - right.height;
+          return (
+            rightShape - leftShape ||
+            right.width * right.height - left.width * left.height ||
+            right.useCount - left.useCount
+          );
+        });
+      if (matches[0]) return matches[0].cachedUrl;
+    }
+    return null;
+  };
+
+  const genreNames = new Map(
+    videoDb
+      .table('genre')
+      .map(({ rowid, values }) => [rowid, String(values[1] ?? '')]),
+  );
+  const genresByMedia = new Map();
+  for (const { values } of videoDb.table('genre_link')) {
+    const genre = genreNames.get(Number(values[0]));
+    const mediaId = Number(values[1]);
+    const mediaType = String(values[2] ?? '');
+    if (!genre || !mediaId || !mediaType) continue;
+    const key = `${mediaType}:${mediaId}`;
+    const genres = genresByMedia.get(key) ?? [];
+    if (!genres.includes(genre)) genres.push(genre);
+    genresByMedia.set(key, genres);
+  }
+
+  const ratingsByMedia = new Map();
+  for (const { values } of videoDb.table('rating')) {
+    const mediaId = Number(values[1]);
+    const mediaType = String(values[2] ?? '');
+    const rating = finiteNumber(values[4]);
+    const votes = finiteNumber(values[5]) ?? 0;
+    if (!mediaId || !mediaType || rating === null) continue;
+    const key = `${mediaType}:${mediaId}`;
+    const current = ratingsByMedia.get(key);
+    if (!current || votes > current.votes) {
+      ratingsByMedia.set(key, { rating, votes });
+    }
+  }
+
+  const bookmarksByFile = new Map();
+  for (const { values } of videoDb.table('bookmark')) {
+    const fileId = Number(values[1]);
+    const positionSeconds = finiteNumber(values[2]);
+    const totalSeconds = finiteNumber(values[3]);
+    const type = Number(values[7]);
+    if (
+      type !== 1 ||
+      !fileId ||
+      positionSeconds === null ||
+      totalSeconds === null ||
+      positionSeconds <= 0 ||
+      totalSeconds <= 0
+    ) {
+      continue;
+    }
+    const resume = { positionSeconds, totalSeconds };
+    const current = bookmarksByFile.get(fileId);
+    if (!current || positionSeconds > current.positionSeconds) {
+      bookmarksByFile.set(fileId, resume);
+    }
+  }
+
+  const resumeForFile = (fileId, episode = null) => {
+    const bookmark = bookmarksByFile.get(fileId);
+    if (!bookmark) return null;
+    const file = files.get(fileId);
+    return {
+      ...bookmark,
+      lastPlayed: file?.lastPlayed ?? null,
+      ...(episode
+        ? {
+            episodeTitle: episode.title,
+            seasonNumber: episode.seasonNumber,
+            episodeNumber: episode.episodeNumber,
+          }
+        : {}),
+    };
+  };
+
+  const showPaths = new Map();
+  for (const { values } of videoDb.table('tvshowlinkpath')) {
+    const showId = Number(values[0]);
+    const pathId = Number(values[1]);
+    const list = showPaths.get(showId) ?? [];
+    list.push(pathId);
+    showPaths.set(showId, list);
+  }
+
+  const episodesByShow = new Map();
+  for (const { rowid, values } of videoDb.table('episode')) {
+    const showId = Number(values[26]);
+    const episode = {
+      id: rowid,
+      fileId: Number(values[1]),
+      title: String(values[2] ?? 'Episode'),
+      seasonNumber: finiteNumber(values[14]),
+      episodeNumber: finiteNumber(values[15]),
+    };
+    const list = episodesByShow.get(showId) ?? [];
+    list.push(episode);
+    episodesByShow.set(showId, list);
+  }
+
+  const seriesByKey = new Map();
+  for (const { rowid, values } of videoDb.table('tvshow')) {
+    const title = String(values[1] ?? '');
+    const episodes = episodesByShow.get(rowid) ?? [];
+    const episodeRatings = episodes
+      .map((episode) => ratingsByMedia.get(`episode:${episode.id}`)?.rating)
+      .filter((rating) => rating !== undefined);
+    const rating =
+      episodeRatings.length > 0
+        ? episodeRatings.reduce((sum, value) => sum + value, 0) /
+          episodeRatings.length
+        : null;
+    const resumes = episodes
+      .map((episode) => resumeForFile(episode.fileId, episode))
+      .filter(Boolean)
+      .sort((left, right) =>
+        String(right.lastPlayed ?? '').localeCompare(
+          String(left.lastPlayed ?? ''),
+        ),
+      );
+    const pathDates = (showPaths.get(rowid) ?? [])
+      .map((pathId) => paths.get(pathId)?.addedAt)
+      .filter(Boolean);
+    const episodeDates = episodes
+      .map((episode) => files.get(episode.fileId)?.addedAt)
+      .filter(Boolean);
+    const linkedGenres = genresByMedia.get(`tvshow:${rowid}`) ?? [];
+
+    seriesByKey.set(mediaMatchKey(title), {
+      kodiId: rowid,
+      title,
+      year: yearFromDate(values[6]),
+      rating,
+      genres:
+        linkedGenres.length > 0 ? linkedGenres : splitLegacyGenres(values[9]),
+      addedAt: bestTimestamp([...pathDates, ...episodeDates]),
+      resume: resumes[0] ?? null,
+      posterCachedUrl: pickArtwork(
+        'tvshow',
+        rowid,
+        ['poster', 'thumb', 'keyart', 'landscape', 'banner', 'fanart'],
+        'portrait',
+      ),
+      fanartCachedUrl: pickArtwork(
+        'tvshow',
+        rowid,
+        ['fanart', 'landscape', 'thumb', 'banner'],
+        'landscape',
+      ),
+    });
+  }
+
+  const moviesByFile = new Map();
+  const moviesByKey = new Map();
+  for (const { rowid, values } of videoDb.table('movie')) {
+    const fileId = Number(values[1]);
+    const file = files.get(fileId);
+    const title = String(values[2] ?? '');
+    const premiered = values[28] ? String(values[28]) : null;
+    const metadata = {
+      kodiId: rowid,
+      fileId,
+      title,
+      year: yearFromDate(premiered),
+      rating: ratingsByMedia.get(`movie:${rowid}`)?.rating ?? null,
+      genres: genresByMedia.get(`movie:${rowid}`) ?? [],
+      addedAt: file?.addedAt ?? null,
+      resume: resumeForFile(fileId),
+      posterCachedUrl: pickArtwork(
+        'movie',
+        rowid,
+        ['poster', 'thumb', 'keyart', 'landscape', 'banner', 'fanart'],
+        'portrait',
+      ),
+    };
+    if (file?.fileName) {
+      moviesByFile.set(file.fileName.toLocaleLowerCase(), metadata);
+    }
+    moviesByKey.set(
+      `${mediaMatchKey(title)}:${metadata.year ?? ''}`,
+      metadata,
+    );
+  }
+
+  return {
+    series(title) {
+      return seriesByKey.get(mediaMatchKey(title)) ?? null;
+    },
+    movie(row, identity) {
+      return (
+        moviesByFile.get(String(row.FileName).toLocaleLowerCase()) ??
+        moviesByKey.get(
+          `${mediaMatchKey(identity.title)}:${identity.year ?? ''}`,
+        ) ??
+        null
+      );
+    },
+  };
+}
+
 async function exists(filePath) {
   try {
     await fs.access(filePath);
     return true;
+  } catch {
+    return false;
+  }
+}
+
+async function isUsableJpeg(filePath) {
+  try {
+    const handle = await fs.open(filePath, 'r');
+    try {
+      const header = Buffer.alloc(3);
+      const { bytesRead } = await handle.read(header, 0, header.length, 0);
+      const stats = await handle.stat();
+      return (
+        bytesRead === 3 &&
+        stats.size > 128 &&
+        header[0] === 0xff &&
+        header[1] === 0xd8 &&
+        header[2] === 0xff
+      );
+    } finally {
+      await handle.close();
+    }
   } catch {
     return false;
   }
@@ -326,50 +852,153 @@ function remoteScpPath(remotePath) {
   return `${remote}:${remotePath.replaceAll('\\', '/')}`;
 }
 
-async function copyPoster(source, slug, counters) {
-  if (!source) return null;
+function windowsJoin(...parts) {
+  return parts
+    .map((part, index) =>
+      String(part)
+        .replaceAll('/', '\\')
+        .replace(index === 0 ? /\\+$/g : /^\\+|\\+$/g, ''),
+    )
+    .filter(Boolean)
+    .join('\\');
+}
 
-  const destination = path.join(artDirectory, `${slug}.jpg`);
-  if (await exists(destination)) {
-    counters.postersSkipped += 1;
-    return `/media-art/${slug}.jpg`;
+async function copyKodiDatabases(kodiUserdata, temporaryDirectory) {
+  const databaseDirectory = windowsJoin(kodiUserdata, 'Database');
+  const copies = [
+    ['MyVideos131.db', path.join(temporaryDirectory, 'MyVideos131.db')],
+    ['Textures13.db', path.join(temporaryDirectory, 'Textures13.db')],
+  ];
+
+  for (const [name, destination] of copies) {
+    try {
+      await execFile(
+        scpBinary,
+        [
+          '-q',
+          remoteScpPath(windowsJoin(databaseDirectory, name)),
+          destination,
+        ],
+        {
+          encoding: 'utf8',
+          maxBuffer: 4 * 1024 * 1024,
+          windowsHide: true,
+        },
+      );
+    } catch (error) {
+      const detail =
+        error && typeof error === 'object' && 'stderr' in error
+          ? String(error.stderr).trim()
+          : String(error);
+      throw new Error(`Kodi database copy failed for ${name}: ${detail}`);
+    }
   }
 
-  const partial = `${destination}.part`;
-  await fs.rm(partial, { force: true });
-  try {
-    await execFile(scpBinary, ['-q', remoteScpPath(source), partial], {
-      encoding: 'utf8',
-      maxBuffer: 4 * 1024 * 1024,
-      windowsHide: true,
-    });
-    await fs.rename(partial, destination);
-    counters.postersCopied += 1;
-    return `/media-art/${slug}.jpg`;
-  } catch (error) {
-    counters.posterFailures += 1;
+  return {
+    videos: copies[0][1],
+    textures: copies[1][1],
+  };
+}
+
+async function copyArtwork(
+  requests,
+  kodiUserdata,
+  temporaryDirectory,
+  counters,
+) {
+  const downloadDirectory = path.join(temporaryDirectory, 'thumbnails');
+  await fs.mkdir(downloadDirectory, { recursive: true });
+
+  const pending = [];
+  for (const request of requests) {
+    if (await isUsableJpeg(request.destination)) {
+      request.target[request.field] = request.publicPath;
+      counters.artSkipped += 1;
+      continue;
+    }
+    if (await exists(request.destination)) {
+      counters.artFailures += 1;
+      console.warn(
+        `Existing artwork is not a usable JPEG; left untouched: ${request.destination}`,
+      );
+      continue;
+    }
+    pending.push(request);
+  }
+
+  const byCachedUrl = new Map();
+  for (const request of pending) {
+    const list = byCachedUrl.get(request.cachedUrl) ?? [];
+    list.push(request);
+    byCachedUrl.set(request.cachedUrl, list);
+  }
+
+  const cachedUrls = [...byCachedUrl.keys()];
+  const chunkSize = 48;
+  for (let start = 0; start < cachedUrls.length; start += chunkSize) {
+    const chunk = cachedUrls.slice(start, start + chunkSize);
+    const sources = chunk.map((cachedUrl) =>
+      remoteScpPath(windowsJoin(kodiUserdata, 'Thumbnails', cachedUrl)),
+    );
+    try {
+      await execFile(scpBinary, ['-q', ...sources, downloadDirectory], {
+        encoding: 'utf8',
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true,
+      });
+    } catch (error) {
+      const detail =
+        error && typeof error === 'object' && 'stderr' in error
+          ? String(error.stderr).trim()
+          : String(error);
+      // A multi-source scp can still copy the other files in its batch. Each
+      // expected file is validated below, so retain successful copies.
+      console.warn(`Artwork batch reported an error: ${detail || error}`);
+    }
+  }
+
+  for (const request of pending) {
+    const staged = path.join(
+      downloadDirectory,
+      path.posix.basename(request.cachedUrl),
+    );
+    if (!(await isUsableJpeg(staged))) {
+      counters.artFailures += 1;
+      console.warn(`Cached Kodi artwork was unavailable: ${request.cachedUrl}`);
+      continue;
+    }
+
+    const partial = `${request.destination}.part`;
     await fs.rm(partial, { force: true });
-    const detail =
-      error && typeof error === 'object' && 'stderr' in error
-        ? String(error.stderr).trim()
-        : String(error);
-    console.warn(`Poster copy failed for ${source}: ${detail}`);
-    return null;
+    try {
+      await fs.copyFile(staged, partial);
+      await fs.rename(partial, request.destination);
+      request.target[request.field] = request.publicPath;
+      counters.artCopied += 1;
+    } catch (error) {
+      counters.artFailures += 1;
+      await fs.rm(partial, { force: true });
+      console.warn(`Artwork install failed for ${request.destination}: ${error}`);
+    }
   }
 }
 
-async function buildCatalog(inventory) {
+function buildCatalog(inventory, kodiMetadata) {
   const usedSlugs = new Set();
+  const artworkRequests = [];
   const counters = {
-    postersCopied: 0,
-    postersSkipped: 0,
-    posterFailures: 0,
+    seriesMetadataMatches: 0,
+    movieMetadataMatches: 0,
+    artCopied: 0,
+    artSkipped: 0,
+    artFailures: 0,
   };
 
   const series = [];
   for (const row of inventory.Series ?? []) {
     const id = uniqueSlug(String(row.Title), usedSlugs);
-    const poster = await copyPoster(row.PosterSource, id, counters);
+    const kodi = kodiMetadata.series(row.Title);
+    if (kodi) counters.seriesMetadataMatches += 1;
     const seasons = (row.Seasons ?? []).map((season) => {
       const number = Number(season.Number);
       const episodes = (season.Episodes ?? []).map((episode, index) => {
@@ -401,29 +1030,71 @@ async function buildCatalog(inventory) {
       };
     });
 
-    series.push({
+    const item = {
       id,
       title: String(row.Title),
+      year: kodi?.year ?? null,
+      rating: kodi?.rating ?? null,
+      genres: kodi?.genres ?? [],
+      addedAt: kodi?.addedAt ?? null,
+      resume: kodi?.resume ?? null,
       seasons,
       episodeCount: Number(row.EpisodeCount),
       totalBytes: Number(row.TotalBytes),
-      poster,
-    });
+      poster: null,
+      fanart: null,
+    };
+    series.push(item);
+
+    if (kodi?.posterCachedUrl) {
+      artworkRequests.push({
+        target: item,
+        field: 'poster',
+        cachedUrl: kodi.posterCachedUrl,
+        destination: path.join(artDirectory, `${id}.jpg`),
+        publicPath: `/media-art/${id}.jpg`,
+      });
+    }
+    if (kodi?.fanartCachedUrl) {
+      artworkRequests.push({
+        target: item,
+        field: 'fanart',
+        cachedUrl: kodi.fanartCachedUrl,
+        destination: path.join(artDirectory, `${id}-fanart.jpg`),
+        publicPath: `/media-art/${id}-fanart.jpg`,
+      });
+    }
   }
 
   const movies = [];
   for (const row of inventory.Movies ?? []) {
     const identity = movieIdentity(row);
     const id = uniqueSlug(identity.title, usedSlugs);
-    const poster = await copyPoster(row.PosterSource, id, counters);
-    movies.push({
+    const kodi = kodiMetadata.movie(row, identity);
+    if (kodi) counters.movieMetadataMatches += 1;
+    const item = {
       id,
       title: identity.title,
-      year: identity.year,
+      year: identity.year ?? kodi?.year ?? null,
+      rating: kodi?.rating ?? null,
+      genres: kodi?.genres ?? [],
+      addedAt: kodi?.addedAt ?? null,
+      resume: kodi?.resume ?? null,
       fileName: String(row.FileName),
       sizeBytes: Number(row.SizeBytes),
-      poster,
-    });
+      poster: null,
+    };
+    movies.push(item);
+
+    if (kodi?.posterCachedUrl) {
+      artworkRequests.push({
+        target: item,
+        field: 'poster',
+        cachedUrl: kodi.posterCachedUrl,
+        destination: path.join(artDirectory, `${id}.jpg`),
+        publicPath: `/media-art/${id}.jpg`,
+      });
+    }
   }
 
   return {
@@ -432,6 +1103,7 @@ async function buildCatalog(inventory) {
       series,
       movies,
     },
+    artworkRequests,
     counters,
   };
 }
@@ -445,27 +1117,83 @@ async function writeCatalog(catalog) {
 
 async function main() {
   await fs.mkdir(artDirectory, { recursive: true });
-  console.log(`Reading Kodi library from ${remote} (read-only)…`);
-  const inventory = await runInventory();
-  const { catalog, counters } = await buildCatalog(inventory);
-  await writeCatalog(catalog);
-
-  const episodeCount = catalog.series.reduce(
-    (total, item) => total + item.episodeCount,
-    0,
+  const temporaryDirectory = path.join(
+    artDirectory,
+    `.kodi-import-${process.pid}-${Date.now()}`,
   );
-  const totalBytes =
-    catalog.series.reduce((total, item) => total + item.totalBytes, 0) +
-    catalog.movies.reduce((total, item) => total + item.sizeBytes, 0);
+  await fs.mkdir(temporaryDirectory, { recursive: true });
 
-  console.log(`Series: ${catalog.series.length}`);
-  console.log(`Episodes: ${episodeCount}`);
-  console.log(`Movies: ${catalog.movies.length}`);
-  console.log(`Media bytes: ${totalBytes}`);
-  console.log(`Posters copied: ${counters.postersCopied}`);
-  console.log(`Posters already present: ${counters.postersSkipped}`);
-  console.log(`Poster copy failures: ${counters.posterFailures}`);
-  console.log(`Wrote ${path.relative(projectRoot, generatedPath)}`);
+  try {
+    console.log(`Reading Kodi library from ${remote} (read-only)...`);
+    const inventory = await runInventory();
+    if (!inventory.KodiUserdata) {
+      throw new Error('The media PC did not report Kodi userdata.');
+    }
+
+    console.log('Copying Kodi databases for local read-only parsing...');
+    const databasePaths = await copyKodiDatabases(
+      String(inventory.KodiUserdata),
+      temporaryDirectory,
+    );
+    const [videoDb, textureDb] = await Promise.all([
+      ReadOnlySqlite.open(databasePaths.videos),
+      ReadOnlySqlite.open(databasePaths.textures),
+    ]);
+    const kodiMetadata = createKodiMetadata(videoDb, textureDb);
+    const { catalog, artworkRequests, counters } = buildCatalog(
+      inventory,
+      kodiMetadata,
+    );
+
+    await copyArtwork(
+      artworkRequests,
+      String(inventory.KodiUserdata),
+      temporaryDirectory,
+      counters,
+    );
+    await writeCatalog(catalog);
+
+    const episodeCount = catalog.series.reduce(
+      (total, item) => total + item.episodeCount,
+      0,
+    );
+    const totalBytes =
+      catalog.series.reduce((total, item) => total + item.totalBytes, 0) +
+      catalog.movies.reduce((total, item) => total + item.sizeBytes, 0);
+    const seriesPosters = catalog.series.filter((item) => item.poster).length;
+    const moviePosters = catalog.movies.filter((item) => item.poster).length;
+    const seriesFanart = catalog.series.filter((item) => item.fanart).length;
+
+    console.log(
+      'SQLite route: copied DBs + built-in pure Node read-only b-tree reader',
+    );
+    console.log(`Series: ${catalog.series.length}`);
+    console.log(`Episodes: ${episodeCount}`);
+    console.log(`Movies: ${catalog.movies.length}`);
+    console.log(`Media bytes: ${totalBytes}`);
+    console.log(
+      `Kodi metadata matched: ${counters.seriesMetadataMatches} series, ${counters.movieMetadataMatches} movies`,
+    );
+    console.log(
+      `Posters recovered: ${seriesPosters}/${catalog.series.length} series, ${moviePosters}/${catalog.movies.length} movies`,
+    );
+    console.log(
+      `Series fanart recovered: ${seriesFanart}/${catalog.series.length}`,
+    );
+    console.log(`Artwork copied: ${counters.artCopied}`);
+    console.log(`Artwork already present: ${counters.artSkipped}`);
+    console.log(`Artwork failures: ${counters.artFailures}`);
+    console.log(`Wrote ${path.relative(projectRoot, generatedPath)}`);
+  } finally {
+    const resolvedArt = path.resolve(artDirectory);
+    const resolvedTemporary = path.resolve(temporaryDirectory);
+    if (
+      resolvedTemporary.startsWith(`${resolvedArt}${path.sep}`) &&
+      path.basename(resolvedTemporary).startsWith('.kodi-import-')
+    ) {
+      await fs.rm(resolvedTemporary, { recursive: true, force: true });
+    }
+  }
 }
 
 main().catch((error) => {

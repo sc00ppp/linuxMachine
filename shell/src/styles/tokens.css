@@ -67,10 +67,10 @@
 
   /* ── Shape ───────────────────────────────────────────────────────────── */
   /* Generous, continuous-curvature-feeling corners: friendly, not bubbly. */
-  --radius-tile: 1.5rem;
-  --radius-card: 1.125rem;
+  --radius-tile: 2rem;
+  --radius-card: 1.5rem;
   --radius-chip: 999px;
-  --radius-sm: 0.5rem;
+  --radius-sm: 0.75rem;
 
   /* ── Depth ───────────────────────────────────────────────────────────── */
   /* Ambient shadow: layered + warm-black so tiles sit *in* the room rather

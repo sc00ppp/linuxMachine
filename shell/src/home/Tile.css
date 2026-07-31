@@ -4,7 +4,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.85rem;
+  /* Room for the focus ring to stand off the tile without touching the
+     label underneath it. */
+  gap: 1.7rem;
   min-width: 0;
   /* Fixed width in the scrolling row (set on .home-row). */
   flex: 0 0 var(--tile-w, 21rem);
@@ -46,6 +48,11 @@
 .tile[data-focused='true'] {
   z-index: 3;
   transform: scale(1.08);
+  /* Cancel the shell-wide focus glow here: on the wall the ring is the
+     selector, and the global bloom sitting behind a big tile just smeared a
+     halo around its edge. */
+  box-shadow: none;
+  filter: none;
 }
 
 .tile-face {
@@ -69,8 +76,13 @@
 }
 
 /* Focused face: just a grounded drop shadow — the ring does the talking. */
+/* Focused face glows in its own channel color — focus is light (DESIGN.md
+   §1). It previously carried a dark drop shadow instead, which read as a
+   grey band sitting between the face and the accent ring. */
+/* No bloom behind the face: the ring IS the selector. A wide glow behind it
+   just muddies the tile edge. */
 .tile[data-focused='true'] .tile-face {
-  box-shadow: 0 1.25rem 2.75rem color-mix(in srgb, var(--bg-0) 72%, transparent);
+  box-shadow: none;
 }
 
 /* Switch-style focus ring: a crisp accent band hugging the tile just outside
@@ -79,11 +91,17 @@
 .tile::after {
   content: '';
   position: absolute;
-  inset: -0.55rem;
-  border-radius: calc(var(--radius-tile) + 0.4rem);
+  /* Stands off the tile so it reads as a selector hovering around the icon,
+     but only far enough to sit roughly midway between the tile edge and its
+     label — any further and it collided with the text. The slot's gap below
+     is widened to match. */
+  inset: -0.7rem;
+  border-radius: calc(var(--radius-tile) + 0.7rem);
   pointer-events: none;
-  border: 0.22rem solid
-    color-mix(in srgb, var(--accent) 62%, var(--text));
+  /* Pure accent. Blending 38% warm white in to "keep it crisp" desaturated
+     every ring into a pale grey band — the selector has to read as coloured
+     light, not as a chrome outline. */
+  border: 0.22rem solid var(--accent);
   box-shadow:
     0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
     inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);

@@ -1,4 +1,4 @@
-.situation {
+﻿.situation {
   position: relative;
   width: 100%;
   height: 100%;
@@ -53,7 +53,7 @@
 
 .situation-header__kicker,
 .situation-story__eyebrow {
-  color: color-mix(in srgb, var(--accent) 62%, var(--text));
+  color: var(--accent);
   font-size: var(--text-label);
   font-weight: var(--weight-bold);
   letter-spacing: var(--tracking-wide);
@@ -257,7 +257,7 @@
   position: absolute;
   inset: -0.3rem;
   border: 0.14rem solid
-    color-mix(in srgb, var(--accent) 62%, var(--text));
+    var(--accent);
   border-radius: inherit;
   opacity: 0;
   transform: scale(0.98);
@@ -674,3 +674,4 @@
 @media (prefers-reduced-motion: reduce) {
   .situation-ticker__track { animation: none; }
 }
+

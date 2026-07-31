@@ -218,7 +218,7 @@ Total on S: ≈ 3.7 TB. Where it actually goes:
 | Kodi Collection (20 TV series) | 497 GB | Keep; this is the Movies & TV channel's content. |
 | `S:\ISOs` | 107 GB | Overlaps RetroBat; dedupe candidate. |
 | Emulators | 10.5 GB | Keep — 79 preconfigured. |
-| **Scraped videos** (.mp4 previews) | **13.5 GB** | **Keep** — cheap for how much life they add to tiles (David, 2026-07-30). |
+| **Scraped videos** (.mp4 previews) | **13.5 GB** | **Keep all of them** — disk is explicitly not a constraint (David, 2026-07-31). No per-system cap. |
 | **Scraped images** | **7.3 GB** | **Keep — highest value per byte in the whole library.** |
 | BIOS | 1.2 GB | Keep. Irreplaceable in practice. |
 | Saves | 1.6 GB | Keep. Personal. |

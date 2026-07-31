@@ -15,6 +15,7 @@ type GamepadState = {
   back: boolean;
   home: boolean;
   menu: boolean;
+  sort: boolean;
 };
 
 const DIRECTIONS: readonly Dir[] = ['up', 'down', 'left', 'right'];
@@ -46,6 +47,8 @@ function keyboardInput(code: string, key: string): ConsoleInput | null {
       return { type: 'home' };
     case 'KeyX':
       return { type: 'menu' };
+    case 'KeyY':
+      return { type: 'sort' };
   }
 
   // `code` gives layout-independent WASD in browsers. Falling back to `key`
@@ -76,6 +79,8 @@ function keyboardInput(code: string, key: string): ConsoleInput | null {
       return { type: 'home' };
     case 'x':
       return { type: 'menu' };
+    case 'y':
+      return { type: 'sort' };
     default:
       return null;
   }
@@ -131,6 +136,8 @@ function readGamepad(gamepad: Gamepad): GamepadState {
     home: buttonDown(gamepad, 16) || buttonDown(gamepad, 9),
     // X on the standard (Xbox) layout — the Controllers overlay button.
     menu: buttonDown(gamepad, 2),
+    // Y — contextual secondary action (library sort).
+    sort: buttonDown(gamepad, 3),
   };
 }
 
@@ -141,6 +148,7 @@ function emptyGamepadState(): GamepadState {
     back: false,
     home: false,
     menu: false,
+    sort: false,
   };
 }
 
@@ -273,6 +281,7 @@ export function startInput(handler: (e: ConsoleInput) => void): () => void {
       if (current.back && !previous.back) emit({ type: 'back' });
       if (current.home && !previous.home) emit({ type: 'home' });
       if (current.menu && !previous.menu) emit({ type: 'menu' });
+      if (current.sort && !previous.sort) emit({ type: 'sort' });
 
       gamepadStates.set(gamepad.index, current);
     }

@@ -6,6 +6,7 @@ export type HomeView =
   | 'wall'
   | 'games'
   | 'movies'
+  | 'youtube'
   | 'settings'
   | 'weather'
   | 'news'
@@ -28,8 +29,10 @@ interface ConsoleStore {
   mode: ConsoleMode;
   /** In-shell screen when mode === 'home'. */
   view: HomeView;
-  /** Games room level: console picker row, or a console's Wii U-style grid. */
-  gamesLevel: 'consoles' | 'grid';
+  /** Games room level: console picker → a console's grid → one game's page. */
+  gamesLevel: 'consoles' | 'grid' | 'detail';
+  /** Which game's detail page is open (shelf entry key). */
+  selectedGameKey: string | null;
   /** News channel: reading the full story rather than the headline view. */
   newsReading: boolean;
   /** Channel id of the simulated running app (mode === 'app'). */
@@ -59,7 +62,9 @@ interface ConsoleStore {
   /** Generic drill into any in-shell channel screen. */
   openView: (view: HomeView) => void;
   closeView: () => void;
-  setGamesLevel: (level: 'consoles' | 'grid') => void;
+  setGamesLevel: (level: 'consoles' | 'grid' | 'detail') => void;
+  openGameDetail: (key: string) => void;
+  closeGameDetail: () => void;
   setNewsReading: (reading: boolean) => void;
 
   openControllers: () => void;
@@ -73,6 +78,7 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
   mode: 'home',
   view: 'wall',
   gamesLevel: 'consoles',
+  selectedGameKey: null,
   newsReading: false,
   runningChannel: null,
   runningTitle: null,
@@ -109,6 +115,8 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
   closeView: () =>
     set({ view: 'wall', gamesLevel: 'consoles', newsReading: false }),
   setGamesLevel: (level) => set({ gamesLevel: level }),
+  openGameDetail: (key) => set({ gamesLevel: 'detail', selectedGameKey: key }),
+  closeGameDetail: () => set({ gamesLevel: 'grid', selectedGameKey: null }),
   setNewsReading: (reading) => set({ newsReading: reading }),
 
   openControllers: () => set({ controllersOpen: true }),

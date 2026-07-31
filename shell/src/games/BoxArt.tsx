@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import type { Platform } from '../core/platforms';
+import type { ConsoleEntry } from '../core/consoles';
 import { useFocusable } from '../focus';
 import { coverArt } from './coverArt';
 import { cssVars, prefersReducedMotion } from './util';
@@ -10,15 +10,19 @@ interface BoxArtProps {
   id: string;
   title: string;
   /** Selected console: supplies the accent, the glyph, and the art seed. */
-  platform: Platform;
+  platform: ConsoleEntry;
   /**
    * Real scraped cover from the imported library (`/art/<system>/<slug>.png`).
    * When present it replaces the generated gradient entirely; the generated
    * art remains the fallback for titles the scrape missed.
    */
   art?: string | null;
-  /** Accept pressed. Receives the card element for `playLaunch`. */
-  onAccept: (title: string, el: HTMLElement) => void;
+  /** Draw the user's star over the cover without disturbing its art. */
+  favorite?: boolean;
+  /** Scraped rating (0–1) to overlay, or null to hide. */
+  rating?: number | null;
+  /** Accept opens this game's console detail page. */
+  onAccept: () => void;
   /** First box takes focus when you drill into a console's library. */
   autoFocus?: boolean;
 }
@@ -31,19 +35,28 @@ interface BoxArtProps {
  * is handed — so the launch grows out of the box face exactly, the same way a
  * channel tile does on the wall.
  */
-export function BoxArt({ id, title, platform, art: cover, onAccept, autoFocus }: BoxArtProps) {
+export function BoxArt({
+  id,
+  title,
+  platform,
+  art: cover,
+  favorite = false,
+  rating = null,
+  onAccept,
+  autoFocus,
+}: BoxArtProps) {
   const elRef = useRef<HTMLDivElement | null>(null);
 
   // The focus engine holds the callback it was registered with, so hand it a
   // stable one that reads current props out of a ref.
-  const latest = useRef({ title, onAccept });
+  const latest = useRef({ onAccept });
   useEffect(() => {
-    latest.current = { title, onAccept };
+    latest.current = { onAccept };
   });
 
   const accept = useCallback(() => {
     const el = elRef.current;
-    if (el) latest.current.onAccept(latest.current.title, el);
+    if (el) latest.current.onAccept();
   }, []);
 
   const { ref: focusRef, focused } = useFocusable({
@@ -108,6 +121,19 @@ export function BoxArt({ id, title, platform, art: cover, onAccept, autoFocus }:
         )}
         <div className="boxart-sheen" />
         <div className="boxart-spine" />
+
+        {favorite && (
+          <span className='boxart-favorite' aria-hidden='true'>
+            &#9733;
+          </span>
+        )}
+
+        {rating !== null && rating > 0 && (
+          <span className="boxart-rating" aria-hidden="true">
+            <span className="boxart-rating-star">&#9733;</span>
+            {(rating * 10).toFixed(1)}
+          </span>
+        )}
 
         {/*
           `tile-glyph` is not decoration here: motion/transitions.ts paints the

@@ -82,7 +82,6 @@
 }
 
 .games-tally {
-  margin-left: auto;
   align-self: center;
   padding: 0.35rem 1.1rem;
   border-radius: 999px;
@@ -96,6 +95,64 @@
   -webkit-backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
   border: 1px solid var(--glass-border);
   box-shadow: var(--glass-inset);
+}
+
+.games-sort {
+  position: relative;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 15rem;
+  padding: 0.42rem 0.9rem 0.42rem 0.48rem;
+  margin-left: auto;
+  border: 0.0625rem solid var(--glass-border);
+  border-radius: var(--radius-chip);
+  color: var(--text-dim);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  transition:
+    color var(--focus-ms) var(--focus-ease),
+    box-shadow var(--focus-ms) var(--focus-ease),
+    transform var(--focus-ms) var(--focus-ease);
+}
+
+.games-sort[data-focused='true'] {
+  color: var(--text);
+  transform: translateY(-0.08rem);
+  box-shadow:
+    0 0 0 0.18rem color-mix(in srgb, var(--accent) 66%, var(--text)),
+    var(--glow-accent),
+    var(--glass-inset);
+}
+
+.games-sort-button {
+  display: grid;
+  place-items: center;
+  width: 1.9rem;
+  height: 1.9rem;
+  flex: 0 0 1.9rem;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 900;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 46%, var(--bg-1));
+  box-shadow: inset 0 0 0 0.08rem
+    color-mix(in srgb, var(--text) 24%, transparent);
+}
+
+.games-sort-caption {
+  font-size: 1.02rem;
+  font-weight: 700;
+  color: var(--text-faint);
+}
+
+.games-sort-value {
+  margin-left: auto;
+  font-size: 1.16rem;
+  font-weight: 800;
+  white-space: nowrap;
+  color: color-mix(in srgb, var(--accent) 42%, var(--text));
 }
 
 /* --- Level container ------------------------------------------------------
@@ -151,6 +208,25 @@
   font-size: 1.5rem;
   font-weight: 600;
   color: var(--text-faint);
+}
+
+.games-missing-detail {
+  align-self: center;
+  margin: auto;
+  padding: 2rem 3rem;
+  border-radius: var(--radius-card);
+  text-align: center;
+}
+
+.games-missing-detail h1 {
+  margin: 0 0 0.6rem;
+  font-size: 2.4rem;
+}
+
+.games-missing-detail p {
+  margin: 0;
+  font-size: 1.25rem;
+  color: var(--text-dim);
 }
 
 /* --- Bottom hints ---------------------------------------------------------
@@ -213,4 +289,62 @@
   .games-console {
     transition-duration: 1ms;
   }
+
+  .games-sort {
+    transition-duration: 1ms;
+  }
+}
+
+/* Column count follows the console's box shape (GamesRoom sets --box-cols):
+   wide wraps read best 3-up, tall covers 6-up. */
+.games-grid {
+  grid-template-columns: repeat(var(--box-cols, 5), minmax(0, 1fr)) !important;
+}
+
+/* ── Chrome pass ──────────────────────────────────────────────────────────
+   The hint PILL stays (it's the console's chrome vocabulary); what goes is
+   the full-width tint band that used to sit behind it across the bottom of
+   the room. */
+.games-level::after,
+.games-shelf::after,
+.games::after {
+  display: none !important;
+}
+
+/* A soft vignette scrim at the top instead of a hard header edge, so rows
+   dissolve under the title rather than colliding with a line. */
+.games::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 11rem;
+  z-index: 2;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--bg-0) 0%,
+    color-mix(in srgb, var(--bg-0) 82%, transparent) 34%,
+    color-mix(in srgb, var(--bg-0) 40%, transparent) 68%,
+    transparent 100%
+  );
+}
+
+/* The header rides above that scrim. */
+.games-header {
+  position: relative;
+  z-index: 3;
+}
+
+/* Scrolling a maker row into view used to tuck its label under the header,
+   which is why "NINTENDO" became unreadable. Stop rows below the scrim. */
+.crow,
+.crow-scroller,
+.games-level {
+  scroll-padding-block-start: 7.5rem;
+  scroll-padding-block-end: 6rem;
+}
+
+.crow-group {
+  scroll-margin-block-start: 7.5rem;
+  scroll-margin-block-end: 6rem;
 }

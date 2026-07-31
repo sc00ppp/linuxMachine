@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConsoleEntry as Platform } from '../core/consoles';
 import { useFocusable } from '../focus';
 import { ConsoleArt } from './consoleArt';
@@ -28,6 +28,11 @@ interface ConsoleTileProps {
  */
 export function ConsoleTile({ platform, onFocus, onOpen, autoFocus }: ConsoleTileProps) {
   const elRef = useRef<HTMLDivElement | null>(null);
+  const [realArtFailed, setRealArtFailed] = useState(false);
+
+  useEffect(() => {
+    setRealArtFailed(false);
+  }, [platform.id]);
 
   // The focus engine holds the callback it was registered with; give it a
   // stable one that reads current props from a ref.
@@ -86,7 +91,17 @@ export function ConsoleTile({ platform, onFocus, onOpen, autoFocus }: ConsoleTil
           <div className="ctile-stage">
             <div className="ctile-artwrap">
               <div className="ctile-shadow" />
-              <ConsoleArt id={platform.id} className="ctile-art" />
+              {realArtFailed ? (
+                <ConsoleArt id={platform.id} className="ctile-art" />
+              ) : (
+                <img
+                  className="ctile-art ctile-art-real"
+                  src={'/console-art/' + encodeURIComponent(platform.id) + '.png'}
+                  alt=""
+                  aria-hidden="true"
+                  onError={() => setRealArtFailed(true)}
+                />
+              )}
             </div>
           </div>
           <div className="ctile-rim" />

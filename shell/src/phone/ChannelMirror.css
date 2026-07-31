@@ -1,4 +1,4 @@
-/* Mirrored channel row. Same tile language as the TV wall (accent face, crisp
+﻿/* Mirrored channel row. Same tile language as the TV wall (accent face, crisp
    focus ring, label under the tile) shrunk to thumb scale. */
 
 .mirror {
@@ -102,13 +102,13 @@
     0 0 1.4rem -0.4rem var(--accent);
 }
 
-/* Crisp ring hugging the tile — an object, not a light leak (DESIGN.md §3). */
+/* Crisp ring hugging the tile â€” an object, not a light leak (DESIGN.md Â§3). */
 .mirror-tile[data-focused='true'] .mirror-face::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  border: 0.14rem solid color-mix(in srgb, var(--accent) 62%, var(--text));
+  border: 0.14rem solid var(--accent);
   box-shadow: inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
   animation: mirror-ring-breathe 2.1s ease-in-out infinite;
 }
@@ -241,3 +241,4 @@
     animation: none;
   }
 }
+
