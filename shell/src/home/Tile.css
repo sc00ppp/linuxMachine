@@ -287,3 +287,36 @@
     animation: none;
   }
 }
+
+/* --- Pinned game art (DESIGN.md §11d) -------------------------------------
+   A pinned game shows its cover instead of a glyph. The image sits above the
+   accent gradient but below the sheen and rim, so a pinned tile still catches
+   the wall's light exactly like a channel does.
+
+   `cover` rather than `contain`: box art comes in wildly different shapes per
+   console (N64 wide, DS tall) and letterboxing every pin against the accent
+   would make the row look broken rather than varied. */
+.tile-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+
+/* With art present the glyph would sit on top of the cover. Keep it as a small
+   corner watermark so you can still tell which machine the game is from. */
+.tile-art ~ .tile-body {
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 0.5rem;
+}
+.tile-art ~ .tile-body .tile-glyph {
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0.28rem 0.4rem;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--bg-0) 62%, transparent);
+  text-shadow: none;
+}

@@ -1,6 +1,14 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { CHANNELS, TRAILING_SOCKETS, channelById } from '../core/channels';
 import { useConsoleStore } from '../core/store';
+import { useUserLibrary, type PinnedGame } from '../core/userLibrary';
 import type { Channel } from '../core/types';
 import { tuning } from '../motion/tuning';
 import { playLaunch, playReturn } from '../motion/transitions';
@@ -15,8 +23,30 @@ import './HomeScreen.css';
 /** Chrome dims to a whisper after this long without input (DESIGN.md §2). */
 const IDLE_MS = 5000;
 
-/** The row: every channel in slot order, then a few invitation sockets. */
-const ROW: Channel[] = [...CHANNELS].sort((a, b) => a.slot - b.slot);
+/** The row: every channel in slot order, then whatever the user pinned. */
+const CHANNEL_ROW: Channel[] = [...CHANNELS].sort((a, b) => a.slot - b.slot);
+
+/** Marks a tile as a pinned game rather than a channel. */
+const PIN_PREFIX = 'pin:';
+
+/**
+ * A pinned game becomes a real tile on the wall (DESIGN.md §11d) — the whole
+ * point of pinning is that the game is one press from Home, so it has to live
+ * in the same row and speak the same interaction language as a channel.
+ *
+ * Accent and glyph are read off the pin record rather than the console library,
+ * so the wall never waits on a library chunk to paint.
+ */
+function pinChannel(pin: PinnedGame, slot: number): Channel {
+  return {
+    id: `${PIN_PREFIX}${pin.id}`,
+    title: pin.title,
+    accent: pin.accent || '#f0655a',
+    glyph: pin.glyph || '🎮',
+    art: pin.art,
+    slot,
+  };
+}
 
 /**
  * A small "no" nudge for a tile that can't be opened.
@@ -48,6 +78,20 @@ export function HomeScreen() {
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const [awake, setAwake] = useState(true);
   const [glow, setGlow] = useState({ x: 0, y: 0 });
+
+  // Pinning re-renders the wall through userLibrary's external store, so a game
+  // pinned from its detail page is already on the row when you back out.
+  const pins = useUserLibrary().pins;
+  const row = useMemo(
+    () => [
+      ...CHANNEL_ROW,
+      ...pins.map((pin, i) => pinChannel(pin, CHANNEL_ROW.length + i)),
+    ],
+    [pins],
+  );
+  // Sockets are an invitation to pin something; they shouldn't keep extending
+  // the row once the user has taken it up.
+  const sockets = Math.max(0, TRAILING_SOCKETS - pins.length);
 
   const stageRef = useRef<HTMLDivElement | null>(null);
   const scrollerRef = useRef<HTMLDivElement | null>(null);
@@ -181,6 +225,20 @@ export function HomeScreen() {
       return;
     }
 
+    // A pinned game launches straight from the wall — that is what pinning is
+    // for. Same choreography as pressing Play on its detail page.
+    if (channel.id.startsWith(PIN_PREFIX)) {
+      busy.current = true;
+      sound.play('launch');
+      sound.duck(true);
+      try {
+        await playLaunch(el, channel.accent);
+      } finally {
+        useConsoleStore.getState().launchApp('games', channel.title);
+      }
+      return;
+    }
+
     busy.current = true;
     sound.play('launch');
     // Stay ducked past the transition — the app owns the audio bed from here;
@@ -247,7 +305,11 @@ export function HomeScreen() {
   // only interaction sounds speak. `sound.startAmbient()` still exists if a
   // (quieter) bed ever comes back as a settings toggle.
 
-  const focusedChannel = focusedId ? (channelById(focusedId) ?? null) : null;
+  // Look up in `row`, not CHANNELS — a focused pin has no channel record, and
+  // falling through to null would drop the wall's lantern on pinned tiles.
+  const focusedChannel = focusedId
+    ? (row.find((c) => c.id === focusedId) ?? null)
+    : null;
 
   return (
     <div
@@ -276,7 +338,7 @@ export function HomeScreen() {
 
         <div className="home-scroller" data-collapse="fade" ref={scrollerRef}>
           <div className="home-row" ref={rowRef}>
-            {ROW.map((channel, i) => (
+            {row.map((channel, i) => (
               <Tile
                 key={channel.id}
                 channel={channel}
@@ -286,7 +348,7 @@ export function HomeScreen() {
                 autoFocus={i === 0}
               />
             ))}
-            {Array.from({ length: TRAILING_SOCKETS }, (_, i) => (
+            {Array.from({ length: sockets }, (_, i) => (
               <EmptySocket key={`socket-${i}`} />
             ))}
           </div>

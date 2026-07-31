@@ -32,6 +32,8 @@ export interface Channel {
   accent: string;
   /** Placeholder glyph (emoji/char) until real art exists. */
   glyph: string;
+  /** Cover art, when the tile stands for something with real artwork (a pin). */
+  art?: string | null;
   /** Grid slot, 0-based, row-major in a 4x2 page. */
   slot: number;
   /** Continue tile renders differently when there is nothing to resume. */

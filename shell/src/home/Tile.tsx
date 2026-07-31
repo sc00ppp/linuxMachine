@@ -77,6 +77,18 @@ export function Tile({ channel, onFocus, onAccept, registerEl, autoFocus }: Tile
         aria-label={channel.title}
       >
         <div className="tile-face">
+          {channel.art && (
+            <img
+              className="tile-art"
+              src={channel.art}
+              alt=""
+              onError={(event) => {
+                // A pinned game whose art moved falls back to the glyph face
+                // rather than showing a broken image on the wall.
+                event.currentTarget.hidden = true;
+              }}
+            />
+          )}
           <div className="tile-sheen" />
           <div className="tile-body">
             <span className="tile-glyph">{channel.glyph}</span>

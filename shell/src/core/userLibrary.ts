@@ -51,6 +51,15 @@ export interface PinnedGame {
   gameKey: string;
   title: string;
   art: string | null;
+  /**
+   * The console's accent and glyph, copied at pin time.
+   *
+   * Denormalised on purpose: the home wall renders before any console library
+   * chunk is loaded, and a pinned tile should not be the reason Home waits on
+   * the library. Absent on pins created before pinning reached the wall.
+   */
+  accent?: string;
+  glyph?: string;
 }
 
 interface UserLibrary {

@@ -305,9 +305,18 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
       gameKey: entry.key,
       title: entry.title,
       art: entry.art,
+      accent: consoleEntry.accent,
+      glyph: consoleEntry.glyph,
     });
     sound.play('accept');
-  }, [consoleEntry.id, entry.art, entry.key, entry.title]);
+  }, [
+    consoleEntry.accent,
+    consoleEntry.glyph,
+    consoleEntry.id,
+    entry.art,
+    entry.key,
+    entry.title,
+  ]);
 
   const showVideo = Boolean(videoSrc) && !videoFailed;
 
