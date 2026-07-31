@@ -24,6 +24,7 @@ use tokio::time::{sleep, timeout, Instant};
 use crate::auth::{PairResult, PairingService};
 use crate::hub::Hub;
 use crate::protocol::{Channel, ClientFrame, Role, ServerFrame};
+use crate::ytdlp::YtDlp;
 
 pub const PORT: u16 = 43_919;
 const IDLE_TIMEOUT: Duration = Duration::from_secs(45);
@@ -32,11 +33,20 @@ const IDLE_TIMEOUT: Duration = Duration::from_secs(45);
 pub struct AppState {
     pairing: Arc<PairingService>,
     hub: Arc<Hub>,
+    pub(crate) ytdlp: Arc<YtDlp>,
 }
 
 impl AppState {
     pub fn new(pairing: Arc<PairingService>, hub: Arc<Hub>) -> Self {
-        Self { pairing, hub }
+        Self {
+            pairing,
+            hub,
+            ytdlp: Arc::new(YtDlp::from_env()),
+        }
+    }
+
+    pub fn start_background_tasks(&self) {
+        self.ytdlp.clone().start_auto_updates();
     }
 }
 
@@ -45,6 +55,7 @@ pub fn router(state: AppState) -> Router {
         .route("/health", get(health).options(preflight))
         .route("/pair", post(pair).options(preflight))
         .route("/pair-info", get(pair_info).options(preflight))
+        .route("/resolve", get(crate::ytdlp::resolve).options(preflight))
         .route("/ws", get(ws_upgrade).options(preflight))
         .layer(middleware::from_fn(add_cors_headers))
         .with_state(state)

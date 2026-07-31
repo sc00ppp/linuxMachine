@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import { gzipSync } from 'node:zlib';
 import { dedupeGames, shouldDedupe } from './dedupe.mjs';
 import { foldMods } from './mods.mjs';
+import { foldSwitchLibrary } from './switchContent.mjs';
 
 const REMOTE = process.env.RETROBAT_REMOTE || 'david@192.168.1.158';
 const REMOTE_ROOT_WINDOWS =
@@ -1019,6 +1020,18 @@ async function main() {
   // resolution, because "did the scraper know this game?" is the detection
   // signal and `art` is only assigned above. Running it at parse time would
   // judge every entry unscraped and fold half the library into itself.
+  // Switch romsets are content lists, not game lists: every patch and every DLC
+  // pack is its own file, so 143 entries were really ~30 games. Nintendo's title
+  // ids say which is which, so this is precise rather than name-guessing — which
+  // is exactly why dedupe.mjs still refuses to touch Switch by title.
+  const switchDrops = { updates: 0, dlc: 0, tools: 0, duplicates: 0 };
+  for (const system of systems) {
+    if (system.id !== 'switch') continue;
+    const { games, dropped } = foldSwitchLibrary(system.games);
+    system.games = games;
+    for (const key of Object.keys(switchDrops)) switchDrops[key] += dropped[key];
+  }
+
   let foldedMods = 0;
   for (const system of systems) {
     const { games, modCount } = foldMods(system.id, system.games);
@@ -1037,6 +1050,9 @@ async function main() {
   );
   console.log(
     `[done] Mods folded under their base game: ${foldedMods.toLocaleString()}`,
+  );
+  console.log(
+    `[done] Switch content removed: ${switchDrops.dlc} DLC, ${switchDrops.updates} updates, ${switchDrops.duplicates} duplicates, ${switchDrops.tools} tools`,
   );
   console.log(
     `[done] Media URLs: ${mediaResult.art.toLocaleString()} art, ${mediaResult.screenshots.toLocaleString()} screenshots, ${mediaResult.videos.toLocaleString()} videos; ${mediaResult.missing.toLocaleString()} without art`,

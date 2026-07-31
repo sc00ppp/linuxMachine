@@ -22,6 +22,9 @@ const MoviesChannel = lazy(() =>
 const YouTubeChannel = lazy(() =>
   import('./youtube/YouTubeChannel').then((m) => ({ default: m.YouTubeChannel })),
 );
+const CustomTvChannel = lazy(() =>
+  import('./customtv').then((m) => ({ default: m.CustomTvChannel })),
+);
 const SettingsRoom = lazy(() =>
   import('./settings/SettingsRoom').then((m) => ({ default: m.SettingsRoom })),
 );
@@ -184,6 +187,9 @@ export default function App() {
       )}
       {mode === 'home' && view === 'youtube' && (
         <Room name="YouTube"><YouTubeChannel /></Room>
+      )}
+      {mode === 'home' && view === 'customtv' && (
+        <Room name="Custom TV"><CustomTvChannel /></Room>
       )}
       {mode === 'home' && view === 'settings' && (
         <Room name="Settings"><SettingsRoom /></Room>

@@ -24,6 +24,7 @@ export interface Channel {
     | 'games'
     | 'movies'
     | 'youtube'
+    | 'customtv'
     | 'settings'
     | 'weather'
     | 'news'

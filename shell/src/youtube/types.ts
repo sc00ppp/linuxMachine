@@ -35,8 +35,12 @@ export interface YouTubeSubscriptionFeedPayload {
 }
 
 export interface DirectStream {
-  url: string;
-  mimeType?: string;
+  videoUrl: string;
+  videoMimeType?: string;
+  audioUrl?: string;
+  audioMimeType?: string;
+  width?: number;
+  height?: number;
   source: string;
 }
 

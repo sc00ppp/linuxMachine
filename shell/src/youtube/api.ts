@@ -26,6 +26,9 @@ const SUBSCRIPTION_FEED_CACHE_KEY = 'console-youtube-sub-feed';
 const SPONSOR_SETTINGS_KEY = 'console-youtube-sponsor-settings';
 const SPONSOR_CACHE_PREFIX = 'console-youtube-sponsor-segments:';
 const REQUEST_TIMEOUT_MS = 9_000;
+const DAEMON_REQUEST_TIMEOUT_MS = 42_000;
+const DAEMON_RESOLVE_URL = 'http://127.0.0.1:43919/resolve';
+const DAEMON_SOURCE = 'consoled:/resolve';
 export const YOUTUBE_CACHE_TTL_MS = 30 * 60_000;
 export const SPONSOR_CACHE_TTL_MS = 24 * 60 * 60_000;
 
@@ -91,9 +94,13 @@ function orderedInstances(): YouTubeInstance[] {
   });
 }
 
-async function fetchJson(url: string, outerSignal?: AbortSignal): Promise<unknown> {
+async function fetchJson(
+  url: string,
+  outerSignal?: AbortSignal,
+  timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<unknown> {
   const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
   const abortFromOuter = () => controller.abort();
   outerSignal?.addEventListener('abort', abortFromOuter, { once: true });
 
@@ -384,7 +391,61 @@ function directStreamFrom(
     .sort((a, b) => b.height - a.height);
 
   const best = candidates[0];
-  return best ? { url: best.url, mimeType: best.mimeType } : null;
+  return best
+    ? { videoUrl: best.url, videoMimeType: best.mimeType }
+    : null;
+}
+
+function daemonStreamFrom(payload: unknown, videoId: string): DirectStream | null {
+  if (!isRecord(payload) || stringValue(payload, 'videoId') !== videoId) {
+    return null;
+  }
+  const video = payload.video;
+  const audio = payload.audio;
+  if (!isRecord(video) || !isRecord(audio)) return null;
+
+  const videoUrl = stringValue(video, 'url');
+  const audioUrl = stringValue(audio, 'url');
+  const width = numberValue(video, 'width');
+  const height = numberValue(video, 'height');
+  const expiresAt = numberValue(payload, 'expiresAt');
+  if (
+    !videoUrl ||
+    !audioUrl ||
+    width <= 0 ||
+    height <= 0 ||
+    height > 1_080 ||
+    expiresAt * 1_000 <= Date.now()
+  ) {
+    return null;
+  }
+
+  return {
+    videoUrl,
+    videoMimeType: stringValue(video, 'mimeType') || undefined,
+    audioUrl,
+    audioMimeType: stringValue(audio, 'mimeType') || undefined,
+    width,
+    height,
+    source: DAEMON_SOURCE,
+  };
+}
+
+async function fetchDaemonStream(
+  videoId: string,
+  signal?: AbortSignal,
+): Promise<DirectStream> {
+  const query = new URLSearchParams({ v: videoId });
+  const stream = daemonStreamFrom(
+    await fetchJson(
+      `${DAEMON_RESOLVE_URL}?${query}`,
+      signal,
+      DAEMON_REQUEST_TIMEOUT_MS,
+    ),
+    videoId,
+  );
+  if (!stream) throw new Error('unusable daemon stream');
+  return stream;
 }
 
 /**
@@ -431,6 +492,26 @@ export async function fetchDirectStream(
   } finally {
     signal?.removeEventListener('abort', abortFromOuter);
   }
+}
+
+/** Playback uses the local daemon first, then the existing public-instance race. */
+export async function fetchPlaybackStream(
+  videoId: string,
+  signal?: AbortSignal,
+  excludedSources: readonly string[] = [],
+): Promise<DirectStream> {
+  if (!validVideoId(videoId)) throw new Error('invalid video id');
+
+  if (!excludedSources.includes(DAEMON_SOURCE)) {
+    try {
+      return await fetchDaemonStream(videoId, signal);
+    } catch (error) {
+      if (signal?.aborted) throw error;
+      // Development commonly runs without consoled. Continue without surfacing it.
+    }
+  }
+
+  return fetchDirectStream(videoId, signal, excludedSources);
 }
 
 function cachedVideo(value: unknown): YouTubeVideo | null {

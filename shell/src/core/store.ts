@@ -7,6 +7,7 @@ export type HomeView =
   | 'games'
   | 'movies'
   | 'youtube'
+  | 'customtv'
   | 'settings'
   | 'weather'
   | 'news'

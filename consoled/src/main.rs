@@ -3,6 +3,7 @@ mod hub;
 mod protocol;
 mod ring;
 mod server;
+mod ytdlp;
 
 use std::net::{Ipv4Addr, SocketAddr};
 use std::sync::Arc;
@@ -27,6 +28,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!();
 
     let state = AppState::new(pairing, Arc::new(Hub::new(64, 256)));
+    state.start_background_tasks();
     let app = server::router(state);
     let addr = SocketAddr::from((Ipv4Addr::UNSPECIFIED, PORT));
     let listener = tokio::net::TcpListener::bind(addr).await?;

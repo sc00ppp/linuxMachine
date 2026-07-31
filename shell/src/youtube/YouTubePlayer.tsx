@@ -9,12 +9,14 @@ import { useFocusable } from '../focus';
 import { sound } from '../sound';
 import {
   fetchDirectStream,
+  fetchPlaybackStream,
   fetchSponsorBlockSegments,
   readSponsorBlockSettings,
   readSponsorSegmentCache,
   SPONSOR_CACHE_TTL_MS,
 } from './api';
 import type {
+  DirectStream,
   SponsorBlockCategory,
   SponsorBlockSegment,
   YouTubeVideo,
@@ -196,6 +198,7 @@ export function YouTubePlayer({
 }) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const nativeRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const iframePlayer = useRef<YouTubeIframePlayer | null>(null);
   const skippedSegments = useRef(new Set<string>());
   const triedDirectSources = useRef(new Set<string>());
@@ -207,9 +210,7 @@ export function YouTubePlayer({
   const sponsorSettings = useMemo(() => readSponsorBlockSettings(), []);
   const [mode, setMode] = useState<PlaybackMode>('loading');
   const [directAttempt, setDirectAttempt] = useState(0);
-  const [directUrl, setDirectUrl] = useState('');
-  const [directType, setDirectType] = useState<string | undefined>();
-  const [directSource, setDirectSource] = useState('');
+  const [directStream, setDirectStream] = useState<DirectStream | null>(null);
   const [playing, setPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(
@@ -235,18 +236,20 @@ export function YouTubePlayer({
         ? 'Finding an ad-free stream…'
         : 'Trying another direct stream…',
     );
-    void fetchDirectStream(
-      video.id,
-      controller.signal,
-      [...triedDirectSources.current],
-    )
+    const fetchStream =
+      directAttempt === 0 ? fetchPlaybackStream : fetchDirectStream;
+    void fetchStream(video.id, controller.signal, [
+      ...triedDirectSources.current,
+    ])
       .then((stream) => {
         if (!active) return;
-        setDirectUrl(stream.url);
-        setDirectType(stream.mimeType);
-        setDirectSource(stream.source);
+        setDirectStream(stream);
         setMode('native-stream');
-        setNotice('Direct playback');
+        setNotice(
+          stream.audioUrl && stream.height
+            ? `Ad-free · ${stream.height}p`
+            : 'Direct playback',
+        );
       })
       .catch(() => {
         if (!active || controller.signal.aborted) return;
@@ -350,6 +353,7 @@ export function YouTubePlayer({
     skippedSegments.current.add(key);
     if (mode === 'native-stream') {
       if (nativeRef.current) nativeRef.current.currentTime = segment.end;
+      if (audioRef.current) audioRef.current.currentTime = segment.end;
     } else {
       iframePlayer.current?.seekTo(segment.end, true);
     }
@@ -372,8 +376,12 @@ export function YouTubePlayer({
     if (mode === 'native-stream') {
       const media = nativeRef.current;
       if (!media) return;
-      if (media.paused) void media.play().catch(() => undefined);
-      else media.pause();
+      if (media.paused) {
+        void media.play().catch(() => undefined);
+      } else {
+        media.pause();
+        audioRef.current?.pause();
+      }
       return;
     }
     const player = iframePlayer.current;
@@ -388,6 +396,7 @@ export function YouTubePlayer({
       const next = clamp(currentTime + delta, 0, duration || currentTime + delta);
       if (mode === 'native-stream') {
         if (nativeRef.current) nativeRef.current.currentTime = next;
+        if (audioRef.current) audioRef.current.currentTime = next;
       } else {
         iframePlayer.current?.seekTo(next, true);
       }
@@ -395,6 +404,40 @@ export function YouTubePlayer({
     },
     [currentTime, duration, mode],
   );
+
+  const syncNativeAudio = useCallback((force = false) => {
+    const videoElement = nativeRef.current;
+    const audioElement = audioRef.current;
+    if (!videoElement || !audioElement) return;
+
+    const drift = audioElement.currentTime - videoElement.currentTime;
+    if (force || Math.abs(drift) > 0.35) {
+      audioElement.currentTime = videoElement.currentTime;
+      audioElement.playbackRate = 1;
+    } else if (drift > 0.08) {
+      audioElement.playbackRate = 0.96;
+    } else if (drift < -0.08) {
+      audioElement.playbackRate = 1.04;
+    } else {
+      audioElement.playbackRate = 1;
+    }
+  }, []);
+
+  const handleNativePlaying = useCallback(() => {
+    const audioElement = audioRef.current;
+    if (!audioElement) return;
+    syncNativeAudio(true);
+    void audioElement.play().catch(() => undefined);
+  }, [syncNativeAudio]);
+
+  const handleNativeError = useCallback(() => {
+    const source = directStream?.source;
+    if (!source || triedDirectSources.current.has(source)) return;
+    triedDirectSources.current.add(source);
+    audioRef.current?.pause();
+    setNotice('Trying another direct stream…');
+    setDirectAttempt((attempt) => attempt + 1);
+  }, [directStream?.source]);
 
   const progress = useMemo(
     () => (duration > 0 ? clamp(currentTime / duration, 0, 1) : 0),
@@ -411,30 +454,62 @@ export function YouTubePlayer({
             <img src={video.thumbnailUrl} alt="" referrerPolicy="no-referrer" />
             <span className="glass">{notice}</span>
           </div>
-        ) : mode === 'native-stream' ? (
-          <video
-            ref={nativeRef}
-            autoPlay
-            playsInline
-            poster={video.thumbnailUrl}
-            onLoadedMetadata={(event) =>
-              setDuration(event.currentTarget.duration || video.durationSeconds)
-            }
-            onTimeUpdate={(event) =>
-              setCurrentTime(event.currentTarget.currentTime)
-            }
-            onPlay={() => setPlaying(true)}
-            onPause={() => setPlaying(false)}
-            onEnded={() => setPlaying(false)}
-            onError={() => {
-              if (directSource && triedDirectSources.current.has(directSource)) return;
-              if (directSource) triedDirectSources.current.add(directSource);
-              setNotice('Trying another direct stream…');
-              setDirectAttempt((attempt) => attempt + 1);
-            }}
-          >
-            <source src={directUrl} type={directType} />
-          </video>
+        ) : mode === 'native-stream' && directStream ? (
+          <>
+            <video
+              key={directStream.videoUrl}
+              ref={nativeRef}
+              autoPlay
+              muted={Boolean(directStream.audioUrl)}
+              playsInline
+              poster={video.thumbnailUrl}
+              onLoadedMetadata={(event) =>
+                setDuration(
+                  event.currentTarget.duration || video.durationSeconds,
+                )
+              }
+              onTimeUpdate={(event) => {
+                setCurrentTime(event.currentTarget.currentTime);
+                syncNativeAudio();
+              }}
+              onSeeking={() => syncNativeAudio(true)}
+              onPlay={() => setPlaying(true)}
+              onPlaying={handleNativePlaying}
+              onWaiting={() => audioRef.current?.pause()}
+              onPause={() => {
+                audioRef.current?.pause();
+                setPlaying(false);
+              }}
+              onEnded={() => {
+                audioRef.current?.pause();
+                setPlaying(false);
+              }}
+              onError={handleNativeError}
+            >
+              <source
+                src={directStream.videoUrl}
+                type={directStream.videoMimeType}
+              />
+            </video>
+            {directStream.audioUrl && (
+              <audio
+                key={directStream.audioUrl}
+                ref={audioRef}
+                preload="auto"
+                onCanPlay={() => {
+                  if (nativeRef.current?.paused === false) {
+                    handleNativePlaying();
+                  }
+                }}
+                onError={handleNativeError}
+              >
+                <source
+                  src={directStream.audioUrl}
+                  type={directStream.audioMimeType}
+                />
+              </audio>
+            )}
+          </>
         ) : (
           <iframe
             key={`${video.id}-${mode}`}

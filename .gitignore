@@ -15,6 +15,7 @@ consoled/target/
 # ---------------------------------------------------------------------------
 shell/src/core/library.generated.json
 shell/src/core/media.generated.json
+shell/src/core/customtv.generated.json
 shell/public/art/
 shell/public/media-art/
 shell/public/console-art/
