@@ -460,3 +460,128 @@
     transform: none;
   }
 }
+
+/* The shell remains a calm status surface while the native emulator owns the
+   television. If focus returns unexpectedly, Stop is immediately available. */
+.game-now-playing {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--bg-0);
+  color: var(--text);
+}
+
+.game-now-playing-art,
+.game-now-playing-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.game-now-playing-art {
+  object-fit: cover;
+  opacity: 0.18;
+  filter: blur(1.2rem) saturate(0.7);
+  transform: scale(1.05);
+}
+
+.game-now-playing-shade {
+  background:
+    radial-gradient(circle at center, color-mix(in srgb, var(--accent) 16%, transparent), transparent 54%),
+    linear-gradient(to bottom, color-mix(in srgb, var(--bg-0) 72%, transparent), var(--bg-0));
+}
+
+.game-now-playing-card {
+  position: relative;
+  z-index: 2;
+  width: min(44rem, 78vw);
+  min-height: 26rem;
+  padding: 3rem 3.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-card);
+  text-align: center;
+  box-shadow: var(--shadow-soft), 0 0 5rem color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.game-now-playing-glyph {
+  display: grid;
+  place-items: center;
+  width: 5.2rem;
+  height: 5.2rem;
+  margin-bottom: 1.2rem;
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--accent) 64%, var(--text));
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-1));
+  box-shadow: 0 0 2.4rem color-mix(in srgb, var(--accent) 32%, transparent);
+  font-size: 2.2rem;
+  font-weight: 900;
+}
+
+.game-now-playing-card p {
+  margin: 0 0 0.5rem;
+  color: color-mix(in srgb, var(--accent) 48%, var(--text));
+  font-size: 1.05rem;
+  font-weight: 850;
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+}
+
+.game-now-playing-card h1 {
+  max-width: 100%;
+  margin: 0;
+  overflow: hidden;
+  color: var(--text);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.08;
+  text-overflow: ellipsis;
+}
+
+.game-now-playing-detail {
+  max-width: 36rem;
+  margin-top: 1rem;
+  color: var(--text-dim);
+  font-size: 1.15rem;
+  line-height: 1.45;
+}
+
+.game-now-playing-pulse {
+  width: 7rem;
+  height: 0.25rem;
+  margin-top: 1.6rem;
+  overflow: hidden;
+  border-radius: var(--radius-chip);
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  animation: game-launch-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes game-launch-pulse {
+  0%, 100% { opacity: 0.35; transform: scaleX(0.55); }
+  50% { opacity: 1; transform: scaleX(1); }
+}
+
+.game-now-playing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-top: 2rem;
+}
+
+.game-now-playing-hint {
+  position: absolute;
+  z-index: 2;
+  bottom: 2rem;
+  color: var(--text-faint);
+  font-size: 1rem;
+  font-weight: 650;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-now-playing-pulse { animation: none; }
+}

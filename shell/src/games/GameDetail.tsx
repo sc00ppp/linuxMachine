@@ -5,8 +5,17 @@ import {
   useRef,
   useState,
 } from 'react';
+import type { CSSProperties } from 'react';
 import type { ConsoleEntry, ShelfGame } from '../core/consoles';
 import type { GameMod } from '../core/library';
+import {
+  explainLaunchProblem,
+  gameLaunchStatus,
+  launchGame,
+  stopGame,
+  type GameLaunchStatus,
+  type LaunchProblem,
+} from '../core/launch';
 import {
   gameId,
   toggleFavorite,
@@ -38,6 +47,17 @@ interface Fact {
   label: string;
   value: string;
   stars?: boolean;
+}
+
+type LaunchPhase = 'starting' | 'running' | 'stopping' | 'ended' | 'error';
+
+interface ActiveLaunch {
+  phase: LaunchPhase;
+  title: string;
+  systemId: string;
+  romPath: string;
+  status?: GameLaunchStatus;
+  problem?: LaunchProblem;
 }
 
 const relativeTime = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
@@ -215,17 +235,123 @@ function ModCard({
   );
 }
 
+function GameNowPlaying({
+  launch,
+  consoleEntry,
+  art,
+  onStop,
+  onDismiss,
+  onRetry,
+}: {
+  launch: ActiveLaunch;
+  consoleEntry: ConsoleEntry;
+  art: string | null;
+  onStop: () => void;
+  onDismiss: () => void;
+  onRetry: () => void;
+}) {
+  const isBusy = launch.phase === 'starting' || launch.phase === 'stopping';
+  const mayStillBeRunning = launch.phase === 'error' && launch.status?.running;
+  const headline = launch.phase === 'starting'
+    ? 'Starting emulator…'
+    : launch.phase === 'running'
+      ? 'Now playing'
+      : launch.phase === 'stopping'
+        ? 'Returning to the console…'
+        : launch.phase === 'ended'
+          ? 'Session ended'
+          : launch.problem?.title ?? 'Game did not start';
+  const detail = launch.phase === 'running'
+    ? [launch.status?.emulator, launch.status?.core]
+        .filter(Boolean)
+        .join(' / ') || `${consoleEntry.name} is running`
+    : launch.phase === 'ended'
+      ? 'The emulator has closed. The rest of your library is still here.'
+      : launch.problem?.detail ?? 'Waiting for RetroBat to report a running process.';
+
+  return (
+    <article
+      className="game-now-playing"
+      aria-label={`${headline}: ${launch.title}`}
+      style={{ '--accent': consoleEntry.accent } as CSSProperties}
+    >
+      {art && <img className="game-now-playing-art" src={art} alt="" />}
+      <div className="game-now-playing-shade" />
+      <section className="game-now-playing-card glass glass--strong" role="status">
+        <span className="game-now-playing-glyph" aria-hidden="true">
+          {launch.phase === 'error' ? '!' : consoleEntry.glyph}
+        </span>
+        <p>{headline}</p>
+        <h1>{launch.title}</h1>
+        <span className="game-now-playing-detail">{detail}</span>
+        {isBusy && <span className="game-now-playing-pulse" aria-hidden="true" />}
+
+        <div className="game-now-playing-actions">
+          {(launch.phase === 'running' || mayStillBeRunning) && (
+            <DetailAction
+              id="detail-stop-game"
+              label="Stop and return"
+              icon="■"
+              onAccept={onStop}
+              autoFocus
+              primary
+            />
+          )}
+          {launch.phase === 'error' && !mayStillBeRunning && (
+            <DetailAction
+              id="detail-retry-game"
+              label="Try again"
+              icon="↻"
+              onAccept={onRetry}
+              autoFocus
+              primary
+            />
+          )}
+          {((launch.phase === 'error' && !mayStillBeRunning) ||
+            launch.phase === 'ended') && (
+            <DetailAction
+              id="detail-dismiss-launch"
+              label="Back to game"
+              icon="←"
+              onAccept={onDismiss}
+              autoFocus={launch.phase === 'ended'}
+            />
+          )}
+        </div>
+      </section>
+      <footer className="game-now-playing-hint">
+        B always stops the session and returns to the shelf
+      </footer>
+    </article>
+  );
+}
+
 /** The metadata-rich console game page from DESIGN.md §11b. */
 export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
   const library = useUserLibrary();
   const heroRef = useRef<HTMLDivElement | null>(null);
   const launching = useRef(false);
+  const mounted = useRef(true);
+  const running = useRef(false);
   const [videoFailed, setVideoFailed] = useState(false);
+  const [activeLaunch, setActiveLaunch] = useState<ActiveLaunch | null>(null);
   const videoSrc = useMemo(() => previewVideo(entry), [entry]);
   const id = gameId(consoleEntry.id, entry.key);
   const favorite = library.favorites.includes(id);
   const pinned = library.pins.some((pin) => pin.id === id);
   const game = entry.game;
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      sound.duck(false);
+      if (running.current) {
+        running.current = false;
+        void stopGame();
+      }
+    };
+  }, [entry.key]);
 
   useEffect(() => {
     setVideoFailed(false);
@@ -266,28 +392,154 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
    * different ROM, so it is the same choreography with a different title —
    * there is no reason for it to feel like a lesser way to start playing.
    */
+  const beginDaemonLaunch = useCallback(
+    async (target: ActiveLaunch) => {
+      setActiveLaunch({ ...target, phase: 'starting' });
+      try {
+        const status = await launchGame(target.systemId, target.romPath);
+        if (!mounted.current) {
+          void stopGame();
+          return;
+        }
+        running.current = status.running;
+        setActiveLaunch({ ...target, phase: 'running', status });
+      } catch (error) {
+        if (!mounted.current) return;
+        running.current = false;
+        launching.current = false;
+        sound.duck(false);
+        setActiveLaunch({
+          ...target,
+          phase: 'error',
+          problem: explainLaunchProblem(error, target.systemId),
+        });
+      }
+    },
+    [],
+  );
+
   const launch = useCallback(
-    async (title: string) => {
+    async (title: string, romPath: string | null) => {
       const hero = heroRef.current;
       if (!hero || launching.current) return;
+      const systemId = game?.systemId ?? consoleEntry.id;
+      if (!romPath) {
+        setActiveLaunch({
+          phase: 'error',
+          title,
+          systemId,
+          romPath: '',
+          problem: {
+            title: 'ROM path missing',
+            detail: 'This library entry has no source ROM path, so no emulator was started.',
+          },
+        });
+        return;
+      }
       launching.current = true;
 
       sound.play('launch');
       sound.duck(true);
       try {
         await playLaunch(hero, consoleEntry.accent);
-      } finally {
-        useConsoleStore.getState().launchApp('games', title);
+      } catch {
+        // The choreography is cosmetic; a failed animation must not strand Play.
       }
+      await beginDaemonLaunch({
+        phase: 'starting',
+        title,
+        systemId,
+        romPath,
+      });
     },
-    [consoleEntry.accent],
+    [beginDaemonLaunch, consoleEntry.accent, consoleEntry.id, game?.systemId],
   );
 
-  const play = useCallback(() => launch(entry.title), [launch, entry.title]);
+  const play = useCallback(
+    () => launch(entry.title, game?.path ?? null),
+    [entry.title, game?.path, launch],
+  );
   const playMod = useCallback(
-    (mod: GameMod) => void launch(mod.name),
+    (mod: GameMod) => void launch(mod.name, mod.path),
     [launch],
   );
+
+  useEffect(() => {
+    if (activeLaunch?.phase !== 'running') return;
+    let cancelled = false;
+    let timer = 0;
+    const poll = async () => {
+      try {
+        const status = await gameLaunchStatus();
+        if (cancelled) return;
+        if (!status.running) {
+          running.current = false;
+          launching.current = false;
+          sound.duck(false);
+          setActiveLaunch((current) => current
+            ? { ...current, phase: 'ended', status }
+            : current);
+          return;
+        }
+        setActiveLaunch((current) => current
+          ? { ...current, status }
+          : current);
+      } catch (error) {
+        if (cancelled) return;
+        setActiveLaunch((current) => current
+          ? {
+              ...current,
+              phase: 'error',
+              problem: explainLaunchProblem(error, current.systemId),
+            }
+          : current);
+        return;
+      }
+      timer = window.setTimeout(poll, 1_500);
+    };
+    timer = window.setTimeout(poll, 1_500);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeLaunch?.phase]);
+
+  const stopRunningGame = useCallback(async () => {
+    setActiveLaunch((current) => current
+      ? { ...current, phase: 'stopping' }
+      : current);
+    try {
+      const status = await stopGame();
+      running.current = false;
+      launching.current = false;
+      sound.duck(false);
+      setActiveLaunch((current) => current
+        ? { ...current, phase: 'ended', status }
+        : current);
+    } catch (error) {
+      setActiveLaunch((current) => current
+        ? {
+            ...current,
+            phase: 'error',
+            problem: explainLaunchProblem(error, current.systemId),
+          }
+        : current);
+    }
+  }, []);
+
+  const dismissLaunch = useCallback(() => {
+    if (running.current) return;
+    launching.current = false;
+    sound.duck(false);
+    setActiveLaunch(null);
+  }, []);
+
+  const retryLaunch = useCallback(() => {
+    if (!activeLaunch || running.current) return;
+    launching.current = true;
+    sound.duck(true);
+    void beginDaemonLaunch(activeLaunch);
+  }, [activeLaunch, beginDaemonLaunch]);
 
   const favoriteGame = useCallback(() => {
     toggleFavorite(consoleEntry.id, entry.key);
@@ -319,6 +571,19 @@ export function GameDetail({ console: consoleEntry, entry }: GameDetailProps) {
   ]);
 
   const showVideo = Boolean(videoSrc) && !videoFailed;
+
+  if (activeLaunch) {
+    return (
+      <GameNowPlaying
+        launch={activeLaunch}
+        consoleEntry={consoleEntry}
+        art={entry.art}
+        onStop={() => void stopRunningGame()}
+        onDismiss={dismissLaunch}
+        onRetry={retryLaunch}
+      />
+    );
+  }
 
   return (
     <article className="game-detail" aria-labelledby="game-detail-title">

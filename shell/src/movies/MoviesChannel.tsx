@@ -27,6 +27,12 @@ import {
   useMovieLibrary,
   type MovieSortMode,
 } from './movieLibrary';
+import { MediaPlayer } from './MediaPlayer';
+import {
+  episodePlayback,
+  moviePlayback,
+  type MediaPlaybackItem,
+} from './mediaPlayback';
 import './MoviesChannel.css';
 
 type MoviesLevel = 'library' | 'episodes';
@@ -207,10 +213,13 @@ export function MoviesChannel() {
   const [highlightedItem, setHighlightedItem] = useState<LibraryItem | null>(
     firstItem,
   );
+  const [playback, setPlayback] = useState<MediaPlaybackItem | null>(null);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const levelRef = useRef<HTMLDivElement | null>(null);
   const busy = useRef(false);
+
+  useEffect(() => () => sound.duck(false), []);
 
   useLayoutEffect(() => {
     animateDrill(rootRef.current, 'deeper', tuning.drillInMs);
@@ -241,26 +250,31 @@ export function MoviesChannel() {
     [setWiredLevel],
   );
 
-  const launchTitle = useCallback(async (title: string, element: HTMLElement) => {
+  const launchMedia = useCallback(async (
+    item: MediaPlaybackItem,
+    element: HTMLElement,
+  ) => {
     if (busy.current) return;
     busy.current = true;
     sound.play('launch');
     sound.duck(true);
     try {
       await playLaunch(element, channelById('movies')?.accent ?? '#e89a3c');
-    } finally {
-      useConsoleStore.getState().launchApp('movies', title);
+    } catch {
+      // Playback is functional even if the decorative handoff cannot animate.
     }
+    setPlayback(item);
   }, []);
 
   const launchEpisode = useCallback(
     (episode: MediaEpisode, element: HTMLElement) => {
-      const title = selectedSeries
-        ? `${selectedSeries.title} / ${episode.title}`
-        : episode.title;
-      void launchTitle(title, element);
+      if (!selectedSeries || !activeSeason) return;
+      void launchMedia(
+        episodePlayback(selectedSeries, activeSeason.number, episode),
+        element,
+      );
     },
-    [launchTitle, selectedSeries],
+    [activeSeason, launchMedia, selectedSeries],
   );
 
   const accent = channelById('movies')?.accent ?? '#e89a3c';
@@ -278,6 +292,29 @@ export function MoviesChannel() {
     : highlightedItem?.kind === 'series'
       ? highlightedItem.value.fanart
       : null;
+
+  if (playback) {
+    return (
+      <main
+        className="movies"
+        data-level="playback"
+        style={cssVars({
+          '--accent': accent,
+          '--focus-ms': `${tuning.focusMoveMs}ms`,
+          '--focus-ease': tuning.focusEase,
+        })}
+      >
+        <MediaPlayer
+          item={playback}
+          onBack={() => {
+            busy.current = false;
+            sound.duck(false);
+            setPlayback(null);
+          }}
+        />
+      </main>
+    );
+  }
 
   return (
     <main
@@ -327,7 +364,9 @@ export function MoviesChannel() {
             highlightedFocusId={lastLibraryFocusId}
             onFocusItem={setHighlightedItem}
             onOpenSeries={openSeries}
-            onLaunchMovie={launchTitle}
+            onLaunchMovie={(movie, element) => {
+              void launchMedia(moviePlayback(movie), element);
+            }}
           />
         )}
       </div>
@@ -354,7 +393,7 @@ function MediaRows({
   highlightedFocusId: string | null;
   onFocusItem: (item: LibraryItem) => void;
   onOpenSeries: (series: MediaSeries) => void;
-  onLaunchMovie: (title: string, element: HTMLElement) => void;
+  onLaunchMovie: (movie: MediaMovie, element: HTMLElement) => void;
 }) {
   const fallbackFocusId = rows[0]?.items[0]
     ? posterFocusId(rows[0].id, rows[0].items[0])
@@ -395,7 +434,7 @@ function MediaRows({
                           if (item.kind === 'series') {
                             onOpenSeries(item.value);
                           } else {
-                            onLaunchMovie(item.value.title, element);
+                            onLaunchMovie(item.value, element);
                           }
                         }}
                       />

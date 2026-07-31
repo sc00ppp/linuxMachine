@@ -23,6 +23,7 @@ use tokio::time::{sleep, timeout, Instant};
 
 use crate::auth::{PairResult, PairingService};
 use crate::hub::Hub;
+use crate::launch::LaunchService;
 use crate::protocol::{Channel, ClientFrame, Role, ServerFrame};
 use crate::ytdlp::YtDlp;
 
@@ -34,6 +35,7 @@ pub struct AppState {
     pairing: Arc<PairingService>,
     hub: Arc<Hub>,
     pub(crate) ytdlp: Arc<YtDlp>,
+    pub(crate) launch: Arc<LaunchService>,
 }
 
 impl AppState {
@@ -42,6 +44,7 @@ impl AppState {
             pairing,
             hub,
             ytdlp: Arc::new(YtDlp::from_env()),
+            launch: Arc::new(LaunchService::from_env()),
         }
     }
 
@@ -56,6 +59,12 @@ pub fn router(state: AppState) -> Router {
         .route("/pair", post(pair).options(preflight))
         .route("/pair-info", get(pair_info).options(preflight))
         .route("/resolve", get(crate::ytdlp::resolve).options(preflight))
+        .route("/launch", post(crate::launch::launch).options(preflight))
+        .route(
+            "/launch/status",
+            get(crate::launch::status).options(preflight),
+        )
+        .route("/launch/kill", post(crate::launch::kill).options(preflight))
         .route("/ws", get(ws_upgrade).options(preflight))
         .layer(middleware::from_fn(add_cors_headers))
         .with_state(state)

@@ -1,5 +1,6 @@
 mod auth;
 mod hub;
+mod launch;
 mod protocol;
 mod ring;
 mod server;
