@@ -27,7 +27,26 @@ use tokio_util::io::ReaderStream;
 
 const DEFAULT_ROOT: &str = r"S:\";
 const DEFAULT_BIND: &str = "0.0.0.0:8099";
+/// Artwork, video and Vite's content-hashed assets never change under a given
+/// name, so they can be cached forever.
 const CACHE_POLICY: &str = "public, max-age=31536000, immutable";
+
+/// HTML is the exception. The shell's entry point keeps the same name across
+/// every deploy, so caching it immutably would pin the console to whichever
+/// build it happened to load first — a redeploy would appear to do nothing.
+const REVALIDATE_POLICY: &str = "no-cache";
+
+fn cache_policy(path: &Path) -> &'static str {
+    match path
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::to_ascii_lowercase)
+        .as_deref()
+    {
+        Some("html" | "htm") => REVALIDATE_POLICY,
+        _ => CACHE_POLICY,
+    }
+}
 
 #[derive(Clone)]
 struct AppState {
@@ -183,6 +202,21 @@ fn content_type(path: &Path) -> &'static str {
         Some("webp") => "image/webp",
         Some("svg") => "image/svg+xml",
         Some("mp4") => "video/mp4",
+        Some("webm") => "video/webm",
+        Some("m4a") => "audio/mp4",
+        Some("mp3") => "audio/mpeg",
+        // This server also hosts the built shell itself. A browser will happily
+        // download an index.html sent as octet-stream instead of rendering it,
+        // and refuses modules that do not arrive as JavaScript, so the web
+        // types are not optional here.
+        Some("html" | "htm") => "text/html; charset=utf-8",
+        Some("js" | "mjs") => "text/javascript; charset=utf-8",
+        Some("css") => "text/css; charset=utf-8",
+        Some("json") => "application/json; charset=utf-8",
+        Some("woff2") => "font/woff2",
+        Some("woff") => "font/woff",
+        Some("ico") => "image/x-icon",
+        Some("txt") => "text/plain; charset=utf-8",
         _ => "application/octet-stream",
     }
 }
@@ -259,7 +293,10 @@ async fn serve_file(
     *response.status_mut() = status;
     let response_headers = response.headers_mut();
     response_headers.insert(ACCEPT_RANGES, HeaderValue::from_static("bytes"));
-    response_headers.insert(CACHE_CONTROL, HeaderValue::from_static(CACHE_POLICY));
+    response_headers.insert(
+        CACHE_CONTROL,
+        HeaderValue::from_static(cache_policy(&canonical_path)),
+    );
     response_headers.insert(
         CONTENT_TYPE,
         HeaderValue::from_static(content_type(&canonical_path)),

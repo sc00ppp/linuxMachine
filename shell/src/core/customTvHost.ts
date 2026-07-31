@@ -1,19 +1,27 @@
 /**
- * Custom TV videos are NOT on the media PC.
+ * Where Custom TV's video files are served from.
  *
- * Game art lives on 192.168.1.158 (S:\RetroBat) and is served by the mediaserve
- * instance on :8099. The Discord bot downloads to `D:\customTV` on the desktop,
- * so these come off a *second* mediaserve instance on this machine:
+ * These now live on the media PC at `S:\customTV`, and mediaserve's main
+ * instance is already rooted at `S:\` — so the existing `:8099` server hosts
+ * them at `/customTV/...` and no second server is needed. The videos used to
+ * sit on the desktop behind their own instance on `:8100`; that arrangement
+ * meant the deployed console pointed at a machine that might be off.
  *
- *   mediaserve --root "D:\customTV" --bind 0.0.0.0:8100
- *
- * Pointing this at .158 was verified unreachable — those files are not there.
- * Override with `localStorage['console-customtv-host']` when the bot moves to
- * the console itself and the videos become local.
+ * The base therefore carries a PATH PREFIX, not just an origin, which is why
+ * joining is string concatenation rather than `new URL(path, base)` — an
+ * absolute path like `/gamer/clip.mp4` resolves against the origin and would
+ * silently discard `/customTV`.
  */
-export const DEFAULT_CUSTOM_TV_HOST = 'http://192.168.1.155:8100';
+const DEFAULT_ORIGIN = 'http://192.168.1.158:8099';
+const DEFAULT_PREFIX = '/customTV';
+
+export const DEFAULT_CUSTOM_TV_HOST = `${DEFAULT_ORIGIN}${DEFAULT_PREFIX}`;
 
 const STORAGE_KEY = 'console-customtv-host';
+
+function trimTrailingSlashes(value: string): string {
+  return value.replace(/\/+$/, '');
+}
 
 function configuredCustomTvHost(): string {
   if (typeof window === 'undefined') return DEFAULT_CUSTOM_TV_HOST;
@@ -25,22 +33,20 @@ function configuredCustomTvHost(): string {
     if (url.protocol !== 'http:' && url.protocol !== 'https:') {
       return DEFAULT_CUSTOM_TV_HOST;
     }
-    return configured.replace(/\/+$/, '');
+    return trimTrailingSlashes(configured);
   } catch {
     return DEFAULT_CUSTOM_TV_HOST;
   }
 }
 
-/** Base URL for the read-only Custom TV media server. */
+/** Base URL (origin plus any path prefix) for Custom TV media. */
 export const customTvHost = configuredCustomTvHost();
 
-/** Resolve an importer-produced server-root path to its playable URL. */
+/** Resolve an importer-produced, already-encoded root-relative media path. */
 export function customTvUrl(path: string | null): string | null {
   if (!path) return null;
+  if (/^https?:\/\//i.test(path)) return path;
 
-  try {
-    return new URL(path, `${customTvHost}/`).toString();
-  } catch {
-    return null;
-  }
+  const suffix = path.startsWith('/') ? path : `/${path}`;
+  return `${customTvHost}${suffix}`;
 }
