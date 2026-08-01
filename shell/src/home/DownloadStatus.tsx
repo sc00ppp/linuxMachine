@@ -21,8 +21,14 @@ interface DownloadStatus {
   active: { title: string | null; percent: number | null } | null;
 }
 
-/** Slow enough to be free, quick enough that a finished download is noticed. */
-const POLL_MS = 20_000;
+/**
+ * Two cadences. While something is downloading the indicator is a progress
+ * bar, so it has to move like one; idle it costs nothing to check rarely.
+ * The bot rewrites status.json every two seconds, so polling faster than that
+ * would only re-read the same file.
+ */
+const POLL_ACTIVE_MS = 2_000;
+const POLL_IDLE_MS = 15_000;
 
 function isStatus(value: unknown): value is DownloadStatus {
   if (!value || typeof value !== 'object') return false;
@@ -40,27 +46,41 @@ export function DownloadStatus() {
     let cancelled = false;
     const controller = new AbortController();
 
-    const read = async () => {
+    const read = async (): Promise<DownloadStatus | null> => {
       try {
         const response = await fetch(url, {
           signal: controller.signal,
           cache: 'no-store',
         });
-        if (!response.ok) return;
+        if (!response.ok) return null;
         const value: unknown = await response.json();
-        if (!cancelled && isStatus(value)) setStatus(value);
+        if (!isStatus(value)) return null;
+        if (!cancelled) setStatus(value);
+        return value;
       } catch {
         // The media PC being unreachable is not worth shouting about on the
         // wall; the indicator simply stays as it was.
+        return null;
       }
     };
 
-    void read();
-    const timer = window.setInterval(() => void read(), POLL_MS);
+    // Reschedule after each read rather than on a fixed interval, so the
+    // cadence can follow whether anything is actually downloading — and so a
+    // slow response can never stack requests on top of each other.
+    let timer = 0;
+    const tick = async () => {
+      const status = await read();
+      if (cancelled) return;
+      timer = window.setTimeout(
+        () => void tick(),
+        status?.active ? POLL_ACTIVE_MS : POLL_IDLE_MS,
+      );
+    };
+    void tick();
+
     return () => {
       cancelled = true;
       controller.abort();
-      window.clearInterval(timer);
       window.clearTimeout(timer);
     };
   }, []);
@@ -101,10 +121,36 @@ export function DownloadStatus() {
           strokeLinecap="round"
         />
       </svg>
-      <span className="topbar-download-count">
-        {status.active ? (percent === null ? '…' : `${Math.round(percent)}%`) : status.pending}
+      <span className="topbar-download-copy">
+        <span className="topbar-download-label">{label}</span>
+        {status.active ? (
+          <span
+            className="topbar-download-track"
+            role="progressbar"
+            aria-valuenow={percent ?? undefined}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
+            <span
+              className="topbar-download-fill"
+              // Indeterminate until a percentage arrives, rather than showing
+              // a full bar for an unknown value.
+              style={{ width: percent === null ? '10%' : `${Math.max(2, percent)}%` }}
+              data-indeterminate={percent === null ? 'true' : undefined}
+            />
+          </span>
+        ) : null}
       </span>
-      <span className="topbar-download-label">{label}</span>
+      <span className="topbar-download-count">
+        {status.active
+          ? percent === null
+            ? '…'
+            : `${Math.round(percent)}%`
+          : status.pending}
+      </span>
+      {status.active && status.pending > 0 && (
+        <span className="topbar-download-queue">+{status.pending}</span>
+      )}
     </div>
   );
 }

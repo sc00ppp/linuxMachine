@@ -51,7 +51,7 @@ def active_download(log_text):
     return title, percent
 
 
-def main():
+def write_status():
     here = os.path.dirname(os.path.abspath(__file__))
     try:
         with open(os.path.join(here, 'config.json'), encoding='utf-8-sig') as handle:
@@ -96,7 +96,11 @@ def main():
     with open(partial, 'w', encoding='utf-8') as handle:
         json.dump(status, handle, ensure_ascii=False)
     os.replace(partial, out)
-    print(f'status: pending={status["pending"]} active={bool(status["active"])}')
+    return status
+
+
+def main():
+    write_status()
 
 
 if __name__ == '__main__':

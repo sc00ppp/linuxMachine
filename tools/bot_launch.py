@@ -81,6 +81,35 @@ log.write('\n=== bot_launch starting ===\n')
 log.write(f'python {sys.version}\n')
 log.write(f'executable {sys.executable}\n')
 
+
+def _publish_status():
+    """Keep status.json fresh enough to drive a real progress bar.
+
+    A scheduled task cannot run more often than once a minute, which made the
+    console's indicator show a percentage from a download that had already
+    finished — it read as frozen. Writing from inside the process that is doing
+    the downloading costs nothing and is always current.
+    """
+    import time
+    try:
+        from status_gen import write_status
+    except Exception:
+        log.write('=== status publisher unavailable ===\n')
+        return
+
+    while True:
+        try:
+            write_status()
+        except Exception:
+            # The indicator is decorative; never let it disturb downloading.
+            pass
+        time.sleep(2)
+
+
+import threading  # noqa: E402  (deliberately after the streams are set up)
+
+threading.Thread(target=_publish_status, daemon=True, name='status').start()
+
 try:
     runpy.run_path(os.path.join(HERE, 'bot.py'), run_name='__main__')
     log.write('=== bot.py returned normally ===\n')

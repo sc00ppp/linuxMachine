@@ -130,3 +130,59 @@
     display: none;
   }
 }
+
+/* --- Download progress bar ------------------------------------------------
+   The count alone read as frozen: a percentage that only refreshed once a
+   minute sat on a download that had already finished. A moving bar makes
+   "working" legible at a glance from the sofa, and the queue count beside it
+   answers "how much is left" without a second look. */
+.topbar-download-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.topbar-download-track {
+  display: block;
+  width: 9rem;
+  height: 0.28rem;
+  border-radius: 999px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+.topbar-download-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--accent, #5865f2) 70%, var(--text));
+  /* Slightly slower than the two-second poll so each step glides into the
+     next rather than stepping — the bar should read as continuous motion. */
+  transition: width 2.4s linear;
+}
+
+/* Unknown percentage: sweep rather than sit at a misleading value. */
+.topbar-download-fill[data-indeterminate='true'] {
+  transition: none;
+  animation: topbar-download-sweep 1.6s ease-in-out infinite;
+}
+
+@keyframes topbar-download-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(900%); }
+}
+
+.topbar-download-queue {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .topbar-download-fill {
+    transition: none;
+    animation: none;
+  }
+}
