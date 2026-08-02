@@ -15,6 +15,7 @@ import type { CSSProperties } from 'react';
 import type { ConsoleInput, MirroredChannel } from './types';
 import { haptic } from './press';
 import './ChannelMirror.css';
+import { glideIntoView } from '../motion/glide';
 
 /** Gap between synthesised nav steps. Long enough for the TV's ~200 ms focus
  *  move to read as travel, short enough that a 4-tile jump still feels instant. */
@@ -58,11 +59,7 @@ export default function ChannelMirror({
     const el = tiles.current.get(focusedId);
     if (!el) return;
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    el.scrollIntoView({
-      behavior: reduced ? 'auto' : 'smooth',
-      inline: 'center',
-      block: 'nearest',
-    });
+    glideIntoView(el, { block: 'nearest', inline: 'center' });
   }, [focusedId]);
 
   const tap = useCallback(

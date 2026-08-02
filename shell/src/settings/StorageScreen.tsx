@@ -6,6 +6,7 @@ import { sound } from '../sound';
 import { STORAGE_DRIVES, STORAGE_SCAN_NOTE, formatGb, type StorageDrive } from './storageData';
 import { cssVars, prefersReducedMotion } from './util';
 import './StorageScreen.css';
+import { glideIntoView } from '../motion/glide';
 
 /**
  * The Storage screen (CONTRACTS.md Round 3.5) — the room's marquee screen.
@@ -73,10 +74,7 @@ function DriveCard({ drive, autoFocus }: DriveCardProps) {
   // TV), so follow focus the same way every other room's scroller does.
   useEffect(() => {
     if (!focused) return;
-    elRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-    });
+    glideIntoView(elRef.current, { block: 'nearest' });
   }, [focused]);
 
   return (

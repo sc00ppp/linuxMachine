@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useFocusable } from '../focus';
 import { PlayIcon } from '../icons';
+import { customTvThumbnailUrl } from '../core/customTvHost';
 import type { CustomTvVideo } from './catalog';
+import { glideIntoView } from '../motion/glide';
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -69,16 +71,13 @@ export function CustomTvCard({
 
   useEffect(() => {
     if (!focused) return;
-    elementRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused]);
 
   const duration = durationLabel(video.duration_seconds);
   const size = fileSizeLabel(video.size_bytes);
   const date = dateLabel(video.downloaded_at);
+  const thumbnailUrl = customTvThumbnailUrl(video.thumbnail);
 
   return (
     <article className="ctv-video-slot">
@@ -93,10 +92,10 @@ export function CustomTvCard({
         aria-label={`${video.title}, ${categoryName}${duration ? `, ${duration}` : ''}${unavailable ? ', currently unavailable' : ''}`}
       >
         <span className="ctv-video-art">
-          {video.thumbnail && (
+          {thumbnailUrl && (
             <img
               className="ctv-video-thumbnail"
-              src={video.thumbnail}
+              src={thumbnailUrl}
               alt=""
               loading="lazy"
             />

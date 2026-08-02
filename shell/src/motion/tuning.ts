@@ -9,9 +9,25 @@
  */
 export const tuning = {
   /** Focus hop between tiles. React on button-down; motion stays short. */
-  focusMoveMs: 200,
-  /** Focused-tile scale/glow ease-in. */
-  focusEase: 'cubic-bezier(0.22, 1, 0.36, 1)',
+  focusMoveMs: 240,
+  /**
+   * Focused-tile scale/glow ease.
+   *
+   * This is the iOS system curve. Its distinguishing feature is that it
+   * leaves the start almost linearly and then decays over a long tail —
+   * where an ease-out-expo (the old curve) snaps off the line and coasts.
+   * Against a d-pad, the snap is what made every hop feel like a twitch.
+   */
+  focusEase: 'cubic-bezier(0.32, 0.72, 0, 1)',
+
+  /**
+   * Spring scrolling (see motion/glide.ts). `navGlideMs` is the response
+   * time — roughly how long an uninterrupted hop takes to arrive — and the
+   * damping ratio sits just under 1 so it settles firmly without ever
+   * overshooting a shelf edge (overshoot on a TV reads as a bug, not bounce).
+   */
+  navGlideMs: 420,
+  navGlideDamping: 0.92,
 
   /** Grid page glide (L/R paging). */
   pageGlideMs: 350,
@@ -35,6 +51,12 @@ export const tuning = {
 
   /** Drill transition (grid → channel screen), per vAMP drillOut. */
   drillMs: 240,
+  /**
+   * The outgoing screen's curve. Faster off the mark than the incoming one:
+   * what you are leaving should clear the way, not compete for attention
+   * with what you are arriving at.
+   */
+  drillOutEase: 'cubic-bezier(0.4, 0, 0.9, 0.6)',
   drillSlidePx: 32,
   drillInMs: 260,
   drillInEase: 'cubic-bezier(0.22, 0.9, 0.32, 1)',

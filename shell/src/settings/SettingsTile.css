@@ -127,8 +127,8 @@
 .stile::after {
   content: '';
   position: absolute;
-  inset: -0.55rem;
-  border-radius: calc(var(--radius-tile) + 0.4rem);
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
   border: 0.22rem solid var(--accent);
   box-shadow:
@@ -229,6 +229,6 @@
 }
 
 
-.settings-tile::after { inset: -0.7rem; border-radius: calc(var(--radius-tile) + 0.7rem); }
+.settings-tile::after { inset: 0; border-radius: inherit; }
 .settings-tile[data-focused='true'] { box-shadow: none; filter: none; }
 

@@ -24,6 +24,7 @@ import {
   type SituationTrace,
 } from './SituationGlobe';
 import './SituationChannel.css';
+import { glideIntoView } from '../motion/glide';
 
 /**
  * Situation — a live globe with toggleable data layers.
@@ -299,12 +300,7 @@ function EventRow({
     if (!focused) return;
     onFocused(item.id);
     // The list is taller than the panel; keep the focused row in view.
-    elRef.current?.scrollIntoView({
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'auto'
-        : 'smooth',
-      block: 'nearest',
-    });
+    glideIntoView(elRef.current, { block: 'nearest' });
   }, [focused, item.id, onFocused]);
 
   return (

@@ -150,7 +150,7 @@
   min-width: 0;
   padding: 1.15rem 1.25rem 1rem;
   overflow: hidden;
-  border-radius: calc(var(--radius-card) + 0.35rem);
+  border-radius: inherit;
 }
 
 .remap-pad-card::after {

@@ -116,7 +116,6 @@
   overflow-y: auto;
   padding: 0.25rem 0 4.5rem;
   scroll-padding-block: 2rem 5rem;
-  scroll-behavior: smooth;
   overscroll-behavior-block: contain;
   scrollbar-width: none;
 }
@@ -157,7 +156,6 @@
   overflow-y: hidden;
   padding: 1.15rem 5rem 2.4rem;
   scroll-padding-inline: 9rem;
-  scroll-behavior: smooth;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
 }
@@ -254,7 +252,7 @@
   z-index: 5;
   inset: 0;
   pointer-events: none;
-  border: 0.2rem solid color-mix(in srgb, var(--accent) 65%, var(--text));
+  border: 0.22rem solid var(--accent);
   border-radius: inherit;
   opacity: 0;
   box-shadow:
@@ -623,9 +621,9 @@
 .ctv-transport-button::after {
   content: '';
   position: absolute;
-  inset: -0.3rem;
+  inset: 0;
   pointer-events: none;
-  border: 0.2rem solid color-mix(in srgb, var(--accent) 64%, var(--text));
+  border: 0.22rem solid var(--accent);
   border-radius: inherit;
   opacity: 0;
   box-shadow:

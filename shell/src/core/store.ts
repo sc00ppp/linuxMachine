@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { CHANNELS } from './channels';
 import type { ConsoleMode } from './types';
 
 /** In-shell screens layered over/instead of the channel wall. */
@@ -12,6 +13,17 @@ export type HomeView =
   | 'weather'
   | 'news'
   | 'situation';
+
+/**
+ * The wall tile a room belongs to, so closing the room can shrink back into
+ * it. Resolved from CHANNELS rather than assuming `view === channel.id`,
+ * which is true today and is exactly the kind of thing that quietly stops
+ * being true. `null` for the wall itself — there is nothing to return to.
+ */
+function channelForView(view: HomeView): string | null {
+  if (view === 'wall') return null;
+  return CHANNELS.find((channel) => channel.view === view)?.id ?? null;
+}
 
 /**
  * Global console state. Owned by the integrator — workers import, never edit.
@@ -116,9 +128,29 @@ export const useConsoleStore = create<ConsoleStore>((set) => ({
 
   openGames: () => set({ view: 'games', gamesLevel: 'consoles' }),
   openSettings: () => set({ view: 'settings' }),
-  openView: (view) => set({ view, gamesLevel: 'consoles', customTvScreen: 'live', newsReading: false }),
+  openView: (view) =>
+    set({
+      view,
+      gamesLevel: 'consoles',
+      customTvScreen: 'live',
+      newsReading: false,
+      // Opening a room cancels any homecoming that never got to play.
+      returningChannel: null,
+    }),
   closeView: () =>
-    set({ view: 'wall', gamesLevel: 'consoles', customTvScreen: 'live', newsReading: false }),
+    set((s) => ({
+      view: 'wall',
+      gamesLevel: 'consoles',
+      customTvScreen: 'live',
+      newsReading: false,
+      // Leaving an in-shell room is a homecoming exactly like quitting an
+      // app, and it has to be told so: HomeScreen plays the reverse tile
+      // zoom off `returningChannel` alone. Without this, every room the
+      // shell owns — Games, Movies, Custom TV, all of them — grew out of
+      // its tile on the way in and then vanished on a hard cut on the way
+      // out. That asymmetry is what made opening things feel broken.
+      returningChannel: channelForView(s.view),
+    })),
   setGamesLevel: (level) => set({ gamesLevel: level }),
   setCustomTvScreen: (screen) => set({ customTvScreen: screen }),
   openGameDetail: (key) => set({ gamesLevel: 'detail', selectedGameKey: key }),

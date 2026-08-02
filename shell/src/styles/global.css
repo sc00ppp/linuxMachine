@@ -184,6 +184,12 @@ html.no-grain body::after {
  */
 
 [data-focused='true'] {
+  /* Redeclared, not merely inherited. `--glow-accent` resolves its `var()`s
+     at the element it is declared on, so the copy inherited from `:root` has
+     the root's gold accent frozen into it — every focused object in every
+     room glowed gold. Restating it here resolves it against THIS element's
+     accent, which is what the token always claimed to do. */
+  --glow-accent: 0 0 1.5rem -0.25rem var(--accent), 0 0 4rem -0.5rem var(--accent);
   /* Accent glow only. `--shadow-lift` used to ride along here, which painted
      a grey halo between a tile and its accent ring — visible as a dull band
      hugging every focused object. Focus is light, not a drop shadow;
@@ -379,10 +385,18 @@ html.cursor-idle *::after {
   /* Focus rings are ::after pseudo-elements — separate boxes that do NOT
      inherit corner-shape from their host. Left round while the tile became a
      squircle, the two curves diverge and the ring visibly bulges past the
-     corners. Give every ring the same shape as the thing it hugs. */
-  .tile::after,
-  .boxart::after,
-  .ctile::after,
+     corners. Give every ring the same shape as the thing it hugs.
+
+     `.tile`, `.ctile` and `.boxart` are deliberately absent: their rings are
+     no longer pseudo-elements at all. Those three are the cases where the
+     host is a squircle but the FACE inside it stays round (see the note
+     above — a clipping container cannot be squircled), so a ring matched to
+     the host was matched to the wrong curve. It hugged the tile's superellipse
+     while the artwork you can actually see followed the face's circular clip,
+     and the gap between the two curves opened up as a wedge of background at
+     45°, invisible along the straight edges. Those three now draw their ring
+     as an `outline` on the face itself, which the browser derives from that
+     element's own box — same curve, by construction, with nothing to sync. */
   .settings-tile::after,
   .weather-hour::after,
   .weather-day::after,

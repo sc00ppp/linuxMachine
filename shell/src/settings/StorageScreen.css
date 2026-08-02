@@ -57,10 +57,10 @@
 .drive-card::after {
   content: '';
   position: absolute;
-  inset: -0.1875rem;
-  border-radius: calc(var(--radius-card) + 0.1875rem);
+  inset: 0;
+  border-radius: inherit;
   pointer-events: none;
-  border: 0.125rem solid color-mix(in srgb, var(--accent) 58%, var(--text));
+  border: 0.22rem solid var(--accent);
   box-shadow: 0 0 1.75rem -0.25rem color-mix(in srgb, var(--accent) 55%, transparent);
   opacity: 0;
   transition: opacity var(--focus-ms) var(--focus-ease);

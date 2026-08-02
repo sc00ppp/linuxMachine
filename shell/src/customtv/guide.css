@@ -362,9 +362,9 @@
 .ctv-guide-cell::after {
   content: '';
   position: absolute;
-  inset: -0.2rem;
+  inset: 0;
   pointer-events: none;
-  border: 0.18rem solid color-mix(in srgb, var(--accent) 72%, var(--text));
+  border: 0.22rem solid var(--accent);
   border-radius: inherit;
   opacity: 0;
   box-shadow: var(--glow-accent);

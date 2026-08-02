@@ -15,6 +15,7 @@ unchanged, and parsed from the MP4 container otherwise — the shell's live TV
 scheduler needs them, and a video with no duration cannot be scheduled.
 """
 import json
+import hashlib
 import os
 import re
 import sqlite3
@@ -25,6 +26,7 @@ from urllib.parse import quote
 
 VIDEO_EXTS = {'.3gp', '.avi', '.flv', '.m2ts', '.m4v', '.mkv', '.mov', '.mp4',
               '.mpeg', '.mpg', '.ogv', '.ts', '.webm', '.wmv'}
+IMAGE_EXTS = {'.jpg', '.jpeg', '.png', '.webp'}
 
 # encodeURIComponent's unreserved set: A-Z a-z 0-9 - _ . ! ~ * ' ( )
 JS_SAFE = "-_.!~*'()"
@@ -108,6 +110,8 @@ def main():
     root = config.get('download_base_path') or r'S:\customTV'
     db_path = config.get('database_path') or os.path.join(bot_dir, 'video_tracker.db')
     out_path = os.path.join(root, 'catalog.json')
+    thumbnail_base_url = str(config.get('thumbnail_base_url') or
+                             'http://192.168.1.158:8099/customTV').rstrip('/')
 
     # Reuse what the last catalog already worked out; parsing every container
     # on every run would make this far too slow to attach to the bot.
@@ -139,6 +143,12 @@ def main():
         folder = os.path.join(root, entry)
         if not os.path.isdir(folder):
             continue
+        sidecars = {}
+        for candidate in os.listdir(folder):
+            stem, candidate_ext = os.path.splitext(candidate)
+            candidate_path = os.path.join(folder, candidate)
+            if os.path.isfile(candidate_path) and candidate_ext.lower() in IMAGE_EXTS:
+                sidecars.setdefault(stem.casefold(), candidate)
         count = 0
         for name in sorted(os.listdir(folder)):
             path = os.path.join(folder, name)
@@ -152,21 +162,36 @@ def main():
             # these filenames are full of apostrophes.
             media_url = '/' + quote(entry, safe=JS_SAFE) + '/' + quote(name, safe=JS_SAFE)
             carried = previous.get(media_url)
+            carried_id = carried.get('id') if carried else None
+            if carried_id and not str(carried_id).startswith('fs-'):
+                video_id = carried_id
+            else:
+                digest = hashlib.sha256(media_url.encode('utf-8')).hexdigest()[:14]
+                video_id = 'fs-' + digest
             stat = os.stat(path)
             duration = carried.get('duration_seconds') if carried else None
             if duration is None or (carried and carried.get('size_bytes') != stat.st_size):
                 duration = mp4_duration(path) if ext in ('.mp4', '.m4v', '.mov') else None
 
             source_url, title = by_title.get(match_key(name), (None, None))
+            sidecar = sidecars.get(os.path.splitext(name)[0].casefold())
+            if sidecar:
+                thumbnail_path = ('/' + quote(entry, safe=JS_SAFE) + '/' +
+                                  quote(sidecar, safe=JS_SAFE))
+                thumbnail = thumbnail_base_url + thumbnail_path
+                thumbnail_source = 'source'
+            else:
+                thumbnail = carried.get('thumbnail') if carried else None
+                thumbnail_source = carried.get('thumbnail_source') if carried else None
             videos.append({
-                'id': carried['id'] if carried else 'fs-' + match_key(entry + name)[:14],
+                'id': video_id,
                 'category': entry,
                 'title': title or title_from_filename(name),
                 'filename': name,
                 'url': source_url,
                 'media_url': media_url,
-                'thumbnail': carried.get('thumbnail') if carried else None,
-                'thumbnail_source': carried.get('thumbnail_source') if carried else None,
+                'thumbnail': thumbnail,
+                'thumbnail_source': thumbnail_source,
                 'size_bytes': stat.st_size,
                 'extension': ext.lstrip('.'),
                 'duration_seconds': duration,

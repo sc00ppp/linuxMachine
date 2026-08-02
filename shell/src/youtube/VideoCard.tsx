@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusable } from '../focus';
 import { PlayIcon } from '../icons';
 import type { YouTubeVideo } from './types';
+import { glideIntoView } from '../motion/glide';
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -51,11 +52,7 @@ export function VideoCard({
 
   useEffect(() => {
     if (!focused) return;
-    elementRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused]);
 
   return (

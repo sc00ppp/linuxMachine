@@ -101,12 +101,23 @@
   border: 0.0625rem solid var(--line);
 }
 
+/* One cursor, the shell's.
+ *
+ * These were rings of three different widths in `accent 72% + text` — a blend
+ * that desaturates into a pale grey band rather than reading as coloured
+ * light. Worse, the buttons keep a dim `--line` border, and a spread ring
+ * sits OUTSIDE the border box: focused, you got fill, then a dark hairline,
+ * then a washed-out band standing off it. Hence "gross". Pure accent, one
+ * width, and the border recoloured so nothing dark separates the fill from
+ * the ring. A `box-shadow` spread ring follows the element's own radius, so
+ * pills stay pills and there is nothing to overhang. */
 .yt-header-button[data-focused='true'],
 .yt-retry-button[data-focused='true'] {
   transform: scale(1.06);
   background: color-mix(in srgb, var(--accent) 20%, var(--bg-2));
+  border-color: var(--accent);
   box-shadow:
-    0 0 0 0.2rem color-mix(in srgb, var(--accent) 72%, var(--text)),
+    0 0 0 0.22rem var(--accent),
     var(--glow-accent);
 }
 
@@ -204,7 +215,6 @@
   overflow-y: hidden;
   padding: 1.15rem 5rem 2.4rem;
   scroll-padding-inline: 9rem;
-  scroll-behavior: smooth;
   overscroll-behavior-inline: contain;
   scrollbar-width: none;
 }
@@ -244,6 +254,14 @@
   filter: saturate(0.84) brightness(0.8);
 }
 
+/* No shell-wide bloom on the card box. The card is a transparent wrapper —
+   the thing you see is `.yt-video-art` inside it, which carries its own ring
+   and its own glow. A second, wider bloom cast from the wrapper just smeared
+   a halo around the thumbnail. Same call the channel wall's tiles make. */
+.yt-video-card[data-focused='true'] {
+  box-shadow: none;
+}
+
 .yt-video-card[data-focused='true'] {
   z-index: 3;
   transform: translateZ(0) scale(1.055);
@@ -273,8 +291,9 @@
   position: absolute;
   pointer-events: none;
   opacity: 0;
-  border: 0.2rem solid
-    color-mix(in srgb, var(--accent) 64%, var(--text));
+  /* Pure accent at the shell's ring width. Blending the text colour in to
+     "keep it crisp" is what turned this ring into a pale grey-pink band. */
+  border: 0.22rem solid var(--accent);
   box-shadow:
     0 0 0.8rem color-mix(in srgb, var(--accent) 48%, transparent),
     inset 0 0 0.35rem color-mix(in srgb, var(--accent) 28%, transparent);
@@ -282,8 +301,8 @@
 }
 
 .yt-video-art::after {
-  inset: -0.48rem;
-  border-radius: calc(var(--radius-card) + 0.35rem);
+  inset: 0;
+  border-radius: inherit;
 }
 
 .yt-video-card[data-focused='true'] .yt-video-art::after,
@@ -365,18 +384,24 @@
   text-align: center;
 }
 
+/* The button prompt that appears on a focused card ("Y Subscribe").
+ *
+ * It was a bordered dark capsule with a drop shadow — a third badge language
+ * on a thumbnail that already carries the duration/Live badge, and heavy
+ * enough to read as a control you could press rather than a prompt. It now
+ * matches the duration badge exactly (same corner, same fill, same weight)
+ * and differs only by carrying the accent, so the two overlays on one
+ * thumbnail read as one family. */
 .yt-video-secondary-action {
   position: absolute;
   z-index: 2;
   left: 0.55rem;
   top: 0.5rem;
-  padding: 0.32rem 0.58rem;
-  border: 0.0625rem solid var(--line-strong);
-  border-radius: var(--radius-chip);
-  color: var(--text);
-  background: color-mix(in srgb, var(--bg-0) 86%, transparent);
-  box-shadow: var(--shadow-soft);
-  font-size: 0.92rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.35rem;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--bg-0) 88%, transparent);
+  font-size: 1rem;
   line-height: 1;
   font-weight: 800;
   opacity: 0;
@@ -557,7 +582,8 @@
 .yt-shelf-action[data-focused='true'] {
   transform: scale(1.07);
   background: color-mix(in srgb, var(--accent) 28%, var(--bg-2));
-  box-shadow: 0 0 0 0.16rem color-mix(in srgb, var(--accent) 68%, var(--text));
+  border-color: var(--accent);
+  box-shadow: 0 0 0 0.22rem var(--accent);
 }
 
 /* Subscription management ---------------------------------------------- */
@@ -647,8 +673,9 @@
   z-index: 2;
   transform: scale(1.045);
   background: color-mix(in srgb, var(--accent) 28%, var(--bg-2));
+  border-color: var(--accent);
   box-shadow:
-    0 0 0 0.18rem color-mix(in srgb, var(--accent) 68%, var(--text)),
+    0 0 0 0.22rem var(--accent),
     var(--glow-accent);
 }
 
@@ -821,7 +848,7 @@
 }
 
 .yt-key::after {
-  inset: -0.3rem;
+  inset: 0;
   border-radius: 0.9rem;
 }
 
@@ -1048,7 +1075,7 @@
 }
 
 .yt-transport-button::after {
-  inset: -0.3rem;
+  inset: 0;
   border-radius: inherit;
 }
 

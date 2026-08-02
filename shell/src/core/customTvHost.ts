@@ -50,3 +50,10 @@ export function customTvUrl(path: string | null): string | null {
   const suffix = path.startsWith('/') ? path : `/${path}`;
   return `${customTvHost}${suffix}`;
 }
+
+/** Resolve runtime sidecars while keeping bundled importer art on this origin. */
+export function customTvThumbnailUrl(path: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith('/customtv-thumbs/')) return path;
+  return customTvUrl(path);
+}

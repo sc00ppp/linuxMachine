@@ -34,6 +34,7 @@ import {
   type MediaPlaybackItem,
 } from './mediaPlayback';
 import './MoviesChannel.css';
+import { glideIntoView } from '../motion/glide';
 
 type MoviesLevel = 'library' | 'episodes';
 
@@ -479,11 +480,7 @@ function MovieSortControl({
   useEffect(() => {
     if (!focused) return;
     lastRowId = rowId;
-    elementRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused, rowId]);
 
   return (
@@ -544,11 +541,7 @@ function MediaPoster({
   useEffect(() => {
     if (!focused) return;
     onFocus(item);
-    elementRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused, item, onFocus]);
 
   const poster = item.value.poster;
@@ -715,11 +708,7 @@ function SeasonChip({
   useEffect(() => {
     if (!focused) return;
     onFocus(season.number);
-    elementRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused, onFocus, season.number]);
 
   return (
@@ -773,11 +762,7 @@ function EpisodeCard({
 
   useEffect(() => {
     if (!focused) return;
-    elementRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused]);
 
   const number =

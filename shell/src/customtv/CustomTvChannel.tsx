@@ -19,6 +19,7 @@ import {
   type CustomTvVideo,
 } from './catalog';
 import { customTvUrl } from '../core/customTvHost';
+import { useScreenExit } from '../motion/useScreenExit';
 import { CustomTvCard } from './CustomTvCard';
 import { CustomTvPlayer } from './CustomTvPlayer';
 import { LiveChannel } from './LiveChannel';
@@ -35,6 +36,13 @@ type CustomTvCssProperties = CSSProperties & Record<`--${string}`, string | numb
  * allowed (you cannot scrub live TV).
  */
 type Screen = 'live' | 'guide' | 'library' | 'playback';
+
+/** Live is the surface; the guide is a step in, on-demand a step past it. */
+const SCREEN_DEPTH: Record<'live' | 'guide' | 'library', number> = {
+  live: 0,
+  guide: 1,
+  library: 2,
+};
 
 function reducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -71,8 +79,15 @@ export function CustomTvChannel() {
   useEffect(() => {
     const controller = new AbortController();
     const url = customTvUrl('/catalog.json');
-    if (url) void refreshCustomTvCatalog(url, controller.signal);
-    return () => controller.abort();
+    const refresh = () => {
+      if (url) void refreshCustomTvCatalog(url, controller.signal);
+    };
+    refresh();
+    const timer = window.setInterval(refresh, 10_000);
+    return () => {
+      window.clearInterval(timer);
+      controller.abort();
+    };
   }, []);
 
   const storeScreen = useConsoleStore((s) => s.customTvScreen);
@@ -93,6 +108,14 @@ export function CustomTvChannel() {
   );
   const returnFocusId = useRef<string | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // Flipping between live, the guide and on-demand animates the screen that
+  // arrives; this drifts the one being left out from under it, so a flip
+  // reads as a move rather than a cut. Playback is excluded — it opens over
+  // the room rather than replacing it.
+  useScreenExit(rootRef, (state) =>
+    state.view === 'customtv' ? SCREEN_DEPTH[state.customTvScreen] : Number.NaN,
+  );
   const categoryNames = useMemo(
     () => new Map(customTvCatalog.categories.map((category) => [category.id, category.display_name])),
     // Rebuilt when a runtime refresh swaps the catalog behind us.

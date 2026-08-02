@@ -7,7 +7,7 @@ import {
   useState,
   type CSSProperties,
 } from 'react';
-import { customTvUrl } from '../core/customTvHost';
+import { customTvThumbnailUrl, customTvUrl } from '../core/customTvHost';
 import { useFocusable } from '../focus';
 import { customTvCatalog, type CustomTvVideo } from './catalog';
 import { scheduleAt, type ChannelSchedule } from './schedule';
@@ -402,7 +402,7 @@ export function LiveChannel({ channelId, onTune, onOpenGuide }: LiveChannelProps
           <video
             key={playbackKey}
             src={sourceUrl}
-            poster={playingVideo.thumbnail ?? undefined}
+            poster={customTvThumbnailUrl(playingVideo.thumbnail) ?? undefined}
             autoPlay
             playsInline
             preload="auto"

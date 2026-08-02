@@ -72,6 +72,19 @@
   --radius-chip: 999px;
   --radius-sm: 0.75rem;
 
+  /* Where the selection ring sits BEFORE it lands.
+   *
+   * The ring itself no longer stands off at all — it traces its element's own
+   * box (`inset: 0; border-radius: inherit` for controls, an `outline` on the
+   * face for cards). A standoff, however small, both overhangs the control
+   * and lets its corner arc disagree with the element's, which shows up as a
+   * wedge of background at 45°.
+   *
+   * What survives is the approach: an unfocused ring sits this far inside its
+   * element and slides out flush as focus lands, so the cursor arrives rather
+   * than appearing. */
+  --focus-ring-offset: 0.15rem;
+
   /* ── Depth ───────────────────────────────────────────────────────────── */
   /* Ambient shadow: layered + warm-black so tiles sit *in* the room rather
      than float on a grey plane. */
@@ -80,8 +93,20 @@
   --shadow-lift: 0 0.25rem 0.75rem rgba(8, 6, 12, 0.34),
     0 1.75rem 4rem rgba(8, 6, 12, 0.5);
 
-  /* Focus = light (DESIGN.md §1). These are accent-derived so a focused
-     element glows in its own channel color with zero extra plumbing. */
+  /* Focus = light (DESIGN.md §1).
+   *
+   * CAREFUL: "accent-derived with zero extra plumbing" is what this looks
+   * like and is NOT what it does. A custom property resolves the `var()`s
+   * inside it at the element where it is DECLARED — here, `:root` — and then
+   * inherits that already-resolved value. So `--glow-accent` carries the root
+   * accent (gold) baked in, and a room that sets its own `--accent` inherits
+   * a gold glow anyway. It went unnoticed for a long time because the wall
+   * and most rooms are warm; YouTube is red, and a gold bloom around a red
+   * ring is impossible to miss.
+   *
+   * Anything using these must REDECLARE them in the same rule that uses
+   * them, which forces resolution against that element's own accent. See
+   * `[data-focused='true']` in global.css. */
   --glow-accent: 0 0 1.5rem -0.25rem var(--accent), 0 0 4rem -0.5rem var(--accent);
   --glow-accent-strong: 0 0 1.25rem -0.125rem var(--accent),
     0 0 6rem -0.5rem var(--accent);

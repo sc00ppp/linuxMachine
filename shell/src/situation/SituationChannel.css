@@ -255,7 +255,7 @@
 .situation-tab::after {
   content: '';
   position: absolute;
-  inset: -0.3rem;
+  inset: 0;
   border: 0.14rem solid
     var(--accent);
   border-radius: inherit;
@@ -507,7 +507,6 @@
   min-height: 0;
   overflow-y: auto;
   scrollbar-width: none;
-  scroll-behavior: smooth;
   padding-right: 0.25rem;
 }
 

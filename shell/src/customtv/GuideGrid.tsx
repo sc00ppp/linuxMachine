@@ -11,6 +11,7 @@ import { PlayIcon } from '../icons';
 import { customTvCatalog, type CustomTvVideo } from './catalog';
 import { scheduleAt } from './schedule';
 import './guide.css';
+import { glideIntoView } from '../motion/glide';
 
 export const CUSTOM_TV_GUIDE_SCOPE = 'customtv';
 
@@ -200,13 +201,7 @@ function GuideCell({
       startsAtMs: segment?.startsAtMs ?? null,
       endsAtMs: segment?.endsAtMs ?? null,
     });
-    elementRef.current?.scrollIntoView({
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
-        ? 'auto'
-        : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'nearest' });
   }, [channel.name, focused, segment]);
 
   const current = Boolean(

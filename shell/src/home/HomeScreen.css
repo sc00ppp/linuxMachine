@@ -45,7 +45,6 @@
   z-index: 1;
   width: 100%;
   overflow-x: auto;
-  scroll-behavior: smooth;
   /* Edge-scroll margins: focus roams freely in the middle of the screen and
      only drags the row along when it pushes into these bands. */
   scroll-padding-inline: 10rem;

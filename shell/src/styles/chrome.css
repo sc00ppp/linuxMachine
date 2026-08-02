@@ -1,0 +1,166 @@
+/* Floating chrome.
+ *
+ * Every room used to be a three-row flex column: header, content, hint pill.
+ * That meant the header and the pill each owned a full-width *row* of the
+ * screen, painted in the room's background — so a shelf of box art stopped
+ * dead at an invisible line a few rem above the bottom of the screen, and the
+ * pill sat on a slab of flat colour instead of over the content. Rows got
+ * clipped at an arbitrary height that had nothing to do with the artwork.
+ *
+ * Here the bars leave the flow and float. Content fills the whole room and
+ * scrolls *underneath* them, dissolving into a scrim so it fades out rather
+ * than being cut off. The only thing left of the old bands is the glass pill
+ * itself, which is what it was always supposed to be: an island.
+ *
+ * Driven off `data-collapse="y"`, which already marks exactly the header and
+ * footer chrome in every room (motion/transitions.ts uses the same hook to
+ * retract them on launch), so a new room gets this for free.
+ *
+ * On the doubled `[data-collapse='y'][data-collapse]`: rooms are lazily
+ * imported, so their stylesheets are injected into the document *after* this
+ * one no matter where it sits in the import graph. Repeating the attribute
+ * buys a specificity point over the single room class (`.games-hints`) that
+ * would otherwise win the tie on source order. It is a deliberate override,
+ * not a typo.
+ */
+
+.console-root {
+  /* Space the chrome occupies. Content is padded by these so the first and
+     last row can always be reached, and `scroll-padding` keeps the focused
+     item from parking underneath a bar. */
+  --chrome-top: 6.5rem;
+  --chrome-bottom: 6.75rem;
+  /* How far the fade extends past the bar — content thins out over this
+     distance instead of ending on a line. */
+  --chrome-scrim: 9rem;
+}
+
+/* --- The bars themselves --------------------------------------------------
+   `position: absolute` against the room root (every room root is already
+   `position: absolute; inset: 0`). They keep their own internal layout. */
+
+[data-collapse='y'][data-collapse] {
+  position: absolute;
+  z-index: 6;
+}
+
+header[data-collapse='y'][data-collapse] {
+  inset: 0 0 auto 0;
+}
+
+/* Hint pills are centred islands: `width: fit-content` + auto margins keeps
+   them centred without a transform, which matters because the launch/return
+   choreography animates `translate` on these elements and a `transform` here
+   would be a second, competing offset. */
+footer[data-collapse='y'][data-collapse] {
+  inset: auto 0 1.6rem 0;
+  width: fit-content;
+  margin-inline: auto;
+  /* The old bars reserved this via layout; as floating elements they must not
+     re-add it or they sit too high. */
+  margin-bottom: 0;
+}
+
+/* --- Scrims ---------------------------------------------------------------
+   A gradient wider than the bar itself, so content dissolves under the chrome
+   across the full width of the screen. Sits behind the bar's own content but
+   above the room, and never eats input. */
+
+header[data-collapse='y']::before,
+footer[data-collapse='y']::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  width: 100vw;
+  transform: translateX(-50%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+header[data-collapse='y'][data-collapse]::before {
+  top: 0;
+  height: var(--chrome-scrim);
+  background: linear-gradient(
+    to bottom,
+    var(--bg-0) 0%,
+    color-mix(in srgb, var(--bg-0) 78%, transparent) 38%,
+    color-mix(in srgb, var(--bg-0) 34%, transparent) 70%,
+    transparent 100%
+  );
+}
+
+footer[data-collapse='y'][data-collapse]::before {
+  bottom: -1.6rem;
+  height: var(--chrome-scrim);
+  background: linear-gradient(
+    to top,
+    var(--bg-0) 0%,
+    color-mix(in srgb, var(--bg-0) 72%, transparent) 42%,
+    color-mix(in srgb, var(--bg-0) 28%, transparent) 72%,
+    transparent 100%
+  );
+}
+
+/* --- Content padding ------------------------------------------------------
+   The scrolling panes now run the full height of the room, so each one takes
+   the chrome's space as padding instead. `scroll-padding-block` is the half
+   that matters for feel: it is what stops the spring (motion/glide.ts) from
+   parking a focused box half-hidden under the pill.
+
+   Listed explicitly rather than matched by a generic selector — these are the
+   panes that scroll vertically, and padding something that doesn't scroll
+   just pushes it off the screen.
+
+   `!important` because several rooms have had a later "layout pass" applied
+   that sets `padding: … !important` on exactly these elements (Weather's is
+   the clearest case). Clearing the chrome is not a stylistic preference those
+   passes get to overrule — content hidden under a bar is unreachable. */
+
+.console-root .crow,
+.console-root .games-shelf,
+.console-root .ctv-library-scroll,
+.console-root .media-rows-scroll,
+.console-root .episode-scroller,
+.console-root .yt-home-scroll,
+.console-root .yt-manage-stage,
+.console-root .yt-search-stage {
+  padding-top: calc(var(--chrome-top) + 0.5rem) !important;
+  padding-bottom: calc(var(--chrome-bottom) + 1rem) !important;
+  scroll-padding-top: calc(var(--chrome-top) + 1rem);
+  scroll-padding-bottom: calc(var(--chrome-bottom) + 1.5rem);
+}
+
+/* Rooms whose content is a fixed, non-scrolling layout.
+ *
+ * Nothing scrolls under the bars here — there is nothing to scroll — so these
+ * take the clearance on the room ROOT instead of on one chosen child. That
+ * distinction is load-bearing: Weather has *two* in-flow rows (a tab strip
+ * above its content), and padding only the content left the tabs stranded
+ * underneath the header. Padding the root pushes every in-flow child down at
+ * once, while the bars, being absolutely positioned, are laid out against the
+ * padding box and stay pinned to the true edges.
+ *
+ * Tuned to the bars' real heights rather than the scrolling rooms' generous
+ * clearance. These layouts were sized to fill the gap between two in-flow
+ * bars exactly, so every extra rem comes straight out of their content —
+ * Weather in particular is already over-subscribed at 1080p and cannot spare
+ * any. The rule here is: give back exactly what the bars used to occupy. */
+.console-root .weather,
+.console-root .news-channel,
+.console-root .settings {
+  --chrome-top: 5.35rem;
+  --chrome-bottom: 4.9rem;
+  padding-top: var(--chrome-top);
+  padding-bottom: var(--chrome-bottom);
+}
+
+/* Situation is deliberately absent from all of this: it has no
+   `data-collapse` chrome, so nothing here floats over it and nothing needs
+   to make room. Padding its list would just push the feed off the screen. */
+
+@media (prefers-reduced-motion: reduce) {
+  header[data-collapse='y']::before,
+  footer[data-collapse='y']::before {
+    transition: none;
+  }
+}

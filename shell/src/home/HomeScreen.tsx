@@ -19,6 +19,7 @@ import { EmptySocket, Tile } from './Tile';
 import { TopBar } from './TopBar';
 import { cssVars, prefersReducedMotion } from './util';
 import './HomeScreen.css';
+import { glideIntoView } from '../motion/glide';
 
 /** Chrome dims to a whisper after this long without input (DESIGN.md §2). */
 const IDLE_MS = 5000;
@@ -189,11 +190,7 @@ export function HomeScreen() {
   useEffect(() => {
     if (!focusedId) return;
     const el = tileEls.current.get(focusedId);
-    el?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
-    });
+    glideIntoView(el, { block: 'nearest', inline: 'nearest' });
   }, [focusedId]);
 
   // --- launch --------------------------------------------------------------
@@ -281,7 +278,7 @@ export function HomeScreen() {
     // off-screen right, snap it into view NOW (instant, pre-paint) so the
     // shrink flies at the tile's real resting rect. The smooth scroll-follow
     // effect would otherwise drag the tile out from under the animation.
-    el.scrollIntoView({ behavior: 'auto', inline: 'nearest', block: 'nearest' });
+    glideIntoView(el, { block: 'nearest', inline: 'nearest', instant: true });
 
     let cancelled = false;
     void (async () => {

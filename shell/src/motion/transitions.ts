@@ -23,8 +23,10 @@
  *    animating top/left/width/height directly.
  *  - Home chrome (anything tagged `data-collapse`) is a separate, parallel
  *    animation driven by `collapseChrome`/`restoreChrome` — it doesn't know
- *    or care about the tile zoom, it just measures itself and animates its
- *    own box away/back.
+ *    or care about the tile zoom, it just slides itself off its own edge of
+ *    the screen and back. Compositor-only, deliberately: this runs at the
+ *    same time as a full-viewport cover is scaling, and it is the one thing
+ *    in the transition that used to touch layout.
  */
 import { tuning } from './tuning';
 
@@ -38,18 +40,23 @@ type CollapseKind = 'x' | 'y' | 'fade';
 interface ChromeOriginal {
   /** Full inline `style` attribute at capture time, so restore can be exact. */
   cssText: string;
-  width: number;
-  height: number;
-  marginLeft: number;
-  marginRight: number;
-  marginTop: number;
-  marginBottom: number;
+  /**
+   * Where this bar goes when it leaves — a `translate` value that carries it
+   * clear of its own edge of the screen.
+   *
+   * This used to animate width/height/margins to zero, which was a mistake
+   * that only became obvious on the media PC's GTX 970: those are layout
+   * properties, so every frame of the launch re-ran layout for the chrome
+   * while a full-viewport cover was scaling over it. Sliding is compositor
+   * work — no layout, no paint — and it looks better besides, because a bar
+   * that squashes to nothing reads as a bug where one that leaves reads as
+   * the screen making way.
+   */
+  offset: string;
   opacity: number;
 }
 
-type StyleProps = Partial<
-  Record<'width' | 'height' | 'marginLeft' | 'marginRight' | 'marginTop' | 'marginBottom' | 'opacity', string>
->;
+type StyleProps = Partial<Record<'translate' | 'opacity', string>>;
 
 /**
  * Elements we've collapsed, keyed by element, so a later `restoreChrome`
@@ -59,35 +66,42 @@ type StyleProps = Partial<
  */
 const chromeOriginals = new WeakMap<HTMLElement, ChromeOriginal>();
 
-function measureOriginal(el: HTMLElement): ChromeOriginal {
+/**
+ * Which way a bar leaves, and how far. Decided from where it actually sits
+ * rather than from a hard-coded "headers go up": rooms position their chrome
+ * themselves, and a footer that slid upward through the content would be
+ * very obviously wrong.
+ */
+function exitOffset(el: HTMLElement, kind: CollapseKind): string {
+  if (kind === 'fade') return '0 0';
   const rect = el.getBoundingClientRect();
+  // A little past the edge, so a bar with a shadow or a scrim clears fully.
+  const slack = 24;
+  if (kind === 'x') {
+    const width = window.innerWidth || rect.right;
+    const goesLeft = rect.left + rect.width / 2 < width / 2;
+    return goesLeft ? `${-(rect.right + slack)}px 0` : `${width - rect.left + slack}px 0`;
+  }
+  const height = window.innerHeight || rect.bottom;
+  const goesUp = rect.top + rect.height / 2 < height / 2;
+  return goesUp ? `0 ${-(rect.bottom + slack)}px` : `0 ${height - rect.top + slack}px`;
+}
+
+function measureOriginal(el: HTMLElement, kind: CollapseKind): ChromeOriginal {
   const cs = getComputedStyle(el);
   return {
     cssText: el.style.cssText,
-    width: rect.width,
-    height: rect.height,
-    marginLeft: parseFloat(cs.marginLeft) || 0,
-    marginRight: parseFloat(cs.marginRight) || 0,
-    marginTop: parseFloat(cs.marginTop) || 0,
-    marginBottom: parseFloat(cs.marginBottom) || 0,
+    offset: exitOffset(el, kind),
     opacity: cs.opacity === '' ? 1 : parseFloat(cs.opacity) || 0,
   };
 }
 
-function collapsedStyleFor(kind: CollapseKind): StyleProps {
-  if (kind === 'x') return { width: '0px', marginLeft: '0px', marginRight: '0px', opacity: '0' };
-  if (kind === 'y') return { height: '0px', marginTop: '0px', marginBottom: '0px', opacity: '0' };
-  return { opacity: '0' };
+function collapsedStyleFor(o: ChromeOriginal): StyleProps {
+  return { translate: o.offset, opacity: '0' };
 }
 
-function naturalStyleFor(kind: CollapseKind, o: ChromeOriginal): StyleProps {
-  if (kind === 'x') {
-    return { width: `${o.width}px`, marginLeft: `${o.marginLeft}px`, marginRight: `${o.marginRight}px`, opacity: `${o.opacity}` };
-  }
-  if (kind === 'y') {
-    return { height: `${o.height}px`, marginTop: `${o.marginTop}px`, marginBottom: `${o.marginBottom}px`, opacity: `${o.opacity}` };
-  }
-  return { opacity: `${o.opacity}` };
+function naturalStyleFor(o: ChromeOriginal): StyleProps {
+  return { translate: '0 0', opacity: `${o.opacity}` };
 }
 
 /** Bracket-notation style assignment, kept in one spot behind a narrow cast. */
@@ -100,8 +114,8 @@ function applyStyle(el: HTMLElement, styles: StyleProps): void {
 }
 
 /**
- * Collapse every `data-collapse="x"|"y"|"fade"` element under `root` away
- * to nothing (width/height/margin/opacity → 0, depending on axis).
+ * Slide every `data-collapse="x"|"y"` element under `root` off its own edge
+ * of the screen, and fade every `data-collapse="fade"` one out.
  *
  * `animate: false` snaps instantly (used by `playReturn`, which needs
  * chrome already hidden the instant HomeScreen remounts, before first
@@ -117,22 +131,18 @@ export function collapseChrome(root: ParentNode, animate: boolean): Promise<void
 
     let original = chromeOriginals.get(el);
     if (!original) {
-      original = measureOriginal(el);
+      original = measureOriginal(el, kind);
       chromeOriginals.set(el, original);
     }
 
-    // Collapsing x/y clips the shrinking box instead of letting content
-    // spill/reflow oddly mid-animation.
-    if (!el.style.overflow) el.style.overflow = 'hidden';
-
-    const to = collapsedStyleFor(kind);
+    const to = collapsedStyleFor(original);
 
     if (!animate) {
       applyStyle(el, to);
       continue;
     }
 
-    const from = naturalStyleFor(kind, original);
+    const from = naturalStyleFor(original);
     const anim = el.animate([from, to] as Keyframe[], {
       duration: tuning.chromeAwayMs,
       easing: tuning.chromeAwayEase,
@@ -164,9 +174,8 @@ export function restoreChrome(root: ParentNode, animate: boolean): Promise<void>
       continue;
     }
 
-    const kind = (el.dataset.collapse as CollapseKind | undefined) ?? 'fade';
-    const from = collapsedStyleFor(kind);
-    const to = naturalStyleFor(kind, original);
+    const from = collapsedStyleFor(original);
+    const to = naturalStyleFor(original);
 
     const anim = el.animate([from, to] as Keyframe[], {
       duration: tuning.chromeBackMs,
@@ -420,6 +429,99 @@ export function playLaunch(tileEl: HTMLElement, accent: string): Promise<void> {
       resolve();
     }
   });
+}
+
+// ---------------------------------------------------------------------------
+// playScreenExit
+// ---------------------------------------------------------------------------
+
+/**
+ * The missing half of every in-room transition.
+ *
+ * Rooms animate the screen that arrives — the console picker slides in, a
+ * game's detail page slides in — but the screen being left was simply
+ * destroyed on the same frame. So a step deeper was a hard cut followed by a
+ * slide, and a step back out was the same. The incoming animation was doing
+ * all the work of selling a move that had already happened.
+ *
+ * React gives no way to animate a node it is about to unmount, so this takes
+ * a photocopy: the outgoing element is cloned into the overlay layer at the
+ * exact rect it occupied, and the copy is animated out while React gets on
+ * with mounting the replacement underneath. The clone is inert — no ids, no
+ * focus, no input — it exists for a quarter of a second purely to leave.
+ *
+ * @param el   The screen being unmounted, while it is still in the document.
+ * @param dx   Pixels to drift horizontally; sign carries the direction of
+ *             travel, so going deeper and backing out don't look identical.
+ */
+export function playScreenExit(el: HTMLElement, dx: number): void {
+  if (prefersReducedMotion()) return;
+  // Cleanup can run after the node is already detached, depending on how the
+  // caller is wired. Nothing to photograph in that case — the incoming
+  // animation alone is a graceful enough degradation.
+  if (!el.isConnected) return;
+
+  // A photocopy costs a clone, a layout and a paint of everything in the
+  // subtree — including the parts scrolled out of sight. On a nine-game shelf
+  // that is 137 nodes and half a millisecond; on a four-figure library it is
+  // thousands of nodes and a dropped frame at the exact moment the user
+  // expects smooth motion. Past this size the arriving screen animates alone,
+  // which is a much better trade than a hitch.
+  if (el.querySelectorAll('*').length > 3000) return;
+
+  try {
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 1 || rect.height < 1) return;
+
+    const layer = document.createElement('div');
+    layer.setAttribute('data-motion-exit', '');
+    Object.assign(layer.style, {
+      position: 'fixed',
+      left: `${rect.left}px`,
+      top: `${rect.top}px`,
+      width: `${rect.width}px`,
+      height: `${rect.height}px`,
+      // Under the chrome (z 6) but over the room, so the outgoing screen
+      // passes beneath the header and hint pill exactly as the live one did.
+      zIndex: '3',
+      overflow: 'hidden',
+      pointerEvents: 'none',
+    });
+
+    const clone = el.cloneNode(true) as HTMLElement;
+    // A duplicate id or a stray `data-focused` would confuse the focus engine
+    // and screen readers alike for as long as the copy lives.
+    clone.removeAttribute('id');
+    for (const node of clone.querySelectorAll('[id]')) node.removeAttribute('id');
+    clone.setAttribute('aria-hidden', 'true');
+    Object.assign(clone.style, {
+      position: 'absolute',
+      inset: '0',
+      margin: '0',
+      // Scroll position is not cloned, so anchor the copy where the real
+      // element was scrolled to rather than snapping it to the top.
+      transform: `translate(${-el.scrollLeft}px, ${-el.scrollTop}px)`,
+    });
+
+    layer.appendChild(clone);
+    document.body.appendChild(layer);
+
+    const remove = () => layer.remove();
+    const anim = layer.animate(
+      [
+        { opacity: 1, translate: '0 0' },
+        { opacity: 0, translate: `${dx}px 0` },
+      ],
+      {
+        duration: tuning.drillMs,
+        easing: tuning.drillOutEase,
+        fill: 'forwards',
+      },
+    );
+    anim.finished.then(remove, remove);
+  } catch {
+    // Purely decorative; a failure here must never block a navigation.
+  }
 }
 
 // ---------------------------------------------------------------------------

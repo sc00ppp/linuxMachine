@@ -4,6 +4,10 @@ import '@fontsource-variable/nunito';
 import './styles/tokens.css';
 import './styles/global.css';
 import './styles/glass.css';
+// Rooms are lazy, so their stylesheets are injected at runtime and always land
+// after this one in the document. Source order can't win that race — chrome.css
+// carries its own specificity instead (see the note at the top of the file).
+import './styles/chrome.css';
 import App from './App';
 
 // One bundle, two homes (the o3code pattern): the same dev server serves the
