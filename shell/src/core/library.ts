@@ -81,6 +81,12 @@ export const RETROBAT_PLATFORM_ID_MAP: Readonly<Record<string, string>> = {
   psx: 'ps1',
   gb: 'gb',
   gbc: 'gb',
+  // "Ports" is a RetroBat bookkeeping category, not a machine — source ports
+  // and native builds of games that never had a console of their own. Five of
+  // them had a shelf to themselves next to real hardware, reading as a console
+  // nobody has heard of. They run on the PC, so they join the PC's shelf.
+  // (`windows` IS the PC shelf here; there is no system called `pc`.)
+  ports: 'windows',
 };
 
 const generatedIndexModules = import.meta.glob<GeneratedLibraryIndex>(

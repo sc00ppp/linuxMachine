@@ -108,6 +108,7 @@ function deltaFor(
   const containerRect = container.getBoundingClientRect();
   const elementRect = el.getBoundingClientRect();
   const style = getComputedStyle(container);
+  const elementStyle = getComputedStyle(el);
 
   const padStart = pixels(
     axis === 'x' ? style.scrollPaddingLeft : style.scrollPaddingTop,
@@ -116,10 +117,29 @@ function deltaFor(
     axis === 'x' ? style.scrollPaddingRight : style.scrollPaddingBottom,
   );
 
+  /*
+   * `scroll-margin` grows the box we promise to bring into view, so an
+   * element can ask for the thing sitting next to it to come along.
+   *
+   * The console picker needs this and it is not a nicety. Each maker's row
+   * has its heading directly above it, outside the tile. `nearest` is
+   * satisfied the instant the TILE clears the header, which leaves the
+   * heading itself tucked underneath — so scrolling down and back up left you
+   * on a shelf whose name you could no longer read, unlike when you first
+   * walked in. Giving the tile a top scroll-margin the height of its heading
+   * makes "bring this into view" mean "and the label it belongs to".
+   */
+  const marginStart = pixels(
+    axis === 'x' ? elementStyle.scrollMarginLeft : elementStyle.scrollMarginTop,
+  );
+  const marginEnd = pixels(
+    axis === 'x' ? elementStyle.scrollMarginRight : elementStyle.scrollMarginBottom,
+  );
+
   const viewStart = (axis === 'x' ? containerRect.left : containerRect.top) + padStart;
   const viewEnd = (axis === 'x' ? containerRect.right : containerRect.bottom) - padEnd;
-  const elStart = axis === 'x' ? elementRect.left : elementRect.top;
-  const elEnd = axis === 'x' ? elementRect.right : elementRect.bottom;
+  const elStart = (axis === 'x' ? elementRect.left : elementRect.top) - marginStart;
+  const elEnd = (axis === 'x' ? elementRect.right : elementRect.bottom) + marginEnd;
 
   switch (align) {
     case 'start':

@@ -85,6 +85,19 @@
   display: none;
 }
 
+/* A tile brings its maker's heading with it.
+ *
+ * Scrolling to a tile used to stop the moment the TILE cleared the header,
+ * which parked the heading — which sits above the tile, outside it — under
+ * the header scrim. Walking into the room showed "NINTENDO 15 machines"
+ * plainly; scrolling away and back left the same shelf unlabelled. The margin
+ * is the heading's line box (1.5rem) plus the scroller's own top padding
+ * (1.3rem), so "bring this tile into view" means "and the name it sits
+ * under". Honoured by motion/glide.ts. */
+.ctile {
+  scroll-margin-top: 3.2rem;
+}
+
 .crow-tiles {
   position: relative;
   isolation: isolate;

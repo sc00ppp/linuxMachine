@@ -437,13 +437,22 @@ export function playLaunch(
         return;
       }
 
+      let landed = false;
       const land = () => {
+        if (landed) return;
+        landed = true;
         resolve();
         // Give the caller's state flip (mode → 'app') two frames to paint
         // before we start dissolving the cover into it.
         requestAnimationFrame(() => requestAnimationFrame(() => fadeOutAndRemove(layer)));
       };
       zoom.finished.then(land, land);
+      // A cover that never lands is a screen the user cannot leave: callers
+      // flip state in this promise's `finally`, so if the animation goes
+      // unresolved they are stranded behind an opaque pane. Animations do not
+      // progress while a page is not compositing (backgrounded tab, a TV that
+      // has blanked), and `finished` simply never settles. Land it anyway.
+      window.setTimeout(land, tuning.launchZoomMs + tuning.bloomDelayMs + 400);
     } catch {
       resolve();
     }
@@ -614,13 +623,20 @@ export function playReturn(tileEl: HTMLElement, accent: string): Promise<void> {
         return;
       }
 
+      let landed = false;
       const land = () => {
+        if (landed) return;
+        landed = true;
         resolve();
         // Cover now sits pixel-for-pixel over the real tile; a short fade
         // hands off to it instead of a hard cut.
         fadeOutAndRemove(layer);
       };
       shrink.finished.then(land, land);
+      // Same guard as the launch: the homecoming clears `returningChannel` in
+      // its `finally`, and a shrink that never settles would leave the wall
+      // permanently mid-transition.
+      window.setTimeout(land, tuning.returnShrinkMs + 400);
     } catch {
       resolve();
     }
