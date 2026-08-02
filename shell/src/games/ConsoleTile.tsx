@@ -4,6 +4,7 @@ import { useFocusable } from '../focus';
 import { ConsoleArt } from './consoleArt';
 import { cssVars, prefersReducedMotion } from './util';
 import './ConsoleTile.css';
+import { glideIntoView } from '../motion/glide';
 
 interface ConsoleTileProps {
   platform: Platform;
@@ -62,11 +63,7 @@ export function ConsoleTile({ platform, onFocus, onOpen, autoFocus }: ConsoleTil
     onFocus(platform.id);
     // Switch-style edge scrolling: the row only glides once focus pushes into
     // the scroller's side margins (`scroll-padding-inline` defines them).
-    elRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      inline: 'nearest',
-      block: 'nearest',
-    });
+    glideIntoView(elRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused, platform.id, onFocus]);
 
   return (

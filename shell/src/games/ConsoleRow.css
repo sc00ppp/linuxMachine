@@ -6,7 +6,6 @@
   width: 100%;
   overflow-x: hidden;
   overflow-y: auto;
-  scroll-behavior: smooth;
   scroll-padding-block: 2rem;
   overscroll-behavior-block: contain;
   scrollbar-width: none;
@@ -74,7 +73,6 @@
   width: 100%;
   overflow-x: auto;
   overflow-y: hidden;
-  scroll-behavior: smooth;
   scroll-padding-inline: 10rem;
   overscroll-behavior-inline: contain;
   /* Vertical breathing room so the focus scale, the ring and the label lift

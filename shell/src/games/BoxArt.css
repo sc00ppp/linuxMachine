@@ -278,26 +278,22 @@
 
 /* --- Focus ring (the wall's cursor, unchanged) ---------------------------- */
 
-.boxart::after {
-  content: '';
-  position: absolute;
-  inset: -0.55rem;
-  border-radius: calc(var(--radius-card) + 0.4rem);
-  pointer-events: none;
-  border: 0.22rem solid var(--accent);
-  box-shadow:
-    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
-    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
-  opacity: 0;
-  transform: scale(0.985);
-  transition:
-    opacity var(--focus-ms) var(--focus-ease),
-    transform var(--focus-ms) var(--focus-ease);
+/* An outline on the FACE, not an offset box on the cell. The face is a
+   composited rounded clip wrapping the artwork, and its corner arc does not
+   rasterize identically to a ring built from the cell's own radius — the
+   difference reads as a wedge of background at 45°. Deriving the ring from
+   the face means it traces the cover's real edge. This matters more here than
+   anywhere: in natural-shape mode the face IS the artwork's box, so the ring
+   follows each cover's own proportions for free. See Tile.css for the long
+   version. */
+.boxart-face {
+  outline: 0.22rem solid transparent;
+  outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 
-.boxart[data-focused='true']::after {
-  opacity: 1;
-  transform: scale(1);
+.boxart[data-focused='true'] .boxart-face {
+  outline-color: var(--accent);
+  outline-offset: 0;
   animation: boxart-ring-breathe 2.1s ease-in-out infinite;
 }
 
@@ -305,16 +301,10 @@
 @keyframes boxart-ring-breathe {
   0%,
   100% {
-    filter: brightness(1);
-    box-shadow:
-      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
-      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent);
   }
   50% {
-    filter: brightness(1.35);
-    box-shadow:
-      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
-      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent);
   }
 }
 
@@ -322,8 +312,7 @@
   .boxart,
   .boxart-face,
   .boxart-band,
-  .boxart-sheen,
-  .boxart::after {
+  .boxart-sheen {
     transition-duration: 1ms;
   }
 
@@ -386,90 +375,57 @@
   font-size: 1rem;
 }
 
-/* ---- True-shape boxes ---------------------------------------------------
-   Cartridge boxes are not one shape: Game Boy boxes are nearly square, SNES
-   boxes wide, DS cases tall, Atari boxes wider still. Forcing a single ratio
-   letterboxed most of the shelf.
+/* ---- Uniform cells -------------------------------------------------------
+   Every box on a shelf is the same size: the console's own packaging ratio
+   (measured from its real covers — see shelfGeometry.ts), sized so a row
+   fills the shelf's width exactly.
 
-   So the ROW sets the height and each box takes its artwork's own width.
-   Real covers size from the image itself (no JS measurement needed — the
-   img is in flow at height:100%, width:auto), and boxes without art fall
-   back to the console's typical packaging ratio. */
+   There was a version where each cover kept its own width and rows went
+   ragged on the right. It was more honest about the artwork and it looked
+   untidy, and it also made virtualization impossible: with no constant row
+   height there is no way to know which rows are on screen without measuring
+   every one of them, which is precisely the work being avoided on a
+   1,477-box library. Uniform cells buy a flush grid and a shelf that doesn't
+   stutter, at the price of letterboxing the covers whose proportions differ
+   from their console's median. That is the right trade at ten feet.
 
-.games-grid[data-shape='natural'] {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  align-content: flex-start;
-}
+   `contain`, never `cover`: box art IS the artwork, and cropping a cover to
+   fill a cell mangles logos and edges. */
 
-.games-grid[data-shape='natural'] .boxart {
-  height: var(--box-h, 21rem);
-  width: auto;
+.games-grid .boxart {
+  /* The row's height comes from the grid (`grid-auto-rows: var(--box-h)`),
+     so the box fills its cell rather than deriving its own size. */
+  height: 100%;
+  width: 100%;
   aspect-ratio: auto;
-  flex: 0 0 auto;
 }
 
-/* With a real cover the face wraps the image in flow rather than filling an
-   absolutely-sized cell. */
-.games-grid[data-shape='natural'] .boxart[data-real-art='true'] .boxart-face {
-  position: relative;
-  inset: auto;
-  height: 100%;
-  width: auto;
-}
-
-.games-grid[data-shape='natural'] .boxart[data-real-art='true'] .boxart-photo {
-  position: relative;
-  inset: auto;
-  height: 100%;
-  width: auto;
-  max-width: none;
-  object-fit: contain;
-  background: none;
-}
-
-/* No scraped art: keep a plausible case shape for that console so the shelf
-   still reads as boxes rather than ragged rectangles. */
-.games-grid[data-shape='natural'] .boxart:not([data-real-art='true']) {
-  aspect-ratio: var(--box-aspect, 0.75);
-}
-
-/* ── Focus fixes for clamped cells ────────────────────────────────────────
-   With per-console cell ratios the focused box scales up inside a fixed
-   grid cell, so it must not collide with its neighbours and the ring must
-   hug the cell rather than the artwork's letterboxed bounds. */
-
-/* Sit the focused box above its neighbours while it is scaled. */
-.games-grid .boxart[data-focused='true'] {
-  z-index: 5;
-}
-
-/* Real covers fill the cell that the console's ratio defines. `contain`
-   keeps artwork undistorted and uncropped; the cell ratio is close enough
-   to the real packaging that letterboxing is minimal. */
 .games-grid .boxart[data-real-art='true'] .boxart-photo {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  /* The letterbox reads as the shelf behind the box rather than as a hole. */
   background: color-mix(in srgb, var(--bg-0) 55%, transparent);
 }
 
-/* The ring sits 0.55rem OUTSIDE the box, so it needs a correspondingly
-   larger radius to stay concentric. Inheriting the box's own radius pulled
-   the corners in and made the focused state look pinched — the "hover looks
-   bad" bug. */
-.games-grid .boxart::after {
-  border-radius: calc(var(--radius-card) + 0.55rem);
+/* No scraped art (or none yet): the generated cover fills the cell. */
+.games-grid .boxart:not([data-real-art='true']) .boxart-face {
+  inset: 0;
+}
+
+/* Sit the focused box above its neighbours while it is scaled — with boxes
+   packed by their own widths, a 1.05 scale genuinely overlaps them. */
+.games-grid .boxart[data-focused='true'] {
+  z-index: 5;
 }
 
 
-/* Selector rings stand OFF their object (matches the channel wall): a ring
-   hugging the edge reads as a border, one floating around it reads as a
-   cursor. Radius grows by the same amount so it stays concentric. */
-.boxart::after { inset: -0.6rem; border-radius: calc(var(--radius-card) + 0.6rem); }
+/* Selector rings HUG their object (matches the channel wall). Standing them
+/* Cancel the shell-wide focus bloom on the cell BOX — the ring and its light
+   both live on `.boxart-face` now, which is the artwork's real shape. A glow
+   drawn from the cell's rounded rect pokes out past a cover's own edges,
+   which in natural-shape mode may be a completely different aspect. */
 .boxart[data-focused='true'] { box-shadow: none; filter: none; }
-.boxart[data-focused='true'] .boxart-face { box-shadow: none; }
 

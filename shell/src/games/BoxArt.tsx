@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConsoleEntry } from '../core/consoles';
 import { useFocusable } from '../focus';
 import { Glyph, StarIcon } from '../icons';
 import { coverArt } from './coverArt';
 import { cssVars, prefersReducedMotion } from './util';
 import './BoxArt.css';
+import { glideIntoView } from '../motion/glide';
 
 interface BoxArtProps {
   /** Focus id — `game-<index>` per the contract. */
@@ -26,6 +27,11 @@ interface BoxArtProps {
   onAccept: () => void;
   /** First box takes focus when you drill into a console's library. */
   autoFocus?: boolean;
+  /**
+   * Reports the cover's true width/height once it decodes, so the shelf can
+   * size its rows from real artwork instead of a per-console guess.
+   */
+  onCoverMeasured?: (aspect: number) => void;
 }
 
 /**
@@ -45,8 +51,62 @@ export function BoxArt({
   rating = null,
   onAccept,
   autoFocus,
+  onCoverMeasured,
 }: BoxArtProps) {
   const elRef = useRef<HTMLDivElement | null>(null);
+
+  /**
+   * Whether the scraped cover actually arrived.
+   *
+   * This is load state, not prop state, and the difference matters now that a
+   * box takes its width from its artwork: a cover the scrape *recorded* but
+   * the media server can't serve leaves an `<img>` of zero width, and the
+   * whole cell collapses to a sliver with a broken-image glyph in it. Until
+   * the bytes land we keep the generated cover at the console's packaging
+   * ratio, and swap only when there is something real to size against.
+   */
+  const [artState, setArtState] = useState<'pending' | 'loaded' | 'failed'>('pending');
+
+  /**
+   * A new cover (sort change, different console) has to be re-proven.
+   *
+   * Reset during render rather than in an effect. An effect keyed on `cover`
+   * also fires on MOUNT, and a cached image's load event lands somewhere
+   * around the same time — so the reset would sometimes overwrite a cover
+   * that had already reported in, and since the event never fires twice that
+   * box was stuck on generated art forever. It showed up as a shelf where a
+   * scattered handful of covers loaded and the rest silently didn't.
+   */
+  const [trackedCover, setTrackedCover] = useState(cover);
+  if (trackedCover !== cover) {
+    setTrackedCover(cover);
+    setArtState('pending');
+  }
+
+  /**
+   * Judge one `<img>`. Shared by the load handler and the ref callback,
+   * because a cached cover is already `complete` by the time React attaches
+   * `onLoad` and its load event never fires — which left the second visit to
+   * a shelf showing generated art over perfectly good cached covers.
+   */
+  const measuredCover = useRef<string | null | undefined>(undefined);
+  const settleArt = useCallback(
+    (img: HTMLImageElement) => {
+      if (img.naturalWidth <= 0 || img.naturalHeight <= 0) {
+        setArtState('failed');
+        return;
+      }
+      setArtState('loaded');
+      // Both entry points can fire for the same image (React re-attaches an
+      // inline ref on every render); the shelf's median must not be skewed by
+      // counting one cover several times.
+      if (measuredCover.current !== img.src) {
+        measuredCover.current = img.src;
+        onCoverMeasured?.(img.naturalWidth / img.naturalHeight);
+      }
+    },
+    [onCoverMeasured],
+  );
 
   // The focus engine holds the callback it was registered with, so hand it a
   // stable one that reads current props out of a ref.
@@ -81,11 +141,7 @@ export function BoxArt({
   // Keep the focused box inside the (vertically scrolling) shelf.
   useEffect(() => {
     if (!focused) return;
-    elRef.current?.scrollIntoView({
-      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'nearest',
-    });
+    glideIntoView(elRef.current, { block: 'nearest', inline: 'nearest' });
   }, [focused]);
 
   const art = coverArt(platform.id, title);
@@ -95,7 +151,7 @@ export function BoxArt({
       ref={setRef}
       className="boxart"
       data-focused={focused ? 'true' : undefined}
-      data-real-art={cover ? 'true' : undefined}
+      data-real-art={artState === 'loaded' ? 'true' : undefined}
       role="button"
       aria-label={`${title} — ${platform.name}`}
       style={cssVars({
@@ -112,9 +168,23 @@ export function BoxArt({
     >
       {/* The face clips the art; the ring on `.boxart::after` sits outside it. */}
       <div className="boxart-face">
-        {cover ? (
-          <img className="boxart-photo" src={cover} alt="" loading="lazy" decoding="async" />
-        ) : (
+        {cover && artState !== 'failed' && (
+          <img
+            className="boxart-photo"
+            src={cover}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            ref={(img) => {
+              // Catches the cached case, where `complete` is already true and
+              // no load event is coming.
+              if (img?.complete) settleArt(img);
+            }}
+            onLoad={(event) => settleArt(event.currentTarget)}
+            onError={() => setArtState('failed')}
+          />
+        )}
+        {artState !== 'loaded' && (
           <>
             <div className="boxart-art" />
             <div className="boxart-motif" data-motif={art.motif} />

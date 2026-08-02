@@ -28,6 +28,18 @@ import { BoxArt } from './BoxArt';
 import { ConsoleRow } from './ConsoleRow';
 import { GameDetail } from './GameDetail';
 import { RoomLight } from './RoomLight';
+import { useShelfGeometry } from './shelfGeometry';
+import { useVirtualRows } from './useVirtualRows';
+import { useScreenExit } from '../motion/useScreenExit';
+
+type GamesLevel = 'consoles' | 'grid' | 'detail';
+
+/** How far in each level sits, so both halves of a swap agree on direction. */
+const LEVEL_DEPTH: Record<GamesLevel, number> = {
+  consoles: 0,
+  grid: 1,
+  detail: 2,
+};
 import { cssVars, prefersReducedMotion } from './util';
 import './GamesRoom.css';
 
@@ -216,6 +228,14 @@ export function GamesRoom() {
   const rootRef = useRef<HTMLDivElement | null>(null);
   const levelRef = useRef<HTMLDivElement | null>(null);
 
+  // The level that is being left drifts away as the next one slides in.
+  // Ranked by depth so walking in and backing out don't look the same.
+  useScreenExit(levelRef, (state) =>
+    state.view === 'games'
+      ? LEVEL_DEPTH[state.gamesLevel]
+      : Number.NaN,
+  );
+
   // --- entrance ------------------------------------------------------------
 
   // Drill-in from the wall: the room arrives from the right and settles
@@ -267,8 +287,7 @@ export function GamesRoom() {
     prevLevel.current = level;
     if (from === null || from === level) return;
 
-    const depth = { consoles: 0, grid: 1, detail: 2 } as const;
-    const deeper = depth[level] > depth[from as keyof typeof depth];
+    const deeper = LEVEL_DEPTH[level] > LEVEL_DEPTH[from as GamesLevel];
     animateDrill(
       levelRef.current,
       deeper ? 'deeper' : 'shallower',
@@ -302,6 +321,26 @@ export function GamesRoom() {
   const inGrid = level === 'grid';
   const inDetail = level === 'detail';
 
+  // The shelf sizes itself from the covers it actually has — see
+  // shelfGeometry.ts for why the per-console ratio table isn't enough.
+  const geometry = useShelfGeometry(platform.id, platform.boxAspect);
+
+  // Only the rows near the viewport are mounted. NES is 1,477 boxes and
+  // 20,000-odd nodes; building all of that is what made the room stutter on
+  // every focus hop, long before any animation ran.
+  const anchorIndex = lastGameKey
+    ? Math.max(sortedShelf.findIndex((entry) => entry.key === lastGameKey), 0)
+    : 0;
+  const virtual = useVirtualRows({
+    itemCount: sortedShelf.length,
+    columns: geometry.columns,
+    rowHeight: geometry.rowHeight,
+    anchorIndex,
+    // A different machine or a different order is a different shelf; both
+    // must start from the top rather than inherit a meaningless offset.
+    resetKey: `${platform.id}:${sortMode}`,
+  });
+
   return (
     <div
       className="games"
@@ -316,21 +355,19 @@ export function GamesRoom() {
         '--focus-ease': tuning.focusEase,
         '--tint-ms': `${Math.round(tuning.focusMoveMs * 2.4)}ms`,
         // Per-system packaging shape: SNES boxes are near-square, DS/GBA
-        // cases are tall, Atari boxes are wide. One ratio letterboxes half
-        // the shelf, so the grid takes the console's own aspect.
+        // cases are tall, Atari boxes are wide. Used as the fallback shape
+        // for titles the scrape missed — anything with real art sizes itself
+        // from the artwork instead (see `--box-h` below).
         '--box-aspect': String(platform.boxAspect),
         // Columns follow the shape: wide N64/PS1 wraps get rows of 3, square
         // SNES/Game Boy boxes 5, tall DS/Switch covers 6. A fixed column
         // count made wide shelves tiny and tall shelves gigantic.
-        '--box-cols': String(
-          platform.boxAspect >= 1.9
-            ? 3
-            : platform.boxAspect >= 1.25
-              ? 4
-              : platform.boxAspect >= 0.85
-                ? 5
-                : 6,
-        ),
+        '--box-cols': String(geometry.columns),
+        // The shelf sets the HEIGHT and every box takes its own artwork's
+        // width from it. Measured from the real covers and the real grid
+        // width, so a wide-box console (PlayStation, N64) and a tall-box one
+        // (DS, Switch) both land at roughly the same boxes-per-row.
+        '--box-h': geometry.boxHeight,
       })}
     >
       <RoomLight accent={platform.accent} />
@@ -379,14 +416,23 @@ export function GamesRoom() {
             <p>Press B to return to the library.</p>
           </div>
         ) : inGrid ? (
-          <div className="games-shelf">
+          <div className="games-shelf" ref={virtual.scrollerRef}>
             {shelfPending ? (
               <div className='games-grid' aria-hidden='true' />
             ) : sortedShelf.length > 0 ? (
-              // Cells use the console's own packaging ratio (--box-aspect);
-              // artwork is fitted inside, never stretched or cropped.
-              <div className="games-grid">
-                {sortedShelf.map((entry, i) => (
+              // Uniform cells, and only the rows near the viewport are
+              // mounted. The padding holds the rest of the shelf's height
+              // open so the scrollbar and the spring both still see the real
+              // library — see useVirtualRows.ts.
+              <div
+                className="games-grid"
+                ref={geometry.gridRef}
+                style={{
+                  paddingTop: `${virtual.padTop}px`,
+                  paddingBottom: `${virtual.padBottom}px`,
+                }}
+              >
+                {sortedShelf.slice(virtual.startIndex, virtual.endIndex).map((entry, i) => (
                   <BoxArt
                     key={entry.key}
                     id={`game-${entry.key}`}
@@ -398,9 +444,15 @@ export function GamesRoom() {
                     rating={sortMode === 'rating' ? (entry.game?.rating ?? null) : null}
                     platform={platform}
                     onAccept={() => handleOpenGame(entry.key)}
+                    onCoverMeasured={geometry.onCoverMeasured}
                     // Backing out of detail lands on the game that opened it;
-                    // a fresh console still starts at the first box.
-                    autoFocus={lastGameKey ? entry.key === lastGameKey : i === 0}
+                    // a fresh console still starts at the first box. The index
+                    // is the slice's, so compare against the absolute one.
+                    autoFocus={
+                      lastGameKey
+                        ? entry.key === lastGameKey
+                        : virtual.startIndex + i === 0
+                    }
                   />
                 ))}
               </div>

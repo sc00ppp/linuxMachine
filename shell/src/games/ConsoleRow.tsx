@@ -63,7 +63,7 @@ const byMaker = (maker: string): ConsoleEntry[] =>
  *
  * A vertical stack with one independently scrolling shelf per maker. Tiles
  * stay fixed-width and every shelf uses the channel wall's edge scrolling:
- * `scroll-padding-inline` here + `scrollIntoView` in ConsoleTile.
+ * `scroll-padding-inline` here + `glideIntoView` in ConsoleTile.
  *
  * The focus engine's geometry keeps left/right within a shelf and sends
  * up/down between makers. That same tile scroll call moves the outer stack

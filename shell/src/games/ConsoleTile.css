@@ -165,28 +165,25 @@
     inset 0 0.0625rem 0 0 color-mix(in srgb, var(--text) 22%, transparent);
 }
 
-/* --- Focus ring (identical to home/Tile.css `.tile::after`) --------------- */
+/* --- Focus ring (identical to home/Tile.css) ------------------------------
+   An outline on the FACE, not an offset box on the tile. The face is a
+   composited rounded clip and its corner arc does not rasterize identically
+   to a ring built from the tile's own radius — the difference shows as a
+   wedge of background at 45°. Deriving the ring from the face means it traces
+   whatever arc the artwork actually has. See Tile.css for the long version. */
 
-.ctile::after {
-  content: '';
-  position: absolute;
-  inset: -0.55rem;
-  border-radius: calc(var(--radius-tile) + 0.4rem);
-  pointer-events: none;
-  border: 0.22rem solid var(--accent);
-  box-shadow:
-    0 0 0.55rem color-mix(in srgb, var(--accent) 45%, transparent),
-    inset 0 0 0.4rem color-mix(in srgb, var(--accent) 28%, transparent);
-  opacity: 0;
-  transform: scale(0.985);
+.ctile-face {
+  outline: 0.22rem solid transparent;
+  outline-offset: calc(-1 * var(--focus-ring-offset));
   transition:
-    opacity var(--focus-ms) var(--focus-ease),
-    transform var(--focus-ms) var(--focus-ease);
+    box-shadow var(--focus-ms) var(--focus-ease),
+    outline-color var(--focus-ms) var(--focus-ease),
+    outline-offset var(--focus-ms) var(--focus-ease);
 }
 
-.ctile[data-focused='true']::after {
-  opacity: 1;
-  transform: scale(1);
+.ctile[data-focused='true'] .ctile-face {
+  outline-color: var(--accent);
+  outline-offset: 0;
   animation: ctile-ring-breathe 2.1s ease-in-out infinite;
 }
 
@@ -194,16 +191,10 @@
 @keyframes ctile-ring-breathe {
   0%,
   100% {
-    filter: brightness(1);
-    box-shadow:
-      0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent),
-      inset 0 0 0.5rem color-mix(in srgb, var(--accent) 35%, transparent);
+    box-shadow: 0 0 0.9rem color-mix(in srgb, var(--accent) 55%, transparent);
   }
   50% {
-    filter: brightness(1.35);
-    box-shadow:
-      0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent),
-      inset 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
+    box-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 75%, transparent);
   }
 }
 
@@ -246,16 +237,13 @@
   }
 
   .ctile-sheen,
-  .ctile[data-focused='true']::after {
+  .ctile[data-focused='true'] .ctile-face {
     animation: none;
   }
 }
 
-
-/* Selector rings stand OFF their object (matches the channel wall): a ring
-   hugging the edge reads as a border, one floating around it reads as a
-   cursor. Radius grows by the same amount so it stays concentric. */
-.ctile::after { inset: -0.7rem; border-radius: calc(var(--radius-tile) + 0.7rem); }
+/* Cancel the shell-wide focus bloom on the tile BOX — the selector's light
+   belongs to the face, which is the shape you can see. A glow drawn from the
+   tile's own rounded rect pokes out past the artwork's corners as a nub. */
 .ctile[data-focused='true'] { box-shadow: none; filter: none; }
-.ctile[data-focused='true'] .ctile-face { box-shadow: none; }
 
