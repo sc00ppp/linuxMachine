@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useFocusable } from '../focus';
 import type { WeatherLocation } from './weatherData';
+import { glideIntoView } from '../motion/glide';
 
 interface CityChoiceProps {
   location: WeatherLocation;
@@ -20,11 +21,7 @@ function CityChoice({ location, selected, autoFocus, onSelect }: CityChoiceProps
 
   useEffect(() => {
     if (!focused) return;
-    elementRef.current?.scrollIntoView({
-      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
-      block: 'nearest',
-      inline: 'center',
-    });
+    glideIntoView(elementRef.current, { block: 'nearest', inline: 'center' });
   }, [focused]);
 
   const setRef = (element: HTMLButtonElement | null) => {
@@ -58,7 +55,7 @@ function AddCityChoice({ onAdd }: { onAdd: () => void }) {
   });
 
   useEffect(() => {
-    if (focused) elementRef.current?.scrollIntoView({ block: 'nearest', inline: 'center' });
+    if (focused) glideIntoView(elementRef.current, { block: 'nearest', inline: 'center' });
   }, [focused]);
 
   const setRef = (element: HTMLButtonElement | null) => {
@@ -81,21 +78,24 @@ interface LocationPickerProps {
   onAdd: () => void;
 }
 
+/**
+ * The saved-city rail. It lives in the floating header and scrolls sideways on
+ * its own, so a long list of cities never widens the room or pushes the view
+ * tabs off the end of the bar.
+ */
 export function LocationPicker({ locations, selectedId, onSelect, onAdd }: LocationPickerProps) {
   return (
-    <div className="weather-locations-scroll">
-      <nav className="weather-locations" aria-label="Saved cities">
-        {locations.map((location) => (
-          <CityChoice
-            key={location.id}
-            location={location}
-            selected={location.id === selectedId}
-            autoFocus={location.id === selectedId}
-            onSelect={onSelect}
-          />
-        ))}
-        <AddCityChoice onAdd={onAdd} />
-      </nav>
-    </div>
+    <nav className="weather-cities" aria-label="Saved cities">
+      {locations.map((location) => (
+        <CityChoice
+          key={location.id}
+          location={location}
+          selected={location.id === selectedId}
+          autoFocus={location.id === selectedId}
+          onSelect={onSelect}
+        />
+      ))}
+      <AddCityChoice onAdd={onAdd} />
+    </nav>
   );
 }

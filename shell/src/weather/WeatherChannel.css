@@ -1,38 +1,79 @@
-﻿.weather {
+/* ═══════════════════════════════════════════════════════════════════════════
+   Weather.
+
+   The layout is one grid, sized once, and it does not fight itself. Reading
+   left to right: a tall "now" panel that behaves like a poster — city, sky,
+   one very large number — and beside it the forecast column, an hourly rail
+   above a week of full-width rows.
+
+   Two rules keep it honest:
+
+   1. Every band either has a fixed cost or absorbs slack, never both. The
+      only flexible boxes are `.weather-now__sky` and the week list, so the
+      difference between a 800px and a 1080px screen lands somewhere chosen
+      rather than spilling out of a row that was already full.
+   2. Anything that could exceed its box scrolls (the city rail, the hourly
+      rail, the week list). Overflow is a scroll, never an overlap.
+
+   The chrome contract lives in styles/chrome.css: the header and hint pill are
+   absolutely positioned there, and the room root is padded by --chrome-top /
+   --chrome-bottom so in-flow content clears them. Nothing here overrides that.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Room and sky ────────────────────────────────────────────────────────── */
+
+.weather {
   --weather-sky-top: color-mix(in srgb, var(--accent) 18%, var(--bg-0));
   --weather-sky-bottom: color-mix(in srgb, var(--accent) 10%, var(--bg-1));
   --weather-haze: color-mix(in srgb, var(--accent) 16%, transparent);
+
+  /* One gutter value for the whole room, so the now panel, the forecast
+     column and the radar all sit on the same margins. */
+  --weather-gutter: clamp(2rem, 3.2vw, 4rem);
+
   position: absolute;
   inset: 0;
   isolation: isolate;
   display: flex;
   flex-direction: column;
   /* `clip`, not `hidden`: an overflow:hidden box is still a scroll container,
-     so scrollIntoView on a focused hour/day card would drag the WHOLE channel
-     sideways (header included). `clip` makes it non-scrollable, forcing the
-     scroll to land on the inner strips where it belongs. */
+     so glideIntoView on a focused hour/day would drag the WHOLE channel
+     sideways, header included. `clip` makes it non-scrollable, forcing the
+     glide to land on the inner rails where it belongs. */
   overflow: clip;
   color: var(--text);
   font-family: var(--font-ui);
   background:
-    radial-gradient(78% 72% at 76% 42%, var(--weather-haze), transparent 66%),
+    radial-gradient(78% 72% at 76% 38%, var(--weather-haze), transparent 66%),
     linear-gradient(168deg, var(--weather-sky-top), var(--weather-sky-bottom));
   transition: background var(--weather-sky-ms) var(--weather-focus-ease);
 }
 
-.weather, .weather *, .weather *::before, .weather *::after { box-sizing: border-box; }
+.weather,
+.weather *,
+.weather *::before,
+.weather *::after {
+  box-sizing: border-box;
+}
 
+/* A slow-breathing light source high on the right — the one piece of motion
+   that runs whether or not anything is focused. */
 .weather::before {
   content: '';
   position: absolute;
   z-index: -1;
-  width: 60rem;
-  height: 60rem;
   right: -15rem;
   top: -27rem;
+  width: 60rem;
+  height: 60rem;
   border-radius: 50%;
   opacity: 0.38;
-  background: radial-gradient(circle, color-mix(in srgb, var(--text) 18%, transparent), color-mix(in srgb, var(--accent) 7%, transparent) 36%, transparent 70%);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--text) 18%, transparent),
+    color-mix(in srgb, var(--accent) 7%, transparent) 36%,
+    transparent 70%
+  );
   filter: blur(1.6rem);
   animation: weather-sky-breathe var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate;
 }
@@ -40,12 +81,21 @@
 .weather::after {
   content: '';
   position: absolute;
-  z-index: -1;
   inset: 0;
+  z-index: -1;
   pointer-events: none;
-  background: var(--vignette), linear-gradient(to bottom, color-mix(in srgb, var(--bg-0) 8%, transparent), transparent 32%, color-mix(in srgb, var(--bg-0) 18%, transparent));
+  background:
+    var(--vignette),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--bg-0) 8%, transparent),
+      transparent 32%,
+      color-mix(in srgb, var(--bg-0) 18%, transparent)
+    );
 }
 
+/* The sky follows the sky. Each condition tints the room a little, which is
+   most of why this reads as a channel rather than a page. */
 .weather[data-sky='clear-day'] {
   --weather-sky-top: color-mix(in srgb, var(--accent) 34%, var(--bg-0));
   --weather-sky-bottom: color-mix(in srgb, var(--accent) 18%, var(--bg-1));
@@ -66,7 +116,8 @@
   --weather-sky-bottom: color-mix(in srgb, var(--accent) 12%, var(--bg-1));
   --weather-haze: color-mix(in srgb, var(--text) 16%, transparent);
 }
-.weather[data-sky='storm-day'], .weather[data-sky='storm-night'] {
+.weather[data-sky='storm-day'],
+.weather[data-sky='storm-night'] {
   --weather-sky-top: color-mix(in srgb, var(--bg-0) 84%, var(--accent));
   --weather-sky-bottom: color-mix(in srgb, var(--bg-0) 66%, var(--bg-1));
   --weather-haze: color-mix(in srgb, var(--accent) 8%, transparent);
@@ -82,322 +133,1209 @@
   --weather-haze: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
-/* Header and city rail */
+/* ── Header: brand, city rail, view tabs ─────────────────────────────────── */
+
+/* One bar carries everything that is "about the channel" rather than about
+   the weather, which is what buys the content its full height back. */
 .weather-header {
-  position: relative;
-  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2vw, 2rem);
+  min-height: 5.2rem;
+  padding: 0.75rem var(--weather-gutter) 0.5rem;
+}
+
+.weather-header--search {
+  justify-content: space-between;
+}
+
+.weather-header__note {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.weather-brand {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 2rem;
-  min-height: 5.2rem;
-  padding: 1.1rem 3rem 0.65rem;
+  gap: 0.7rem;
 }
-.weather-header--search { justify-content: space-between; }
-.weather-header--search > p { margin: 0; color: var(--text-dim); font-size: 1.25rem; font-weight: 750; }
-.weather-brand { flex: 0 0 auto; display: flex; align-items: center; gap: 0.75rem; }
-.weather-brand h1 { margin: 0; color: var(--text-dim); font-size: 1.9rem; font-weight: 800; letter-spacing: var(--tracking-tight); }
-.weather-brand__symbol { width: 3.2rem; height: 2.6rem; overflow: visible; filter: drop-shadow(0 0 0.7rem color-mix(in srgb, var(--accent) 50%, transparent)); }
-.weather-locations-scroll { min-width: 0; overflow-x: auto; overflow-y: hidden; padding: 0.35rem; scrollbar-width: none; scroll-behavior: smooth; }
-.weather-locations-scroll::-webkit-scrollbar, .weather-hours-scroll::-webkit-scrollbar, .weather-days-scroll::-webkit-scrollbar { display: none; }
-.weather-locations { display: flex; align-items: center; gap: 0.65rem; width: max-content; }
 
-.weather-location, .weather-tab, .weather-key, .weather-search-result,
-.weather-action, .weather-radar-control, .weather-remove-city,
-.weather-hour, .weather-day {
+.weather-brand h1 {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
+}
+
+.weather-brand__symbol {
+  width: 3rem;
+  height: 2.5rem;
+  overflow: visible;
+  filter: drop-shadow(0 0 0.7rem color-mix(in srgb, var(--accent) 50%, transparent));
+}
+
+/* The rail takes the leftover width and scrolls inside it, so twenty saved
+   cities can never push the view tabs off the end of the bar. */
+.weather-cities {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.35rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: 3rem;
+  scrollbar-width: none;
+}
+
+.weather-views {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.55rem;
+}
+
+.weather-cities::-webkit-scrollbar,
+.weather-hours::-webkit-scrollbar,
+.weather-week::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── The cursor ──────────────────────────────────────────────────────────────
+   One ring, one behaviour, everywhere in the room.
+
+   The ring IS the control's own box: `inset: 0` plus `border-radius: inherit`.
+   Not a standoff. A ring drawn a few pixels outside the element overhangs it —
+   it reads as floating around the control rather than belonging to it — and an
+   offset rounded rect rasterises to a slightly different arc than the element's
+   own, which opens a visible wedge of background at each 45° corner while the
+   straight edges still line up. Inheriting the box and the radius removes both
+   problems and leaves no arithmetic to get wrong: a pill stays a pill.
+
+   Every control here is a plain button with no separately clipped inner face,
+   so this one form covers the whole room. The glow rides on the same
+   pseudo-element as the ring, so there is only ever one rounded rect glowing. */
+
+.weather-location,
+.weather-tab,
+.weather-hour,
+.weather-day,
+.weather-remove-city,
+.weather-radar-control,
+.weather-key,
+.weather-search-result,
+.weather-action {
   position: relative;
   border: 0;
   outline: none;
   color: var(--text);
   font: inherit;
+  transition:
+    color var(--weather-focus-ms) var(--weather-focus-ease),
+    opacity var(--weather-focus-ms) var(--weather-focus-ease),
+    transform var(--weather-focus-ms) var(--weather-focus-ease),
+    background var(--weather-focus-ms) var(--weather-focus-ease),
+    box-shadow var(--weather-focus-ms) var(--weather-focus-ease);
 }
 
-.weather-location {
+.weather-location::after,
+.weather-tab::after,
+.weather-hour::after,
+.weather-day::after,
+.weather-remove-city::after,
+.weather-radar-control::after,
+.weather-key::after,
+.weather-search-result::after,
+.weather-action::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  border: 0.22rem solid var(--accent);
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--accent) 48%, transparent);
+  transition: opacity var(--weather-focus-ms) var(--weather-focus-ease);
+}
+
+.weather-location[data-focused='true'],
+.weather-tab[data-focused='true'],
+.weather-hour[data-focused='true'],
+.weather-day[data-focused='true'],
+.weather-remove-city[data-focused='true'],
+.weather-radar-control[data-focused='true'],
+.weather-key[data-focused='true'],
+.weather-search-result[data-focused='true'],
+.weather-action[data-focused='true'] {
+  z-index: 4;
+  opacity: 1;
+}
+
+.weather-location[data-focused='true']::after,
+.weather-tab[data-focused='true']::after,
+.weather-hour[data-focused='true']::after,
+.weather-day[data-focused='true']::after,
+.weather-remove-city[data-focused='true']::after,
+.weather-radar-control[data-focused='true']::after,
+.weather-key[data-focused='true']::after,
+.weather-search-result[data-focused='true']::after,
+.weather-action[data-focused='true']::after {
+  opacity: 1;
+  animation: weather-ring-breathe var(--weather-breathe-ms) var(--weather-focus-ease) infinite alternate;
+}
+
+/* ── Chips: cities, tabs, quiet actions ──────────────────────────────────── */
+
+.weather-location,
+.weather-tab {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
-  min-width: 7.5rem;
+  gap: 0.5rem;
   min-height: 2.85rem;
-  padding: 0.45rem 1.1rem;
+  padding: 0.45rem 1.15rem;
   border-radius: var(--radius-chip);
-  color: color-mix(in srgb, var(--text) 48%, transparent);
+  color: color-mix(in srgb, var(--text) 52%, transparent);
   background: transparent;
   font-size: 1.25rem;
-  font-weight: 700;
+  font-weight: 750;
   white-space: nowrap;
-  opacity: 0.72;
-  transition: color var(--weather-focus-ms) var(--weather-focus-ease), opacity var(--weather-focus-ms) var(--weather-focus-ease), transform var(--weather-focus-ms) var(--weather-focus-ease), background var(--weather-focus-ms) var(--weather-focus-ease);
-}
-.weather-location[aria-pressed='true'] { color: var(--text); opacity: 1; background: var(--glass-bg); box-shadow: var(--glass-inset); }
-.weather-location--add { min-width: 8.5rem; border: 0.0625rem dashed color-mix(in srgb, var(--text) 20%, transparent); }
-.weather-location__plus { color: var(--accent); font-size: 1.7rem; font-weight: 700; line-height: 1; }
-.weather-location__pin { display: grid; place-items: center; width: 1.15rem; height: 1.15rem; border: 0.125rem solid var(--accent); border-radius: 50% 50% 50% 0; transform: rotate(-45deg); }
-.weather-location__pin span { width: 0.32rem; height: 0.32rem; border-radius: 50%; background: var(--accent); }
-
-/* Focus is a single crisp lantern ring across every weather surface. */
-.weather-location::after, .weather-tab::after, .weather-key::after,
-.weather-search-result::after, .weather-action::after,
-.weather-radar-control::after, .weather-remove-city::after,
-.weather-hour::after, .weather-day::after {
-  content: '';
-  position: absolute;
-  inset: -0.28rem;
-  z-index: 3;
-  pointer-events: none;
-  border: 0.16rem solid var(--accent);
-  border-radius: inherit;
-  opacity: 0;
-  transform: scale(0.985);
-  box-shadow: 0 0 0.8rem color-mix(in srgb, var(--accent) 48%, transparent);
-  transition: opacity var(--weather-focus-ms) var(--weather-focus-ease), transform var(--weather-focus-ms) var(--weather-focus-ease);
-}
-.weather-location[data-focused='true'], .weather-tab[data-focused='true'],
-.weather-key[data-focused='true'], .weather-search-result[data-focused='true'],
-.weather-action[data-focused='true'], .weather-radar-control[data-focused='true'],
-.weather-remove-city[data-focused='true'], .weather-hour[data-focused='true'],
-.weather-day[data-focused='true'] { z-index: 4; opacity: 1; transform: translateY(-0.12rem) scale(1.025); }
-.weather-location[data-focused='true']::after, .weather-tab[data-focused='true']::after,
-.weather-key[data-focused='true']::after, .weather-search-result[data-focused='true']::after,
-.weather-action[data-focused='true']::after, .weather-radar-control[data-focused='true']::after,
-.weather-remove-city[data-focused='true']::after, .weather-hour[data-focused='true']::after,
-.weather-day[data-focused='true']::after { opacity: 1; transform: scale(1); animation: weather-ring-breathe var(--weather-breathe-ms) var(--weather-focus-ease) infinite alternate; }
-
-/* Per-city view menu */
-.weather-tabs {
-  position: relative;
-  z-index: 4;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 4rem;
-  margin: 0 4rem;
-  padding: 0.35rem 0.8rem 0.55rem;
-  border-bottom: 0.0625rem solid color-mix(in srgb, var(--text) 10%, transparent);
-}
-.weather-tabs__place { display: flex; align-items: baseline; gap: 0.8rem; }
-.weather-tabs__place strong { font-size: 1.75rem; font-weight: 850; }
-.weather-tabs__place span { color: var(--text-dim); font-size: 1.25rem; font-weight: 650; }
-.weather-tabs__choices { display: flex; gap: 0.6rem; }
-.weather-tab { min-width: 8.5rem; padding: 0.58rem 1.2rem; border-radius: var(--radius-chip); color: var(--text-dim); background: transparent; font-size: 1.25rem; font-weight: 800; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-tab[aria-pressed='true'] { color: var(--text); background: var(--glass-bg); box-shadow: var(--glass-inset); }
-
-/* Conditions */
-.weather-content { position: relative; z-index: 1; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; padding: 0 3.5rem; }
-.weather-hero { position: relative; flex: 0 0 14rem; display: grid; grid-template-columns: minmax(28rem, 0.9fr) minmax(18rem, 1.1fr); align-items: center; gap: 1rem; max-width: 102rem; width: 100%; margin: 0 auto; }
-.weather-current { position: relative; padding-left: 1rem; }
-.weather-current__date { margin: 0; color: var(--text-dim); font-size: 1.25rem; font-weight: 650; letter-spacing: 0.025em; }
-.weather-current__temperature { display: flex; align-items: flex-start; height: 6.5rem; margin-top: 0.2rem; color: var(--text); font-size: 8rem; font-weight: 500; line-height: 0.82; letter-spacing: -0.075em; text-shadow: 0 0 2.8rem color-mix(in srgb, var(--accent) 24%, transparent), 0 1rem 3rem color-mix(in srgb, var(--bg-0) 56%, transparent); }
-.weather-current__temperature sup { margin-top: 0.1rem; color: color-mix(in srgb, var(--accent) 54%, var(--text)); font-size: 2.8rem; font-weight: 700; letter-spacing: 0; }
-.weather-current h2 { margin: 0.25rem 0 0; font-size: 2rem; font-weight: 800; letter-spacing: var(--tracking-tight); }
-.weather-current__facts { display: flex; align-items: center; gap: 0.9rem; min-height: 1.8rem; margin-top: 0.25rem; color: var(--text-dim); font-size: 1.25rem; font-weight: 650; }
-.weather-current__separator { width: 0.28rem; height: 0.28rem; border-radius: 50%; background: color-mix(in srgb, var(--text) 30%, transparent); }
-.weather-current__status { min-height: 1.7rem; margin: 0.25rem 0 0; color: color-mix(in srgb, var(--text) 45%, transparent); font-size: 1.25rem; font-weight: 600; }
-.weather-current__status[data-offline='true'], .weather-radar__status[data-offline='true'] { color: color-mix(in srgb, var(--accent) 32%, var(--text-dim)); }
-.weather-hero-art { position: relative; display: grid; place-items: center; align-self: stretch; min-height: 12rem; }
-.weather-hero-art__halo { position: absolute; width: 24rem; height: 13rem; border-radius: 50%; background: radial-gradient(ellipse, color-mix(in srgb, var(--accent) 17%, transparent), transparent 70%); filter: blur(1.4rem); animation: weather-halo-float var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate; }
-.weather-hero-art__symbol { width: 19rem; max-width: 100%; height: 14rem; overflow: visible; filter: drop-shadow(0 1.5rem 2.5rem color-mix(in srgb, var(--bg-0) 58%, transparent)); }
-.weather-remove-city { position: absolute; right: 0.8rem; bottom: 0.8rem; padding: 0.5rem 1rem; border-radius: var(--radius-chip); color: var(--text-dim); background: color-mix(in srgb, var(--bg-0) 24%, transparent); font-size: 1.25rem; font-weight: 700; opacity: 0.64; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-
-.weather-strip-heading { display: flex; align-items: center; gap: 1rem; margin: 0 0.6rem 0.15rem; color: var(--text-dim); font-size: 1.25rem; font-weight: 750; letter-spacing: 0.035em; }
-.weather-outlook__rule { flex: 1; height: 0.0625rem; background: linear-gradient(to right, color-mix(in srgb, var(--text) 16%, transparent), transparent); }
-.weather-hourly, .weather-outlook { flex: 0 0 auto; max-width: 108rem; width: 100%; margin: 0 auto; }
-.weather-hours-scroll, .weather-days-scroll { overflow-x: auto; overflow-y: hidden; padding: 0.45rem 0.6rem 0.55rem; scroll-behavior: smooth; scrollbar-width: none; }
-.weather-hours, .weather-days { display: flex; align-items: stretch; gap: 0.65rem; width: max-content; min-width: 100%; }
-.weather-hours { justify-content: flex-start; }
-.weather-hour { flex: 0 0 7rem; width: 7rem; height: 6.7rem; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto 1fr; align-items: center; justify-items: center; padding: 0.4rem; border: 0.0625rem solid color-mix(in srgb, var(--text) 9%, transparent); border-radius: var(--radius-card); background: color-mix(in srgb, var(--bg-0) 20%, transparent); opacity: 0.68; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-hour__time { grid-column: 1 / -1; color: var(--text-dim); font-size: 1.25rem; font-weight: 800; }
-.weather-hour__symbol { width: 3.5rem; height: 3rem; overflow: visible; }
-.weather-hour strong { font-size: 1.45rem; font-weight: 850; }
-.weather-hour__rain { grid-column: 1 / -1; display: none; color: color-mix(in srgb, var(--accent) 58%, var(--text)); font-size: 1.25rem; font-weight: 750; }
-.weather-hour[data-focused='true'] .weather-hour__rain { display: block; }
-.weather-hour[data-focused='true'] .weather-hour__symbol { display: none; }
-
-.weather-days { justify-content: center; }
-.weather-day { flex: 0 0 10.5rem; width: 10.5rem; height: 8.8rem; display: grid; grid-template-rows: auto 1fr auto auto; justify-items: center; align-items: center; padding: 0.45rem 0.55rem; border: 0.0625rem solid color-mix(in srgb, var(--text) 10%, transparent); border-radius: var(--radius-card); background: linear-gradient(145deg, color-mix(in srgb, var(--text) 7%, transparent), color-mix(in srgb, var(--bg-1) 14%, transparent)), color-mix(in srgb, var(--bg-0) 18%, transparent); box-shadow: var(--glass-inset); opacity: 0.68; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-day__name, .weather-day__condition, .weather-day__temperatures { font-size: 1.25rem; }
-.weather-day__name { color: var(--text-dim); font-weight: 800; }
-.weather-day__symbol { width: 4rem; height: 3.4rem; overflow: visible; }
-.weather-day__condition { max-width: 100%; overflow: hidden; color: color-mix(in srgb, var(--text) 62%, transparent); font-weight: 650; line-height: 1.05; text-overflow: ellipsis; white-space: nowrap; }
-.weather-day__temperatures { display: flex; gap: 0.65rem; color: var(--text-dim); font-weight: 650; opacity: 0.45; }
-.weather-day__temperatures strong { color: var(--text); font-weight: 800; }
-.weather-day[data-focused='true'] .weather-day__temperatures { opacity: 1; }
-.weather-detail { min-height: 3rem; display: flex; align-items: center; justify-content: center; gap: 2.1rem; margin: 0 0.6rem 0.2rem; padding: 0.25rem 1rem; border-top: 0.0625rem solid color-mix(in srgb, var(--text) 9%, transparent); }
-.weather-detail__day { min-width: 5rem; color: color-mix(in srgb, var(--accent) 48%, var(--text)); font-size: 1.35rem; font-weight: 850; }
-.weather-detail__item { display: flex; align-items: baseline; gap: 0.55rem; white-space: nowrap; }
-.weather-detail__item small, .weather-detail__item strong { font-size: 1.25rem; }
-.weather-detail__item small { color: var(--text-dim); font-weight: 600; }
-.weather-detail__item strong { font-weight: 800; }
-
-/* Gamepad-first city entry */
-.weather-search { position: relative; z-index: 2; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.4rem; padding: 1rem 5rem; }
-.weather-search__intro { text-align: center; }
-.weather-search__eyebrow { margin: 0; color: color-mix(in srgb, var(--accent) 55%, var(--text)); font-size: 1.25rem; font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase; }
-.weather-search__intro h2 { margin: 0.25rem 0; font-size: 3rem; letter-spacing: var(--tracking-tight); }
-.weather-search__intro > p:last-child { margin: 0; color: var(--text-dim); font-size: 1.25rem; font-weight: 650; }
-.weather-search__query { width: min(54rem, 80vw); display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1rem; color: var(--text-dim); font-size: 1.25rem; font-weight: 750; }
-.weather-search__query input { min-height: 3.5rem; padding: 0.55rem 1.2rem; border: 0.0625rem solid color-mix(in srgb, var(--text) 18%, transparent); border-radius: var(--radius-chip); outline: none; color: var(--text); background: var(--glass-bg); box-shadow: var(--glass-inset); font: inherit; font-size: 1.4rem; }
-.weather-search__query input:focus { border-color: var(--accent); box-shadow: 0 0 1rem color-mix(in srgb, var(--accent) 28%, transparent); }
-.weather-keyboard { display: grid; grid-template-columns: repeat(10, minmax(4rem, 1fr)); gap: 0.65rem; width: min(53rem, 86vw); }
-.weather-key { min-height: 3.3rem; border-radius: var(--radius-card); background: linear-gradient(145deg, color-mix(in srgb, var(--text) 9%, transparent), color-mix(in srgb, var(--bg-0) 20%, transparent)); box-shadow: var(--glass-inset); font-size: 1.3rem; font-weight: 850; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-key--wide { grid-column: span 2; }
-.weather-key--search { grid-column: span 2; background: color-mix(in srgb, var(--accent) 22%, var(--glass-bg)); }
-.weather-key--quiet { grid-column: span 2; color: var(--text-dim); }
-.weather-search-results { display: grid; grid-template-columns: repeat(2, minmax(24rem, 1fr)); gap: 0.85rem; width: min(65rem, 86vw); }
-.weather-search-result { min-height: 5.2rem; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 0.7rem 1.4rem; border: 0.0625rem solid color-mix(in srgb, var(--text) 11%, transparent); border-radius: var(--radius-card); background: var(--glass-bg); box-shadow: var(--glass-inset); text-align: left; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-search-result span { font-size: 1.55rem; font-weight: 850; }
-.weather-search-result small { color: var(--text-dim); font-size: 1.25rem; font-weight: 650; }
-.weather-search__actions { display: flex; gap: 1rem; }
-.weather-action { min-width: 11rem; padding: 0.7rem 1.2rem; border-radius: var(--radius-chip); background: color-mix(in srgb, var(--accent) 20%, var(--glass-bg)); font-size: 1.25rem; font-weight: 800; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-action--quiet { color: var(--text-dim); background: var(--glass-bg); }
-
-/* Radar: RainViewer data over an authored, policy-safe map field. */
-.weather-radar { position: relative; z-index: 2; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; width: min(106rem, calc(100% - 7rem)); margin: 0 auto; padding: 0.7rem 0 0.35rem; }
-.weather-radar__heading { flex: 0 0 auto; display: flex; align-items: end; justify-content: space-between; margin-bottom: 0.55rem; }
-.weather-radar__heading p { margin: 0; color: var(--text-dim); font-size: 1.25rem; font-weight: 750; letter-spacing: 0.04em; }
-.weather-radar__heading h2 { margin: 0; font-size: 2.2rem; font-weight: 850; letter-spacing: var(--tracking-tight); }
-.weather-radar__controls { display: flex; gap: 0.75rem; }
-.weather-radar-control { min-width: 8rem; padding: 0.65rem 1.15rem; border-radius: var(--radius-chip); color: var(--text-dim); background: var(--glass-bg); box-shadow: var(--glass-inset); font-size: 1.25rem; font-weight: 800; transition: all var(--weather-focus-ms) var(--weather-focus-ease); }
-.weather-radar-control--primary { color: var(--text); background: color-mix(in srgb, var(--accent) 20%, var(--glass-bg)); }
-.weather-radar-map { position: relative; flex: 1 1 auto; min-height: 24rem; overflow: hidden; border: 0.0625rem solid color-mix(in srgb, var(--text) 13%, transparent); border-radius: var(--radius-card); background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 55%), linear-gradient(155deg, color-mix(in srgb, var(--bg-1) 82%, var(--accent)), color-mix(in srgb, var(--bg-0) 92%, var(--accent))); box-shadow: var(--glass-shadow), var(--glass-inset); }
-.weather-radar-map__grid { position: absolute; inset: 0; z-index: 0; opacity: 0.32; background-image: repeating-linear-gradient(to right, color-mix(in srgb, var(--text) 14%, transparent) 0 0.0625rem, transparent 0.0625rem 8rem), repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text) 14%, transparent) 0 0.0625rem, transparent 0.0625rem 8rem); }
-.weather-radar-map__land { position: absolute; z-index: 0; inset: 0; width: 100%; height: 100%; fill: none; stroke: color-mix(in srgb, var(--text-dim) 32%, transparent); stroke-width: 0.22rem; stroke-linecap: round; filter: drop-shadow(0 0 0.6rem color-mix(in srgb, var(--accent) 24%, transparent)); }
-.weather-radar-layer { position: absolute; z-index: 1; inset: 0; opacity: 0; transition: opacity var(--weather-radar-frame-ms) linear; }
-.weather-radar-layer[data-active='true'] { z-index: 2; opacity: 0.88; }
-.weather-radar-tile { position: absolute; width: 16rem; height: 16rem; max-width: none; user-select: none; filter: saturate(0.88) brightness(1.05); }
-.weather-radar-marker { position: absolute; z-index: 4; left: 50%; top: 50%; width: 2rem; height: 2rem; border: 0.2rem solid var(--text); border-radius: 50% 50% 50% 0; background: color-mix(in srgb, var(--accent) 68%, transparent); box-shadow: 0 0 1.2rem color-mix(in srgb, var(--accent) 70%, transparent); transform: translate(-50%, -90%) rotate(-45deg); }
-.weather-radar-marker span { position: absolute; inset: 0.48rem; border-radius: 50%; background: var(--text); }
-.weather-radar-map__label { position: absolute; z-index: 4; left: calc(50% + 1.2rem); top: calc(50% + 0.5rem); padding: 0.25rem 0.65rem; border-radius: var(--radius-chip); color: var(--text); background: color-mix(in srgb, var(--bg-0) 74%, transparent); font-size: 1.25rem; font-weight: 850; }
-.weather-radar-legend { position: absolute; z-index: 4; right: 1.2rem; bottom: 1rem; display: flex; align-items: center; gap: 0.35rem; padding: 0.4rem 0.7rem; border-radius: var(--radius-chip); color: var(--text-dim); background: color-mix(in srgb, var(--bg-0) 72%, transparent); font-size: 1.25rem; font-weight: 700; }
-.weather-radar-legend i { width: 1.7rem; height: 0.6rem; background: color-mix(in srgb, var(--accent) 28%, var(--text-dim)); }
-.weather-radar-legend i:nth-of-type(2) { background: color-mix(in srgb, var(--accent) 46%, var(--text-dim)); }
-.weather-radar-legend i:nth-of-type(3) { background: color-mix(in srgb, var(--accent) 68%, var(--text)); }
-.weather-radar-legend i:nth-of-type(4) { background: color-mix(in srgb, var(--accent) 86%, var(--text)); }
-.weather-radar__status { flex: 0 0 auto; min-height: 1.8rem; margin: 0.4rem 0 0; color: var(--text-dim); font-size: 1.25rem; font-weight: 650; text-align: center; }
-
-/* Shared hint pill */
-.weather-hints { position: relative; z-index: 6; flex: 0 0 auto; align-self: center; display: flex; align-items: center; gap: 2rem; width: fit-content; padding: 0.65rem 2rem; margin: 0.25rem 0 0.85rem; border: 0.0625rem solid var(--glass-border); border-radius: var(--radius-chip); background: var(--glass-bg); box-shadow: var(--glass-shadow), var(--glass-inset); backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05); }
-.weather-hint { display: flex; align-items: center; gap: 0.55rem; color: var(--text-dim); font-size: 1.25rem; font-weight: 650; }
-.weather-hint__badge { display: grid; place-items: center; min-width: 1.875rem; height: 1.875rem; padding: 0 0.35rem; border-radius: 50%; color: var(--text); background: color-mix(in srgb, var(--text) 9%, transparent); box-shadow: inset 0 0 0 0.0938rem color-mix(in srgb, var(--text) 26%, transparent); font-size: 1.25rem; font-weight: 850; line-height: 1; }
-.weather-hint__badge--wide { min-width: 3.2rem; border-radius: var(--radius-chip); }
-
-/* The existing hand-authored weather symbols retain one shared construction. */
-.weather-symbol { color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
-.weather-symbol__sun, .weather-symbol__moon { fill: color-mix(in srgb, var(--accent) 54%, var(--text)); filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--accent) 55%, transparent)); }
-.weather-symbol__sun-wheel { transform-box: fill-box; transform-origin: center; animation: weather-sun-breathe var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate; }
-.weather-symbol__rays { fill: none; stroke: color-mix(in srgb, var(--accent) 50%, var(--text)); stroke-linecap: round; stroke-width: 4; }
-.weather-symbol__airline { fill: none; stroke: color-mix(in srgb, var(--text) 18%, transparent); stroke-linecap: round; stroke-width: 3; }
-.weather-symbol__behind { opacity: 0.68; }
-.weather-symbol__behind--fog { opacity: 0.3; }
-.weather-symbol__cloud { transform-box: fill-box; transform-origin: center; animation: weather-cloud-drift var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate; }
-.weather-symbol__cloud-shadow { fill: color-mix(in srgb, var(--bg-0) 45%, transparent); transform: translateY(0.25rem); }
-.weather-symbol__cloud-face { fill: color-mix(in srgb, var(--text) 80%, var(--accent)); }
-.weather-symbol__cloud-light { fill: color-mix(in srgb, var(--text) 88%, transparent); }
-.weather-symbol__cloud--storm .weather-symbol__cloud-face { fill: color-mix(in srgb, var(--text-dim) 52%, var(--bg-1)); }
-.weather-symbol__drop { fill: none; stroke: color-mix(in srgb, var(--accent) 72%, var(--text)); stroke-linecap: round; stroke-width: 5; animation: weather-rain-fall var(--weather-fall-ms) var(--weather-focus-ease) infinite; }
-.weather-symbol__drop--two, .weather-symbol__flake--two { animation-delay: calc(-1 * var(--weather-settle-delay)); }
-.weather-symbol__drop--three, .weather-symbol__flake--three { animation-delay: calc(-2 * var(--weather-settle-delay)); }
-.weather-symbol__flake { fill: none; stroke: color-mix(in srgb, var(--text) 82%, var(--accent)); stroke-linecap: round; stroke-width: 2.5; transform-origin: center; animation: weather-snow-fall var(--weather-fall-ms) var(--weather-focus-ease) infinite; }
-.weather-symbol__bolt-glow { fill: none; stroke: var(--accent); stroke-linejoin: round; stroke-width: 10; opacity: 0.25; filter: blur(0.1875rem); }
-.weather-symbol__bolt { fill: var(--accent); stroke: color-mix(in srgb, var(--text) 65%, transparent); stroke-linejoin: round; stroke-width: 1.5; animation: weather-storm-glow var(--weather-breathe-ms) var(--weather-focus-ease) infinite; }
-.weather-symbol__fogline { fill: none; stroke: color-mix(in srgb, var(--text) 66%, transparent); stroke-linecap: round; stroke-width: 8; animation: weather-fog-drift var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate; }
-.weather-symbol__fogline--two { animation-direction: alternate-reverse; }
-.weather-symbol__fogline--three { animation-delay: calc(-2 * var(--weather-settle-delay)); }
-.weather-symbol__fogline--four { animation-direction: alternate-reverse; animation-delay: calc(-1 * var(--weather-settle-delay)); }
-
-@keyframes weather-sky-breathe { from { transform: translate3d(-1.5rem, -0.75rem, 0) scale(0.98); } to { transform: translate3d(1rem, 1rem, 0) scale(1.04); } }
-@keyframes weather-halo-float { from { transform: translate3d(-1rem, 0.5rem, 0) scale(0.96); opacity: 0.62; } to { transform: translate3d(1.25rem, -0.45rem, 0) scale(1.05); opacity: 1; } }
-@keyframes weather-ring-breathe { from { filter: brightness(1); box-shadow: 0 0 0.7rem color-mix(in srgb, var(--accent) 42%, transparent); } to { filter: brightness(1.28); box-shadow: 0 0 1.25rem color-mix(in srgb, var(--accent) 68%, transparent); } }
-@keyframes weather-sun-breathe { from { transform: rotate(-5deg) scale(0.98); } to { transform: rotate(5deg) scale(1.03); } }
-@keyframes weather-cloud-drift { from { transform: translate3d(-0.125rem, 0.0625rem, 0); } to { transform: translate3d(0.1875rem, -0.0625rem, 0); } }
-@keyframes weather-rain-fall { 0% { opacity: 0; transform: translate3d(0.1875rem, -0.3125rem, 0); } 25% { opacity: 1; } 80% { opacity: 0.9; } 100% { opacity: 0; transform: translate3d(-0.1875rem, 0.5625rem, 0); } }
-@keyframes weather-snow-fall { 0% { opacity: 0; transform: translate3d(-0.125rem, -0.25rem, 0) rotate(-8deg); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate3d(0.1875rem, 0.5625rem, 0) rotate(8deg); } }
-@keyframes weather-storm-glow { 0%, 72%, 100% { filter: brightness(0.9); opacity: 0.72; } 80% { filter: brightness(1.45); opacity: 1; } }
-@keyframes weather-fog-drift { from { transform: translateX(-0.25rem); opacity: 0.48; } to { transform: translateX(0.3125rem); opacity: 0.86; } }
-
-@media (prefers-reduced-motion: reduce) {
-  .weather, .weather-location, .weather-tab, .weather-key, .weather-search-result,
-  .weather-action, .weather-radar-control, .weather-remove-city, .weather-hour,
-  .weather-day, .weather-radar-layer { transition-duration: 1ms; }
-  .weather::before, .weather-hero-art__halo,
-  [data-focused='true']::after, .weather-symbol__sun-wheel,
-  .weather-symbol__cloud, .weather-symbol__drop, .weather-symbol__flake,
-  .weather-symbol__bolt, .weather-symbol__fogline { animation: none; }
-  .weather-locations-scroll, .weather-hours-scroll, .weather-days-scroll { scroll-behavior: auto; }
 }
 
-/* ── Fable layout pass ─────────────────────────────────────────────────────
-   The channel was packing everything into the top ~730px of a 1080p screen
-   and leaving the bottom third empty, which is what made it feel unfinished.
-
-   The content column is now a grid that OWNS the full height: the hero takes
-   the space it deserves, the two strips sit on their own generous bands, and
-   the summary line anchors the bottom. Nothing floats in a void. */
-
-.weather-content {
-  display: grid !important;
-  grid-template-rows:
-    minmax(0, 1.15fr)   /* hero: current conditions + art  */
-    auto                /* hourly strip                    */
-    auto                /* daily strip                     */
-    auto;               /* day summary                     */
-  row-gap: clamp(1.5rem, 3.2vh, 3.25rem);
-  padding: clamp(1rem, 2.4vh, 2.5rem) 4rem clamp(1.5rem, 3vh, 3rem) !important;
+.weather-location {
+  min-width: 7rem;
 }
 
-/* Hero grows with the room instead of being pinned to 14rem. */
-.weather-hero {
-  flex: 1 1 auto !important;
+.weather-tab {
+  min-width: 7.5rem;
+}
+
+.weather-location[aria-pressed='true'],
+.weather-tab[aria-pressed='true'] {
+  color: var(--text);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+}
+
+.weather-location--add {
+  min-width: 8.25rem;
+  box-shadow: inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+.weather-location__plus {
+  color: var(--accent);
+  font-size: 1.6rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.weather-location__pin {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 0.125rem solid var(--accent);
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+}
+
+.weather-location__pin span {
+  width: 0.3rem;
+  height: 0.3rem;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.weather-location[data-focused='true'],
+.weather-tab[data-focused='true'],
+.weather-remove-city[data-focused='true'],
+.weather-radar-control[data-focused='true'] {
+  color: var(--text);
+  transform: translateY(-0.1rem);
+}
+
+/* ── Stage: the two-column body ──────────────────────────────────────────── */
+
+.weather-stage {
+  flex: 1 1 auto;
   min-height: 0;
-  align-self: center;
-  max-width: none !important;
+  display: grid;
+  grid-template-columns: minmax(22rem, 33fr) minmax(0, 67fr);
+  gap: clamp(1.25rem, 2.2vw, 2.5rem);
+  padding: clamp(0.5rem, 1.4vh, 1.25rem) var(--weather-gutter) 0;
 }
 
-/* Strips span the full content width so the week doesn't sit off-centre. */
-.weather-hourly,
-.weather-outlook {
-  min-width: 0;
-}
+/* ── The now panel ───────────────────────────────────────────────────────────
+   Fixed costs at top and bottom; `.weather-now__sky` is the single elastic
+   band. Give the room another 280px of height and all of it goes to the
+   illustration, which is exactly where an ambient channel wants it. */
 
-.weather-days {
+.weather-now {
+  position: relative;
+  min-height: 0;
   display: flex;
-  gap: 1rem;
-  width: 100%;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(0.5rem, 1.4vh, 1.1rem);
+  padding: clamp(1.1rem, 2.4vh, 2rem) clamp(1.1rem, 1.6vw, 1.9rem);
+  border-radius: var(--radius-tile);
+  background:
+    linear-gradient(
+      160deg,
+      color-mix(in srgb, var(--text) 8%, transparent),
+      color-mix(in srgb, var(--bg-1) 20%, transparent)
+    ),
+    color-mix(in srgb, var(--bg-0) 26%, transparent);
+  box-shadow: var(--glass-inset), var(--shadow-soft);
+  text-align: center;
 }
 
-/* Day cards share the row evenly rather than clustering in the middle. */
-.weather-days > * {
+.weather-now__place {
+  flex: 0 0 auto;
+  max-width: 100%;
+}
+
+.weather-now__place h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: clamp(1.85rem, 3.2vh, 2.5rem);
+  font-weight: 850;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-now__place p {
+  margin: 0.15rem 0 0;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.weather-now__sky {
+  position: relative;
   flex: 1 1 0;
-  min-width: 0;
+  min-height: clamp(4.5rem, 12vh, 15rem);
+  align-self: stretch;
 }
 
-/* Conditions text was truncating ("Passing show…"); let it wrap to two lines
-   inside the taller card instead. */
-.weather-day .weather-day__label,
-.weather-day [class*='label'],
-.weather-day [class*='summary'] {
-  white-space: normal;
-  overflow-wrap: anywhere;
+.weather-now__halo {
+  position: absolute;
+  width: 80%;
+  height: 70%;
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse,
+    color-mix(in srgb, var(--accent) 18%, transparent),
+    transparent 70%
+  );
+  filter: blur(1.4rem);
+  animation: weather-halo-float var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate;
+}
+
+/* Absolutely positioned on purpose. As an in-flow child, `height: 100%` has
+   no definite containing block to resolve against, so it silently falls back
+   to `auto` — and an SVG sized `auto` uses its own 140:120 aspect ratio, which
+   at this width is ~110px taller than the band it was given. That is exactly
+   how the old layout ended up painting the illustration over the temperature.
+   Against `.weather-now__sky`'s padding box the percentage is definite, and
+   `margin: auto` centres the capped width. */
+.weather-now__symbol {
+  position: absolute;
+  inset: 0;
+  width: min(100%, 24rem);
+  height: 100%;
+  margin: auto;
+  overflow: visible;
+  filter: drop-shadow(0 1.2rem 2.2rem color-mix(in srgb, var(--bg-0) 58%, transparent));
+}
+
+.weather-now__reading {
+  flex: 0 0 auto;
+}
+
+.weather-now__temperature {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(4.25rem, 10.5vh, 7.5rem);
+  font-weight: 500;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+  text-shadow:
+    0 0 2.8rem color-mix(in srgb, var(--accent) 24%, transparent),
+    0 1rem 3rem color-mix(in srgb, var(--bg-0) 56%, transparent);
+}
+
+.weather-now__temperature sup {
+  margin-top: 0.15em;
+  color: color-mix(in srgb, var(--accent) 54%, var(--text));
+  font-size: 0.36em;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.weather-now__condition {
+  margin: 0.2rem 0 0;
+  font-size: clamp(1.5rem, 2.5vh, 1.9rem);
+  font-weight: 800;
+  letter-spacing: var(--tracking-tight);
   line-height: 1.15;
 }
 
-/* Hourly cards get a little more air now that there is room for it. */
-.weather-hour {
-  min-width: 8.5rem;
+.weather-now__facts {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(0.35rem, 0.9vh, 0.8rem) 1rem;
+  align-self: stretch;
+  padding-top: clamp(0.35rem, 0.9vh, 0.8rem);
+  border-top: 0.0625rem solid color-mix(in srgb, var(--text) 11%, transparent);
 }
 
-/* "Remove city" was floating loose in the middle of the hero. Park it with
-   the tabs, where the other per-city controls live. */
+.weather-fact {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.weather-fact__label {
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+.weather-fact__value {
+  font-size: 1.45rem;
+  font-weight: 800;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.weather-now__foot {
+  flex: 0 0 auto;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.weather-now__status {
+  margin: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--text) 46%, transparent);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-now__status[data-offline='true'],
+.weather-radar__status[data-offline='true'] {
+  color: color-mix(in srgb, var(--accent) 32%, var(--text-dim));
+}
+
 .weather-remove-city {
+  flex: 0 0 auto;
+  min-height: 2.6rem;
+  padding: 0.4rem 1.1rem;
+  border-radius: var(--radius-chip);
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--bg-0) 26%, transparent);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+/* ── Forecast column ─────────────────────────────────────────────────────── */
+
+.weather-forecast {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(0.75rem, 2vh, 1.75rem);
+}
+
+.weather-hourly,
+.weather-weekly {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.weather-section-title {
+  flex: 0 0 auto;
+  margin: 0 0 0.4rem;
+  padding-left: 0.4rem;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  line-height: 1.15;
+}
+
+.weather-empty {
+  margin: 0;
+  padding: 1rem 0.4rem;
+  color: var(--text-faint);
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+/* Hourly rail — horizontal, springs sideways under glideIntoView. The block
+   padding is the ring's breathing room, since overflow-y is clipped. */
+.weather-hours {
+  flex: 0 0 auto;
+  height: clamp(7rem, 15.5vh, 9rem);
+  display: flex;
+  align-items: stretch;
+  gap: 0.55rem;
+  padding: 0.4rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-padding-inline: 2rem;
+  scrollbar-width: none;
+}
+
+.weather-hour {
+  flex: 0 0 6.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.35rem;
+  border-radius: var(--radius-card);
+  background: color-mix(in srgb, var(--bg-0) 22%, transparent);
+  box-shadow: inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 9%, transparent);
+  opacity: 0.72;
+}
+
+.weather-hour[data-focused='true'] {
+  opacity: 1;
+  background: color-mix(in srgb, var(--bg-0) 42%, transparent);
+  transform: translateY(-0.15rem);
+}
+
+.weather-hour__time {
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.weather-hour[data-focused='true'] .weather-hour__time {
+  color: var(--text);
+}
+
+.weather-hour__symbol {
+  flex: 1 1 auto;
+  width: 3.4rem;
+  min-height: 0;
+  overflow: visible;
+}
+
+.weather-hour__temperature {
+  font-size: 1.5rem;
+  font-weight: 850;
+  line-height: 1.1;
+}
+
+.weather-hour__rain {
+  color: color-mix(in srgb, var(--accent) 62%, var(--text));
+  font-size: 1.25rem;
+  font-weight: 750;
+  line-height: 1.15;
+}
+
+/* Week list — vertical, and the only box that scrolls on the block axis. */
+.weather-week {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.35rem 0.4rem;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-padding-block: 1rem;
+  scrollbar-width: none;
+}
+
+/* A row, not a tile. Everything the day has to say fits on one line at ten
+   feet, and the range bars share one axis so the week has a silhouette. */
+.weather-day {
+  flex: 1 1 auto;
+  min-height: clamp(2.9rem, 6.4vh, 4.6rem);
+  display: grid;
+  grid-template-columns:
+    minmax(4.5rem, 5.5rem)   /* day name        */
+    2.9rem                   /* symbol          */
+    minmax(0, 1fr)           /* condition       */
+    3.5rem                   /* rain            */
+    minmax(10.5rem, 15rem);  /* low — bar — high */
+  align-items: center;
+  gap: clamp(0.5rem, 1vw, 1.1rem);
+  padding: 0.35rem clamp(0.75rem, 1.2vw, 1.25rem);
+  border-radius: var(--radius-card);
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--text) 7%, transparent),
+    color-mix(in srgb, var(--bg-1) 14%, transparent)
+  );
+  box-shadow: var(--glass-inset);
+  text-align: left;
+  opacity: 0.78;
+}
+
+.weather-day[data-focused='true'] {
+  opacity: 1;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--text) 13%, transparent),
+    color-mix(in srgb, var(--bg-1) 22%, transparent)
+  );
+}
+
+.weather-day__name {
+  color: var(--text);
+  font-size: 1.35rem;
+  font-weight: 850;
+  white-space: nowrap;
+}
+
+.weather-day__symbol {
+  width: 2.9rem;
+  height: 2.5rem;
+  overflow: visible;
+}
+
+.weather-day__condition {
+  min-width: 0;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--text) 66%, transparent);
+  font-size: 1.25rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-day__rain {
+  color: color-mix(in srgb, var(--accent) 62%, var(--text));
+  font-size: 1.25rem;
+  font-weight: 750;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.weather-day__range {
+  display: grid;
+  grid-template-columns: 2.9rem minmax(2rem, 1fr) 2.9rem;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.weather-day__low,
+.weather-day__high {
+  font-size: 1.3rem;
+  font-weight: 750;
+  line-height: 1.1;
+}
+
+.weather-day__low {
+  color: var(--text-dim);
+  text-align: right;
+}
+
+.weather-day__high {
+  color: var(--text);
+  font-weight: 850;
+}
+
+.weather-day__track {
+  position: relative;
+  height: 0.4rem;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.weather-day__fill {
   position: absolute;
-  top: 0.6rem;
-  right: 4rem;
-  z-index: 5;
+  inset-block: 0;
+  left: var(--range-start);
+  right: calc(100% - var(--range-end));
+  border-radius: var(--radius-chip);
+  background: linear-gradient(
+    to right,
+    color-mix(in srgb, var(--accent) 42%, var(--text)),
+    var(--accent)
+  );
+  box-shadow: 0 0 0.7rem color-mix(in srgb, var(--accent) 45%, transparent);
 }
 
-/* Strip headings sit closer to their strip than to the block above. */
-.weather-strip-heading {
-  margin-bottom: 0.55rem;
+/* ── Radar ───────────────────────────────────────────────────────────────────
+   RainViewer frames over an authored, policy-safe map field. Same box as the
+   stage, so switching tabs does not move the room around. */
+
+.weather-radar {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: clamp(0.5rem, 1.4vh, 1.25rem) var(--weather-gutter) 0;
 }
 
+.weather-radar__heading {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  margin-bottom: 0.6rem;
+}
+
+.weather-radar__status {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+}
+
+.weather-radar__heading h2 {
+  margin: 0;
+  font-size: clamp(1.75rem, 3vh, 2.2rem);
+  font-weight: 850;
+  letter-spacing: var(--tracking-tight);
+}
+
+.weather-radar__controls {
+  display: flex;
+  gap: 0.7rem;
+}
+
+.weather-radar-control {
+  min-width: 8rem;
+  min-height: 2.85rem;
+  padding: 0.6rem 1.15rem;
+  border-radius: var(--radius-chip);
+  color: var(--text-dim);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.weather-radar-control--primary {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 20%, var(--glass-bg));
+}
+
+.weather-radar-map {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background:
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 55%),
+    linear-gradient(
+      155deg,
+      color-mix(in srgb, var(--bg-1) 82%, var(--accent)),
+      color-mix(in srgb, var(--bg-0) 92%, var(--accent))
+    );
+  box-shadow:
+    inset 0 0 0 0.0625rem color-mix(in srgb, var(--text) 13%, transparent),
+    var(--glass-shadow);
+}
+
+.weather-radar-map__grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.32;
+  background-image:
+    repeating-linear-gradient(to right, color-mix(in srgb, var(--text) 14%, transparent) 0 0.0625rem, transparent 0.0625rem 8rem),
+    repeating-linear-gradient(to bottom, color-mix(in srgb, var(--text) 14%, transparent) 0 0.0625rem, transparent 0.0625rem 8rem);
+}
+
+.weather-radar-map__land {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: color-mix(in srgb, var(--text-dim) 32%, transparent);
+  stroke-width: 0.22rem;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 0.6rem color-mix(in srgb, var(--accent) 24%, transparent));
+}
+
+.weather-radar-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity var(--weather-radar-frame-ms) linear;
+}
+
+.weather-radar-layer[data-active='true'] {
+  z-index: 2;
+  opacity: 0.88;
+}
+
+.weather-radar-tile {
+  position: absolute;
+  width: 16rem;
+  height: 16rem;
+  max-width: none;
+  user-select: none;
+  filter: saturate(0.88) brightness(1.05);
+}
+
+.weather-radar-marker {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  width: 2rem;
+  height: 2rem;
+  border: 0.2rem solid var(--text);
+  border-radius: 50% 50% 50% 0;
+  background: color-mix(in srgb, var(--accent) 68%, transparent);
+  box-shadow: 0 0 1.2rem color-mix(in srgb, var(--accent) 70%, transparent);
+  transform: translate(-50%, -90%) rotate(-45deg);
+}
+
+.weather-radar-marker span {
+  position: absolute;
+  inset: 0.48rem;
+  border-radius: 50%;
+  background: var(--text);
+}
+
+.weather-radar-map__label {
+  position: absolute;
+  z-index: 4;
+  left: calc(50% + 1.2rem);
+  top: calc(50% + 0.5rem);
+  padding: 0.25rem 0.65rem;
+  border-radius: var(--radius-chip);
+  color: var(--text);
+  background: color-mix(in srgb, var(--bg-0) 74%, transparent);
+  font-size: 1.25rem;
+  font-weight: 850;
+}
+
+.weather-radar-legend {
+  position: absolute;
+  z-index: 4;
+  right: 1.2rem;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-chip);
+  color: var(--text-dim);
+  background: color-mix(in srgb, var(--bg-0) 72%, transparent);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.weather-radar-legend i {
+  width: 1.7rem;
+  height: 0.6rem;
+  background: color-mix(in srgb, var(--accent) 28%, var(--text-dim));
+}
+.weather-radar-legend i:nth-of-type(2) { background: color-mix(in srgb, var(--accent) 46%, var(--text-dim)); }
+.weather-radar-legend i:nth-of-type(3) { background: color-mix(in srgb, var(--accent) 68%, var(--text)); }
+.weather-radar-legend i:nth-of-type(4) { background: color-mix(in srgb, var(--accent) 86%, var(--text)); }
+
+/* ── Gamepad-first city entry ────────────────────────────────────────────── */
+
+.weather-search {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(0.9rem, 2.2vh, 1.6rem);
+  padding: 0 var(--weather-gutter);
+}
+
+.weather-search__intro {
+  text-align: center;
+}
+
+.weather-search__eyebrow {
+  margin: 0;
+  color: color-mix(in srgb, var(--accent) 55%, var(--text));
+  font-size: 1.25rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.weather-search__intro h2 {
+  margin: 0.2rem 0;
+  font-size: clamp(2.2rem, 4.5vh, 3rem);
+  letter-spacing: var(--tracking-tight);
+}
+
+.weather-search__intro > p:last-child {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.weather-search__query {
+  width: min(54rem, 80vw);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 750;
+}
+
+.weather-search__query input {
+  min-height: 3.4rem;
+  padding: 0.55rem 1.2rem;
+  border: 0.0625rem solid color-mix(in srgb, var(--text) 18%, transparent);
+  border-radius: var(--radius-chip);
+  outline: none;
+  color: var(--text);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  font: inherit;
+  font-size: 1.4rem;
+}
+
+.weather-search__query input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 1rem color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.weather-keyboard {
+  display: grid;
+  grid-template-columns: repeat(10, minmax(3.6rem, 1fr));
+  gap: 0.6rem;
+  width: min(53rem, 86vw);
+}
+
+.weather-key {
+  min-height: clamp(2.8rem, 5.2vh, 3.4rem);
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--text) 9%, transparent),
+    color-mix(in srgb, var(--bg-0) 20%, transparent)
+  );
+  box-shadow: var(--glass-inset);
+  font-size: 1.3rem;
+  font-weight: 850;
+}
+
+.weather-key--wide,
+.weather-key--search,
+.weather-key--quiet {
+  grid-column: span 2;
+}
+
+.weather-key--search {
+  background: color-mix(in srgb, var(--accent) 22%, var(--glass-bg));
+}
+
+.weather-key--quiet {
+  color: var(--text-dim);
+}
+
+.weather-key[data-focused='true'],
+.weather-search-result[data-focused='true'],
+.weather-action[data-focused='true'] {
+  transform: translateY(-0.12rem);
+}
+
+.weather-search-results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(22rem, 1fr));
+  gap: 0.8rem;
+  width: min(65rem, 86vw);
+}
+
+.weather-search-result {
+  min-height: 4.8rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0.7rem 1.4rem;
+  border-radius: var(--radius-card);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-inset);
+  text-align: left;
+}
+
+.weather-search-result span {
+  font-size: 1.5rem;
+  font-weight: 850;
+}
+
+.weather-search-result small {
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.weather-search__actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.weather-action {
+  min-width: 11rem;
+  min-height: 2.9rem;
+  padding: 0.65rem 1.2rem;
+  border-radius: var(--radius-chip);
+  background: color-mix(in srgb, var(--accent) 20%, var(--glass-bg));
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.weather-action--quiet {
+  color: var(--text-dim);
+  background: var(--glass-bg);
+}
+
+/* ── Hint pill ───────────────────────────────────────────────────────────── */
+
+.weather-hints {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  padding: 0.65rem 2rem;
+  border: 0.0625rem solid var(--glass-border);
+  border-radius: var(--radius-chip);
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow), var(--glass-inset);
+  backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+  -webkit-backdrop-filter: blur(2.625rem) saturate(200%) contrast(1.05);
+}
+
+.weather-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--text-dim);
+  font-size: 1.25rem;
+  font-weight: 650;
+}
+
+.weather-hint__badge {
+  display: grid;
+  place-items: center;
+  min-width: 1.875rem;
+  height: 1.875rem;
+  padding: 0 0.35rem;
+  border-radius: 50%;
+  color: var(--text);
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  box-shadow: inset 0 0 0 0.0938rem color-mix(in srgb, var(--text) 26%, transparent);
+  font-size: 1.25rem;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.weather-hint__badge--wide {
+  min-width: 3.2rem;
+  border-radius: var(--radius-chip);
+}
+
+/* ── Symbols ─────────────────────────────────────────────────────────────────
+   The hand-drawn set shares one construction and one stroke rhythm, so a strip
+   of them reads as a single illustrator's work. */
+
+.weather-symbol { color: color-mix(in srgb, var(--accent) 60%, var(--text)); }
+.weather-symbol__sun,
+.weather-symbol__moon {
+  fill: color-mix(in srgb, var(--accent) 54%, var(--text));
+  filter: drop-shadow(0 0 0.55rem color-mix(in srgb, var(--accent) 55%, transparent));
+}
+.weather-symbol__sun-wheel {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: weather-sun-breathe var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate;
+}
+.weather-symbol__rays {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 50%, var(--text));
+  stroke-linecap: round;
+  stroke-width: 4;
+}
+.weather-symbol__airline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 18%, transparent);
+  stroke-linecap: round;
+  stroke-width: 3;
+}
+.weather-symbol__behind { opacity: 0.68; }
+.weather-symbol__behind--fog { opacity: 0.3; }
+.weather-symbol__cloud {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: weather-cloud-drift var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate;
+}
+.weather-symbol__cloud-shadow {
+  fill: color-mix(in srgb, var(--bg-0) 45%, transparent);
+  transform: translateY(0.25rem);
+}
+.weather-symbol__cloud-face { fill: color-mix(in srgb, var(--text) 80%, var(--accent)); }
+.weather-symbol__cloud-light { fill: color-mix(in srgb, var(--text) 88%, transparent); }
+.weather-symbol__cloud--storm .weather-symbol__cloud-face {
+  fill: color-mix(in srgb, var(--text-dim) 52%, var(--bg-1));
+}
+.weather-symbol__drop {
+  fill: none;
+  stroke: color-mix(in srgb, var(--accent) 72%, var(--text));
+  stroke-linecap: round;
+  stroke-width: 5;
+  animation: weather-rain-fall var(--weather-fall-ms) var(--weather-focus-ease) infinite;
+}
+.weather-symbol__drop--two,
+.weather-symbol__flake--two { animation-delay: calc(-1 * var(--weather-settle-delay)); }
+.weather-symbol__drop--three,
+.weather-symbol__flake--three { animation-delay: calc(-2 * var(--weather-settle-delay)); }
+.weather-symbol__flake {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 82%, var(--accent));
+  stroke-linecap: round;
+  stroke-width: 2.5;
+  transform-origin: center;
+  animation: weather-snow-fall var(--weather-fall-ms) var(--weather-focus-ease) infinite;
+}
+.weather-symbol__bolt-glow {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linejoin: round;
+  stroke-width: 10;
+  opacity: 0.25;
+  filter: blur(0.1875rem);
+}
+.weather-symbol__bolt {
+  fill: var(--accent);
+  stroke: color-mix(in srgb, var(--text) 65%, transparent);
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+  animation: weather-storm-glow var(--weather-breathe-ms) var(--weather-focus-ease) infinite;
+}
+.weather-symbol__fogline {
+  fill: none;
+  stroke: color-mix(in srgb, var(--text) 66%, transparent);
+  stroke-linecap: round;
+  stroke-width: 8;
+  animation: weather-fog-drift var(--weather-drift-ms) var(--weather-focus-ease) infinite alternate;
+}
+.weather-symbol__fogline--two { animation-direction: alternate-reverse; }
+.weather-symbol__fogline--three { animation-delay: calc(-2 * var(--weather-settle-delay)); }
+.weather-symbol__fogline--four {
+  animation-direction: alternate-reverse;
+  animation-delay: calc(-1 * var(--weather-settle-delay));
+}
+
+/* ── Keyframes ───────────────────────────────────────────────────────────── */
+
+@keyframes weather-sky-breathe {
+  from { transform: translate3d(-1.5rem, -0.75rem, 0) scale(0.98); }
+  to { transform: translate3d(1rem, 1rem, 0) scale(1.04); }
+}
+@keyframes weather-halo-float {
+  from { transform: translate3d(-1rem, 0.5rem, 0) scale(0.96); opacity: 0.62; }
+  to { transform: translate3d(1.25rem, -0.45rem, 0) scale(1.05); opacity: 1; }
+}
+@keyframes weather-ring-breathe {
+  from { filter: brightness(1); box-shadow: 0 0 0.7rem color-mix(in srgb, var(--accent) 42%, transparent); }
+  to { filter: brightness(1.28); box-shadow: 0 0 1.25rem color-mix(in srgb, var(--accent) 68%, transparent); }
+}
+@keyframes weather-sun-breathe {
+  from { transform: rotate(-5deg) scale(0.98); }
+  to { transform: rotate(5deg) scale(1.03); }
+}
+@keyframes weather-cloud-drift {
+  from { transform: translate3d(-0.125rem, 0.0625rem, 0); }
+  to { transform: translate3d(0.1875rem, -0.0625rem, 0); }
+}
+@keyframes weather-rain-fall {
+  0% { opacity: 0; transform: translate3d(0.1875rem, -0.3125rem, 0); }
+  25% { opacity: 1; }
+  80% { opacity: 0.9; }
+  100% { opacity: 0; transform: translate3d(-0.1875rem, 0.5625rem, 0); }
+}
+@keyframes weather-snow-fall {
+  0% { opacity: 0; transform: translate3d(-0.125rem, -0.25rem, 0) rotate(-8deg); }
+  30% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(0.1875rem, 0.5625rem, 0) rotate(8deg); }
+}
+@keyframes weather-storm-glow {
+  0%, 72%, 100% { filter: brightness(0.9); opacity: 0.72; }
+  80% { filter: brightness(1.45); opacity: 1; }
+}
+@keyframes weather-fog-drift {
+  from { transform: translateX(-0.25rem); opacity: 0.48; }
+  to { transform: translateX(0.3125rem); opacity: 0.86; }
+}
+
+/* ── Reduced motion ──────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .weather,
+  .weather-location,
+  .weather-tab,
+  .weather-hour,
+  .weather-day,
+  .weather-remove-city,
+  .weather-radar-control,
+  .weather-radar-layer,
+  .weather-key,
+  .weather-search-result,
+  .weather-action {
+    transition-duration: 1ms;
+  }
+
+  .weather::before,
+  .weather-now__halo,
+  [data-focused='true']::after,
+  .weather-symbol__sun-wheel,
+  .weather-symbol__cloud,
+  .weather-symbol__drop,
+  .weather-symbol__flake,
+  .weather-symbol__bolt,
+  .weather-symbol__fogline {
+    animation: none;
+  }
+
+  .weather-cities,
+  .weather-hours,
+  .weather-week {
+    scroll-behavior: auto;
+  }
+}

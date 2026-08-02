@@ -142,7 +142,16 @@ export function RadarView({ location, timezone }: { location: WeatherLocation; t
     <main className="weather-radar" aria-label={`Weather radar around ${location.name}`}>
       <div className="weather-radar__heading">
         <div>
-          <p>Last two hours</p>
+          {/* The live line rides with the title rather than sitting at the
+              bottom of the room, where the hint pill's scrim fades it out
+              exactly when it has something to say. */}
+          <p
+            className="weather-radar__status"
+            data-offline={status === 'offline' ? 'true' : undefined}
+            aria-live="polite"
+          >
+            {message}
+          </p>
           <h2>Rain around {location.name}</h2>
         </div>
         <div className="weather-radar__controls">
@@ -197,10 +206,6 @@ export function RadarView({ location, timezone }: { location: WeatherLocation; t
           <span>Light</span><i /><i /><i /><i /><span>Heavy</span>
         </div>
       </div>
-
-      <p className="weather-radar__status" data-offline={status === 'offline' ? 'true' : undefined} aria-live="polite">
-        {message}
-      </p>
     </main>
   );
 }

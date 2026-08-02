@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type CSSProperties,
@@ -19,7 +20,6 @@ import { WeatherIcon } from './WeatherIcon';
 import {
   DEFAULT_LOCATION,
   fetchWeather,
-  formatForecastDay,
   formatLongDate,
   formatSunTime,
   readSavedCities,
@@ -64,7 +64,7 @@ function weatherStatus(status: FetchStatus, payload: WeatherPayload | null, city
       ? `Can’t refresh ${city.name} — showing the last saved forecast.`
       : 'Can’t reach the weather right now. We’ll keep looking.';
   }
-  return `Open-Meteo · Local forecast · ${payload?.timezone ?? city.detail}`;
+  return `Open-Meteo · ${payload?.timezone ?? city.detail}`;
 }
 
 function WeatherTabButton({ tab, active, onSelect }: {
@@ -87,9 +87,25 @@ function WeatherTabButton({ tab, active, onSelect }: {
 function RemoveCityButton({ city, onRemove }: { city: WeatherLocation; onRemove: () => void }) {
   const { ref } = useFocusable({ id: 'weather-city-remove', scope: 'weather', onAccept: onRemove });
   return (
-    <button className="weather-remove-city" ref={ref} type="button" tabIndex={-1} aria-label={`Remove ${city.name} from saved cities`}>
+    <button
+      className="weather-remove-city"
+      ref={ref}
+      type="button"
+      tabIndex={-1}
+      aria-label={`Remove ${city.name} from saved cities`}
+    >
       Remove city
     </button>
+  );
+}
+
+/** One label/value pair in the "now" panel's fact block. */
+function NowFact({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="weather-fact">
+      <span className="weather-fact__label">{label}</span>
+      <strong className="weather-fact__value">{value}</strong>
+    </div>
   );
 }
 
@@ -104,14 +120,25 @@ export function WeatherChannel() {
   const [status, setStatus] = useState<FetchStatus>(bootstrap.payload ? 'refreshing' : 'loading');
   const [activeTab, setActiveTab] = useState<WeatherTab>('conditions');
   const [searchOpen, setSearchOpen] = useState(false);
-  const [focusedDay, setFocusedDay] = useState(0);
   const payloadRef = useRef(payload);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const focusTargetRef = useRef<string | null>(null);
 
   const selectedCity = cities.find((city) => city.id === selectedCityId) ?? cities[0] ?? DEFAULT_LOCATION;
   const current = payload?.current ?? null;
-  const selectedDay = payload?.days[focusedDay] ?? payload?.days[0] ?? null;
+  const today = payload?.days[0] ?? null;
+
+  /**
+   * One shared temperature scale for the whole week, so the range bars in the
+   * day rows are comparable to each other rather than each normalising itself.
+   */
+  const dayScale = useMemo(() => {
+    const days = payload?.days ?? [];
+    if (days.length === 0) return { low: 0, span: 1 };
+    const low = Math.min(...days.map((day) => day.low));
+    const high = Math.max(...days.map((day) => day.high));
+    return { low, span: Math.max(high - low, 1) };
+  }, [payload]);
 
   useEffect(() => { payloadRef.current = payload; }, [payload]);
 
@@ -186,7 +213,6 @@ export function WeatherChannel() {
       .then((nextPayload) => {
         payloadRef.current = nextPayload;
         setPayload(nextPayload);
-        setFocusedDay(0);
         setStatus('ready');
         writeWeatherCache(nextPayload);
       })
@@ -200,7 +226,6 @@ export function WeatherChannel() {
     writeSelectedCityId(city.id);
     setSelectedCityId(city.id);
     setActiveTab('conditions');
-    setFocusedDay(0);
     const cached = readWeatherCache(city.id);
     payloadRef.current = cached;
     setPayload(cached);
@@ -251,7 +276,7 @@ export function WeatherChannel() {
             <WeatherIcon className="weather-brand__symbol" kind="cloud" label="Weather" />
             <h1>Weather</h1>
           </div>
-          <p>Saved cities</p>
+          <p className="weather-header__note">Saved cities</p>
         </header>
         <CitySearch onChoose={chooseNewCity} onCancel={() => setSearchOpen(false)} />
         <footer className="weather-hints" data-collapse="y">
@@ -281,78 +306,95 @@ export function WeatherChannel() {
           onSelect={selectCity}
           onAdd={() => setSearchOpen(true)}
         />
-      </header>
-
-      <nav className="weather-tabs" aria-label={`${selectedCity.name} weather views`}>
-        <div className="weather-tabs__place">
-          <strong>{selectedCity.name}</strong>
-          <span>{selectedCity.detail}</span>
-        </div>
-        <div className="weather-tabs__choices">
+        <nav className="weather-views" aria-label={`${selectedCity.name} weather views`}>
           <WeatherTabButton tab="conditions" active={activeTab === 'conditions'} onSelect={setActiveTab} />
           <WeatherTabButton tab="radar" active={activeTab === 'radar'} onSelect={setActiveTab} />
-        </div>
-      </nav>
+        </nav>
+      </header>
 
       {activeTab === 'radar' ? (
         <RadarView location={selectedCity} timezone={payload?.timezone ?? 'UTC'} />
       ) : (
-        <main className="weather-content">
-          <section className="weather-hero" aria-label={`Current conditions for ${selectedCity.name}`}>
-            <div className="weather-current">
-              <p className="weather-current__date">
-                {payload?.days[0] ? formatLongDate(payload.days[0].date) : 'Your weather, taking shape'}
+        <main className="weather-stage">
+          <section className="weather-now" aria-label={`Current conditions for ${selectedCity.name}`}>
+            <div className="weather-now__place">
+              <h2>{selectedCity.name}</h2>
+              <p>{today ? formatLongDate(today.date) : selectedCity.detail}</p>
+            </div>
+
+            <div className="weather-now__sky">
+              <div className="weather-now__halo" aria-hidden="true" />
+              <WeatherIcon
+                className="weather-now__symbol"
+                kind={current?.kind ?? 'cloud'}
+                isDay={current?.isDay ?? true}
+                label=""
+              />
+            </div>
+
+            <div className="weather-now__reading">
+              <p
+                className="weather-now__temperature"
+                aria-label={current ? `${Math.round(current.temperature)} degrees Fahrenheit` : 'Temperature unavailable'}
+              >
+                <span>{current ? Math.round(current.temperature) : '—'}</span>
+                <sup aria-hidden="true">°</sup>
               </p>
-              <div className="weather-current__temperature" aria-label={current ? `${Math.round(current.temperature)} degrees Fahrenheit` : 'Temperature unavailable'}>
-                <span>{current ? Math.round(current.temperature) : '—'}</span><sup>°</sup>
-              </div>
-              <h2>{current?.condition ?? 'Looking for the sky…'}</h2>
-              {current && (
-                <div className="weather-current__facts">
-                  <span>Feels like {Math.round(current.apparentTemperature)}°</span>
-                  <span className="weather-current__separator" aria-hidden="true" />
-                  <span>Wind {Math.round(current.windSpeed)} mph</span>
-                </div>
-              )}
-              <p className="weather-current__status" data-offline={status === 'offline' ? 'true' : undefined} aria-live="polite">
+              <p className="weather-now__condition">{current?.condition ?? 'Looking for the sky…'}</p>
+            </div>
+
+            <div className="weather-now__facts">
+              <NowFact label="Feels like" value={current ? `${Math.round(current.apparentTemperature)}°` : '—'} />
+              <NowFact label="Wind" value={current ? `${Math.round(current.windSpeed)} mph` : '—'} />
+              <NowFact label="Sunrise" value={today ? formatSunTime(today.sunrise) : '—'} />
+              <NowFact label="Sunset" value={today ? formatSunTime(today.sunset) : '—'} />
+            </div>
+
+            <div className="weather-now__foot">
+              <p
+                className="weather-now__status"
+                data-offline={status === 'offline' ? 'true' : undefined}
+                aria-live="polite"
+              >
                 {weatherStatus(status, payload, selectedCity)}
               </p>
+              <RemoveCityButton city={selectedCity} onRemove={removeSelectedCity} />
             </div>
-            <div className="weather-hero-art" aria-hidden="true">
-              <div className="weather-hero-art__halo" />
-              <WeatherIcon className="weather-hero-art__symbol" kind={current?.kind ?? 'cloud'} isDay={current?.isDay ?? true} label="" />
-            </div>
-            <RemoveCityButton city={selectedCity} onRemove={removeSelectedCity} />
           </section>
 
-          {payload && (
-            <>
-              <section className="weather-hourly" aria-label="Hourly forecast">
-                <div className="weather-strip-heading"><span>Next 24 hours</span><span className="weather-outlook__rule" /></div>
-                <div className="weather-hours-scroll"><div className="weather-hours">
-                  {payload.hours.map((hour, index) => <HourCard key={hour.time} hour={hour} index={index} />)}
-                </div></div>
-              </section>
-
-              <section className="weather-outlook" aria-label="Seven day forecast">
-                <div className="weather-strip-heading"><span>The week ahead</span><span className="weather-outlook__rule" /></div>
-                <div className="weather-days-scroll"><div className="weather-days">
-                  {payload.days.map((day, index) => (
-                    <DayCard key={day.date} day={day} index={index} onFocus={setFocusedDay} />
+          <div className="weather-forecast">
+            <section className="weather-hourly" aria-label="Hourly forecast">
+              <h2 className="weather-section-title">Next 24 hours</h2>
+              {payload ? (
+                <div className="weather-hours">
+                  {payload.hours.map((hour, index) => (
+                    <HourCard key={hour.time} hour={hour} index={index} />
                   ))}
-                </div></div>
-                {selectedDay && (
-                  <div className="weather-detail" aria-live="polite">
-                    <span className="weather-detail__day">{formatForecastDay(selectedDay.date, focusedDay)}</span>
-                    <span className="weather-detail__item"><small>High / Low</small><strong>{Math.round(selectedDay.high)}° / {Math.round(selectedDay.low)}°</strong></span>
-                    <span className="weather-detail__item"><small>Rain</small><strong>{Math.round(selectedDay.precipitationChance)}%</strong></span>
-                    <span className="weather-detail__item"><small>Sunrise</small><strong>{formatSunTime(selectedDay.sunrise)}</strong></span>
-                    <span className="weather-detail__item"><small>Sunset</small><strong>{formatSunTime(selectedDay.sunset)}</strong></span>
-                  </div>
-                )}
-              </section>
-            </>
-          )}
+                </div>
+              ) : (
+                <p className="weather-empty">The next day’s hours are on their way.</p>
+              )}
+            </section>
+
+            <section className="weather-weekly" aria-label="Seven day forecast">
+              <h2 className="weather-section-title">The week ahead</h2>
+              {payload ? (
+                <div className="weather-week">
+                  {payload.days.map((day, index) => (
+                    <DayCard
+                      key={day.date}
+                      day={day}
+                      index={index}
+                      scaleLow={dayScale.low}
+                      scaleSpan={dayScale.span}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="weather-empty">The week is still coming into focus.</p>
+              )}
+            </section>
+          </div>
         </main>
       )}
 
