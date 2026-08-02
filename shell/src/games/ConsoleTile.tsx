@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { ConsoleEntry as Platform } from '../core/consoles';
-import { useFocusable } from '../focus';
+import { focusManager, useFocusable } from '../focus';
+import { playFocusArrival } from '../motion/focusArrival';
 import { ConsoleArt } from './consoleArt';
 import { cssVars, prefersReducedMotion } from './util';
 import './ConsoleTile.css';
@@ -10,8 +11,12 @@ interface ConsoleTileProps {
   platform: Platform;
   /** Fires when this tile becomes the focused element (drives room lighting). */
   onFocus: (platformId: string) => void;
-  /** Accept — drill into this console's library. */
-  onOpen: (platformId: string) => void;
+  /**
+   * Accept — drill into this console's library. Receives the tile element so
+   * the room can grow the library out of the machine you picked, the same way
+   * the wall grows an app out of its tile.
+   */
+  onOpen: (platformId: string, element: HTMLElement | null) => void;
   /** Takes focus when the scope activates with no usable memory. */
   autoFocus?: boolean;
 }
@@ -41,7 +46,10 @@ export function ConsoleTile({ platform, onFocus, onOpen, autoFocus }: ConsoleTil
   useEffect(() => {
     latest.current = { onOpen };
   });
-  const accept = useCallback(() => latest.current.onOpen(platform.id), [platform.id]);
+  const accept = useCallback(
+    () => latest.current.onOpen(platform.id, elRef.current),
+    [platform.id],
+  );
 
   const { ref: focusRef, focused } = useFocusable({
     id: `console-${platform.id}`,
@@ -64,6 +72,12 @@ export function ConsoleTile({ platform, onFocus, onOpen, autoFocus }: ConsoleTil
     // Switch-style edge scrolling: the row only glides once focus pushes into
     // the scroller's side margins (`scroll-padding-inline` defines them).
     glideIntoView(elRef.current, { block: 'nearest', inline: 'nearest' });
+    // Lean into the movement that brought the cursor here.
+    playFocusArrival(
+      elRef.current,
+      focusManager.lastDirection(),
+      elRef.current?.querySelector<HTMLElement>('.ctile-sheen'),
+    );
   }, [focused, platform.id, onFocus]);
 
   return (

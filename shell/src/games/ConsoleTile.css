@@ -46,6 +46,48 @@
   transform: scale(1.06);
 }
 
+/* Depth for the arrival lean — see the note in home/Tile.css. */
+.ctile-slot {
+  perspective: 62rem;
+}
+
+/* The shelf a maker's machines sit on (home/HomeScreen.css has the long
+   version). Here it earns its keep twice over: the picker stacks several
+   shelves, so lighting the one holding the cursor says which maker you are
+   in without adding another highlight to the page. */
+.crow-group {
+  position: relative;
+}
+
+.crow-group::before {
+  content: '';
+  position: absolute;
+  inset: 1.6rem -1.75rem 0.4rem;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: 2rem;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--text) 5%, transparent) 0%,
+    color-mix(in srgb, var(--text) 2%, transparent) 48%,
+    transparent 100%
+  );
+  box-shadow: inset 0 0.0625rem 0 color-mix(in srgb, var(--text) 8%, transparent);
+  opacity: 0;
+  transition: opacity var(--focus-ms, 240ms) var(--focus-ease, ease);
+}
+
+.crow-group:has(.ctile[data-focused='true'])::before {
+  opacity: 1;
+}
+
+/* Tiles and headings ride above the shelf. */
+.crow-maker,
+.crow-scroller {
+  position: relative;
+  z-index: 1;
+}
+
 .ctile-face {
   position: absolute;
   inset: 0;

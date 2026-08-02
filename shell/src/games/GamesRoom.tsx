@@ -22,6 +22,7 @@ import {
 } from '../core/userLibrary';
 import { useFocusable } from '../focus';
 import { Glyph } from '../icons';
+import { playLaunch } from '../motion/transitions';
 import { tuning } from '../motion/tuning';
 import { sound } from '../sound';
 import { BoxArt } from './BoxArt';
@@ -227,6 +228,8 @@ export function GamesRoom() {
 
   const rootRef = useRef<HTMLDivElement | null>(null);
   const levelRef = useRef<HTMLDivElement | null>(null);
+  /** Guards against a second Accept landing mid-zoom and stacking covers. */
+  const openingConsole = useRef(false);
 
   // The level that is being left drifts away as the next one slides in.
   // Ranked by depth so walking in and backing out don't look the same.
@@ -302,13 +305,42 @@ export function GamesRoom() {
     setActiveId(platformId);
   }, []);
 
-  const handleOpenConsole = useCallback((platformId: string) => {
-    lastConsoleId = platformId;
-    lastGameKey = null;
-    setActiveId(platformId);
-    sound.play('accept');
-    useConsoleStore.getState().setGamesLevel('grid');
-  }, []);
+  /**
+   * Opening a machine grows its library out of the machine, the same shared-
+   * element zoom the wall uses to launch an app. A console is the biggest
+   * step this room takes — everything below it is one library — and it was
+   * the only one of the three that just slid.
+   *
+   * `collapseChrome: false` because this move stays inside the room: the
+   * header and the hint pill are continuous across it, and only the
+   * homecoming ever restores collapsed chrome.
+   */
+  const handleOpenConsole = useCallback(
+    async (platformId: string, element: HTMLElement | null) => {
+      if (openingConsole.current) return;
+      lastConsoleId = platformId;
+      lastGameKey = null;
+      setActiveId(platformId);
+      sound.play('accept');
+
+      const accent = consoleById(platformId)?.accent ?? platform.accent;
+      if (!element) {
+        useConsoleStore.getState().setGamesLevel('grid');
+        return;
+      }
+
+      openingConsole.current = true;
+      try {
+        await playLaunch(element, accent, { collapseChrome: false });
+      } finally {
+        // Even if the choreography fails we must not strand the user on the
+        // picker with a cover over it.
+        useConsoleStore.getState().setGamesLevel('grid');
+        openingConsole.current = false;
+      }
+    },
+    [platform.accent],
+  );
 
   // --- level 2: shelf -------------------------------------------------------
 

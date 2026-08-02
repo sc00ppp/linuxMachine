@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef } from 'react';
 import type { Channel } from '../core/types';
-import { useFocusable } from '../focus';
+import { focusManager, useFocusable } from '../focus';
 import { Glyph } from '../icons';
+import { playFocusArrival } from '../motion/focusArrival';
 import { cssVars } from './util';
 import './Tile.css';
 
@@ -62,6 +63,16 @@ export function Tile({ channel, onFocus, onAccept, registerEl, autoFocus }: Tile
   useEffect(() => {
     if (focused) onFocus(channel.id);
   }, [focused, channel.id, onFocus]);
+
+  // Lean into the movement that brought the cursor here, and sweep the gloss.
+  useEffect(() => {
+    if (!focused) return;
+    playFocusArrival(
+      elRef.current,
+      focusManager.lastDirection(),
+      elRef.current?.querySelector<HTMLElement>('.tile-sheen'),
+    );
+  }, [focused]);
 
   // Continue with nothing to resume gets the friendly "nothing yet" face
   // instead of art (DESIGN.md §10).

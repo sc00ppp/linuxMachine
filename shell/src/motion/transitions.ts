@@ -351,7 +351,24 @@ function prefersReducedMotion(): boolean {
  * then dissolve the cover on our own clock afterward (not awaited) so the
  * new screen crossfades in once it's had a couple of frames to paint.
  */
-export function playLaunch(tileEl: HTMLElement, accent: string): Promise<void> {
+export interface LaunchOptions {
+  /**
+   * Whether the room's chrome retracts along with the zoom.
+   *
+   * True when the screen is being left behind — the header and hint bar
+   * belong to the thing you are leaving. False when the zoom is a move
+   * *within* a room (a console opening into its library): the chrome is
+   * continuous across that move, and retracting it would be a lie, as well
+   * as leaving it collapsed since only the homecoming restores it.
+   */
+  collapseChrome?: boolean;
+}
+
+export function playLaunch(
+  tileEl: HTMLElement,
+  accent: string,
+  options: LaunchOptions = {},
+): Promise<void> {
   if (prefersReducedMotion()) return quickCoverFade(accent, 'in');
 
   return new Promise((resolve) => {
@@ -365,7 +382,9 @@ export function playLaunch(tileEl: HTMLElement, accent: string): Promise<void> {
 
       // Chrome retreats on its own clock; we don't wait on it, only on the
       // tile bloom (that's the beat HomeScreen is choreographed around).
-      collapseChrome(document, true).catch(() => {});
+      if (options.collapseChrome !== false) {
+        collapseChrome(document, true).catch(() => {});
+      }
 
       // The real tile disappears under the cover almost immediately, so an
       // eased scale-up that transiently underlaps a corner never exposes
@@ -460,6 +479,10 @@ export function playScreenExit(el: HTMLElement, dx: number): void {
   // caller is wired. Nothing to photograph in that case — the incoming
   // animation alone is a graceful enough degradation.
   if (!el.isConnected) return;
+  // A launch cover is already over the screen, opaque and full-viewport. The
+  // copy would drift about entirely unseen, at the exact moment the zoom
+  // needs the frames.
+  if (activeOverlay) return;
 
   // A photocopy costs a clone, a layout and a paint of everything in the
   // subtree — including the parts scrolled out of sight. On a nine-game shelf

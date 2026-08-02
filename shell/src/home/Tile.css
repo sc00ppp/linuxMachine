@@ -56,6 +56,24 @@
   filter: none;
 }
 
+/* Depth for the arrival lean (motion/focusArrival.ts). Without a perspective
+   on an ancestor a 3D rotation just squashes the tile; with one it reads as
+   the object turning. On the SLOT rather than the tile so the tile's own
+   transform stack stays free for the focus scale and the launch zoom. */
+.tile-slot {
+  perspective: 62rem;
+}
+
+/* The Apple TV lift: the focused tile comes off the wall, and the shadow is
+   what sells it. Large, soft and offset downward — a light source above the
+   screen, not a glow around the edge. Sits on the FACE so it follows the
+   artwork's own corner, like the ring does. */
+.tile[data-focused='true'] .tile-face {
+  box-shadow:
+    0 1.5rem 2.75rem -0.75rem color-mix(in srgb, var(--bg-0) 88%, transparent),
+    0 0.5rem 1rem -0.25rem color-mix(in srgb, var(--bg-0) 72%, transparent);
+}
+
 .tile-face {
   position: absolute;
   inset: 0;

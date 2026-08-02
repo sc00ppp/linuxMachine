@@ -21,6 +21,16 @@ export const tuning = {
   focusEase: 'cubic-bezier(0.32, 0.72, 0, 1)',
 
   /**
+   * Focus arrival (see motion/focusArrival.ts). The swing is longer than the
+   * focus hop itself on purpose: the highlight should land immediately and
+   * the object should still be settling, which is what makes it read as
+   * weight rather than as a second animation.
+   */
+  focusSwingMs: 420,
+  focusSwingEase: 'cubic-bezier(0.18, 0.9, 0.28, 1)',
+  focusSweepMs: 620,
+
+  /**
    * Spring scrolling (see motion/glide.ts). `navGlideMs` is the response
    * time — roughly how long an uninterrupted hop takes to arrive — and the
    * damping ratio sits just under 1 so it settles firmly without ever

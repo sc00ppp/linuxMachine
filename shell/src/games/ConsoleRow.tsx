@@ -6,7 +6,7 @@ interface ConsoleRowProps {
   /** Console the room is currently lit by — the focused one. */
   activeId: string;
   onFocusConsole: (platformId: string) => void;
-  onOpenConsole: (platformId: string) => void;
+  onOpenConsole: (platformId: string, element: HTMLElement | null) => void;
 }
 
 /** Fixed leaders, then earned shelves, an "Other" catch-all, PC last. */

@@ -353,8 +353,12 @@ export function useFocusable(opts: {
   return { ref, focused };
 }
 
+/** Direction of the most recent successful `move`, for arrival motion. */
+let lastMoveDir: Dir | null = null;
+
 export const focusManager = {
   setScope(scope: string): void {
+    lastMoveDir = null;
     if (scope === activeScope) {
       if (!focusedEntry && scope !== 'none') restoreOrChoose(scope);
       return;
@@ -381,14 +385,28 @@ export const focusManager = {
     if (!focusedEntry) {
       const initial = defaultEntry(activeScope);
       if (!initial) return false;
+      lastMoveDir = null;
       selectEntry(initial, initial.autoFocus ? 'auto' : 'fallback');
       return true;
     }
 
     const candidate = candidateInDirection(focusedEntry, dir);
     if (!candidate) return false;
+    lastMoveDir = dir;
     selectEntry(candidate, 'explicit');
     return true;
+  },
+
+  /**
+   * Which way the cursor was travelling when it landed where it is.
+   *
+   * Components use this to lean into the movement — a tile that swings from
+   * the side focus came from reads as something being pushed, rather than as
+   * a highlight teleporting. Null when focus arrived some other way (a scope
+   * restore, an explicit `focusId`), where there is no direction to lean.
+   */
+  lastDirection(): Dir | null {
+    return lastMoveDir;
   },
 
   accept(): void {
@@ -400,6 +418,7 @@ export const focusManager = {
   },
 
   focusId(id: string): void {
+    lastMoveDir = null;
     if (activeScope === 'none') return;
     const entry = registry.get(activeScope)?.get(id);
     if (entry) selectEntry(entry, 'explicit');
