@@ -24,12 +24,13 @@ export type GameLaunchErrorCode =
   | 'DAEMON_UNREACHABLE'
   | 'INVALID_SYSTEM'
   | 'UNKNOWN_SYSTEM'
-  | 'UNSUPPORTED_SYSTEM'
+  | 'NO_EMULATOR_FOR_SYSTEM'
   | 'INVALID_ROM_PATH'
   | 'ROM_OUTSIDE_ROOT'
   | 'ROM_ROOT_UNAVAILABLE'
   | 'ROM_MISSING'
   | 'EMULATOR_MISSING'
+  | 'CORE_MISSING'
   | 'ALREADY_RUNNING'
   | 'BIOS_MISSING'
   | 'EMULATOR_EXITED'
@@ -186,14 +187,19 @@ export function explainLaunchProblem(
       };
     case 'EMULATOR_MISSING':
       return {
-        title: 'RetroBat launcher missing',
+        title: 'Emulator not installed',
+        detail: launchError.message,
+      };
+    case 'CORE_MISSING':
+      return {
+        title: 'Emulator core not installed',
         detail: launchError.message,
       };
     case 'BIOS_MISSING':
       return {
         title: 'Required BIOS missing',
         detail: launchError.missingBios.length > 0
-          ? `RetroBat closed during startup. Missing: ${launchError.missingBios.join(', ')}.`
+          ? `The emulator closed during startup. Missing: ${launchError.missingBios.join(', ')}.`
           : `${launchError.message}${requirementText}`,
       };
     case 'EMULATOR_EXITED':
@@ -207,7 +213,7 @@ export function explainLaunchProblem(
         detail: 'Stop the current emulator before launching another game.',
       };
     case 'UNKNOWN_SYSTEM':
-    case 'UNSUPPORTED_SYSTEM':
+    case 'NO_EMULATOR_FOR_SYSTEM':
       return {
         title: 'System is not launchable',
         detail: launchError.message,

@@ -1,7 +1,10 @@
 mod auth;
+mod config;
 mod hub;
 mod launch;
 mod protocol;
+mod registry;
+mod resolve;
 mod ring;
 mod server;
 mod ytdlp;

@@ -1,7 +1,15 @@
-//! Secure RetroBat game launching and process supervision.
+//! Native game launching and process supervision.
+//!
+//! The daemon resolves and spawns emulators itself. A client supplies only a
+//! system id and a ROM path; every executable, argument and core path comes
+//! from the embedded catalog (`registry.rs`) resolved against this machine
+//! (`resolve.rs`). No client can influence argv.
+//!
+//! Note the two different system ids in play. The *source* id is what the
+//! library and the on-disk ROM folders use (`megadrive`, `psx`); the *canonical*
+//! id is what the catalog uses (`genesis`, `ps1`). ROM paths resolve under the
+//! source id; emulator lookup canonicalizes internally.
 
-use std::collections::HashMap;
-use std::env;
 use std::path::{Component, Path, PathBuf};
 use std::process::ExitStatus;
 use std::sync::Arc;
@@ -11,27 +19,15 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
-use regex::Regex;
 use serde::{Deserialize, Serialize};
 use tokio::process::{Child, Command};
 use tokio::sync::Mutex;
 use tokio::time::sleep;
 
+use crate::resolve::{PlanError, Resolver};
 use crate::server::AppState;
 
-const DEFAULT_ROM_ROOT: &str = r"S:\RetroBat\roms";
-const DEFAULT_BIOS_ROOT: &str = r"S:\RetroBat\bios";
-const DEFAULT_LAUNCHER: &str = r"S:\RetroBat\emulationstation\emulatorLauncher.exe";
-const DEFAULT_SYSTEMS_CONFIG: &str =
-    r"S:\RetroBat\emulationstation\.emulationstation\es_systems.cfg";
 const EARLY_EXIT_WINDOW: Duration = Duration::from_millis(700);
-
-#[derive(Clone, Debug)]
-struct SystemProfile {
-    emulator: String,
-    core: String,
-    uses_retrobat_launcher: bool,
-}
 
 #[derive(Debug)]
 struct RunningProcess {
@@ -63,14 +59,9 @@ struct SupervisorState {
 
 #[derive(Clone)]
 pub(crate) struct LaunchService {
-    rom_root: Arc<PathBuf>,
-    bios_root: Arc<PathBuf>,
-    launcher: Arc<PathBuf>,
-    systems_config: Arc<PathBuf>,
-    systems: Arc<HashMap<String, SystemProfile>>,
+    resolver: Arc<Resolver>,
     state: Arc<Mutex<SupervisorState>>,
     launch_gate: Arc<Mutex<()>>,
-    config_error: Arc<Option<String>>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -151,31 +142,23 @@ impl IntoResponse for ApiError {
     }
 }
 
+/// Map a resolution failure onto the HTTP surface the shell understands.
+fn plan_error(error: PlanError) -> ApiError {
+    let status = match error.code() {
+        "UNKNOWN_SYSTEM" | "INVALID_ROM_PATH" => StatusCode::BAD_REQUEST,
+        "NO_EMULATOR_FOR_SYSTEM" => StatusCode::NOT_IMPLEMENTED,
+        "EMULATOR_MISSING" | "CORE_MISSING" => StatusCode::NOT_FOUND,
+        _ => StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    ApiError::new(status, error.code(), error.message())
+}
+
 impl LaunchService {
-    pub(crate) fn from_env() -> Self {
-        let rom_root = env_path("CONSOLED_ROM_ROOT", DEFAULT_ROM_ROOT);
-        let bios_root = env_path("CONSOLED_BIOS_ROOT", DEFAULT_BIOS_ROOT);
-        let launcher = env_path("CONSOLED_RETROBAT_LAUNCHER", DEFAULT_LAUNCHER);
-        let systems_config = env_path("CONSOLED_ES_SYSTEMS", DEFAULT_SYSTEMS_CONFIG);
-        let parsed = std::fs::read_to_string(&systems_config)
-            .map_err(|error| format!("cannot read {}: {error}", systems_config.display()))
-            .and_then(|xml| parse_system_profiles(&xml));
-        let (systems, config_error) = match parsed {
-            Ok(systems) => (systems, None),
-            Err(error) => {
-                tracing::warn!(%error, "game launching is not configured");
-                (HashMap::new(), Some(error))
-            }
-        };
+    pub(crate) fn new(resolver: Arc<Resolver>) -> Self {
         Self {
-            rom_root: Arc::new(rom_root),
-            bios_root: Arc::new(bios_root),
-            launcher: Arc::new(launcher),
-            systems_config: Arc::new(systems_config),
-            systems: Arc::new(systems),
+            resolver,
             state: Arc::new(Mutex::new(SupervisorState::default())),
             launch_gate: Arc::new(Mutex::new(())),
-            config_error: Arc::new(config_error),
         }
     }
 
@@ -188,33 +171,12 @@ impl LaunchService {
                 "systemId must contain only lowercase letters, numbers, '_' or '-'",
             )
         })?;
-        let profile = self.systems.get(&system_id).ok_or_else(|| {
-            let config_note = self
-                .config_error
-                .as_ref()
-                .as_ref()
-                .map(|error| format!(" ({error})"))
-                .unwrap_or_default();
-            ApiError::new(
-                StatusCode::BAD_REQUEST,
-                "UNKNOWN_SYSTEM",
-                format!(
-                    "{system_id:?} is not a system in {}{config_note}",
-                    self.systems_config.display()
-                ),
-            )
-        })?;
-        if !profile.uses_retrobat_launcher {
-            return Err(ApiError::new(
-                StatusCode::NOT_IMPLEMENTED,
-                "UNSUPPORTED_SYSTEM",
-                format!(
-                    "RetroBat's configured command for {system_id:?} does not use emulatorLauncher.exe"
-                ),
-            ));
-        }
 
+        // Resolve the emulator before touching the filesystem for the ROM: an
+        // unsupported system is a clearer answer than a missing-file error.
+        let plan = self.resolver.plan(&system_id).map_err(plan_error)?;
         let rom_path = self.resolve_rom(&system_id, &request.rom_path).await?;
+        let spec = plan.command(&argv_path(&rom_path)).map_err(plan_error)?;
         let missing_bios = self.check_bios(request.bios.as_ref()).await;
         {
             let mut state = self.state.lock().await;
@@ -232,64 +194,33 @@ impl LaunchService {
             }
         }
 
-        let metadata = tokio::fs::metadata(self.launcher.as_ref())
-            .await
-            .map_err(|error| {
-                ApiError::new(
-                    StatusCode::NOT_FOUND,
-                    "EMULATOR_MISSING",
-                    format!(
-                        "RetroBat launcher {} is unavailable: {error}",
-                        self.launcher.display()
-                    ),
-                )
-            })?;
-        if !metadata.is_file() {
-            return Err(ApiError::new(
-                StatusCode::NOT_FOUND,
-                "EMULATOR_MISSING",
-                format!(
-                    "RetroBat launcher is not a file: {}",
-                    self.launcher.display()
-                ),
-            ));
-        }
-
-        let mut command = Command::new(self.launcher.as_ref());
-        // Windows canonicalization commonly returns a verbatim `\\?\` path.
-        // Keep it for containment checks, but RetroBat's older .NET launcher
-        // calls that spelling nonexistent. The normal drive/UNC spelling is
-        // the same already-validated file and remains one argv entry.
-        let rom_argument = launcher_path(&rom_path);
-        command
-            .arg("-system")
-            .arg(&system_id)
-            .arg("-emulator")
-            .arg(&profile.emulator)
-            .arg("-core")
-            .arg(&profile.core)
-            .arg("-rom")
-            .arg(&rom_argument);
-        if let Some(home) = self.launcher.parent() {
-            command.current_dir(home).env("HOME", home);
+        let mut command = Command::new(&spec.program);
+        command.args(&spec.args);
+        // Many emulators resolve relative config paths against their own
+        // directory, so start them there rather than in the daemon's cwd.
+        if let Some(working_dir) = &spec.working_dir {
+            command.current_dir(working_dir);
         }
         let mut child = command.spawn().map_err(|error| {
             ApiError::new(
                 StatusCode::BAD_GATEWAY,
                 "LAUNCH_FAILED",
-                format!("failed to start {}: {error}", self.launcher.display()),
+                format!("failed to start {}: {error}", spec.program.display()),
             )
         })?;
         let pid = child.id().ok_or_else(|| {
             ApiError::new(
                 StatusCode::BAD_GATEWAY,
                 "LAUNCH_FAILED",
-                "RetroBat launcher started without a process id",
+                "the emulator started without a process id",
             )
         })?;
+        let emulator = plan.emulator.name.clone();
+        let core = plan.emulator.core.clone().unwrap_or_default();
         tracing::info!(
-            pid, system = %system_id, emulator = %profile.emulator,
-            core = %profile.core, rom = %rom_path.display(), "game launch started"
+            pid, system = %system_id, emulator = %emulator, core = %core,
+            program = %spec.program.display(), rom = %rom_path.display(),
+            "game launch started"
         );
 
         sleep(EARLY_EXIT_WINDOW).await;
@@ -301,7 +232,7 @@ impl LaunchService {
                     StatusCode::BAD_GATEWAY,
                     "EMULATOR_EXITED",
                     format!(
-                        "RetroBat launcher exited immediately{}",
+                        "{emulator} exited immediately{}",
                         format_exit_code(exit_code)
                     ),
                 )
@@ -310,10 +241,11 @@ impl LaunchService {
                     StatusCode::FAILED_DEPENDENCY,
                     "BIOS_MISSING",
                     format!(
-                        "RetroBat launcher exited immediately and required BIOS files were not found under {}",
-                        self.bios_root.display()
+                        "{emulator} exited immediately and required BIOS files were not found under {}",
+                        self.resolver.config().bios_root.display()
                     ),
-                ).with_missing_bios(missing_bios)
+                )
+                .with_missing_bios(missing_bios)
             };
             return Err(error);
         }
@@ -323,8 +255,8 @@ impl LaunchService {
             pid,
             system_id,
             rom_path,
-            emulator: profile.emulator.clone(),
-            core: profile.core.clone(),
+            emulator,
+            core,
             started_at_ms: now_ms(),
             missing_bios,
         };
@@ -333,6 +265,7 @@ impl LaunchService {
         Ok(snapshot(&state))
     }
 
+    /// `system_id` here is the *source* id, matching the on-disk ROM folders.
     async fn resolve_rom(&self, system_id: &str, requested: &str) -> Result<PathBuf, ApiError> {
         if requested.trim().is_empty() {
             return Err(ApiError::new(
@@ -341,15 +274,14 @@ impl LaunchService {
                 "romPath cannot be empty",
             ));
         }
-        let canonical_root = tokio::fs::canonicalize(self.rom_root.as_ref())
-            .await
-            .map_err(|error| {
-                ApiError::new(
-                    StatusCode::INTERNAL_SERVER_ERROR,
-                    "ROM_ROOT_UNAVAILABLE",
-                    format!("cannot open ROM root {}: {error}", self.rom_root.display()),
-                )
-            })?;
+        let rom_root = &self.resolver.config().rom_root;
+        let canonical_root = tokio::fs::canonicalize(rom_root).await.map_err(|error| {
+            ApiError::new(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "ROM_ROOT_UNAVAILABLE",
+                format!("cannot open ROM root {}: {error}", rom_root.display()),
+            )
+        })?;
         let canonical_system_root = tokio::fs::canonicalize(canonical_root.join(system_id))
             .await
             .map_err(|error| {
@@ -414,6 +346,7 @@ impl LaunchService {
         let Some(request) = request else {
             return Vec::new();
         };
+        let bios_root = &self.resolver.config().bios_root;
         let mut candidates = Vec::new();
         for file in request.files.iter().take(32) {
             let relative = Path::new(file);
@@ -424,7 +357,7 @@ impl LaunchService {
             {
                 continue;
             }
-            let exists = tokio::fs::metadata(self.bios_root.join(relative))
+            let exists = tokio::fs::metadata(bios_root.join(relative))
                 .await
                 .map(|metadata| metadata.is_file())
                 .unwrap_or(false);
@@ -479,15 +412,11 @@ pub(crate) async fn kill(State(state): State<AppState>) -> Result<Json<LaunchSta
     state.launch.kill().await.map(Json)
 }
 
-fn env_path(name: &str, default: &str) -> PathBuf {
-    env::var_os(name)
-        .filter(|value| !value.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(default))
-}
-
+/// Windows canonicalization returns a verbatim `\\?\` path. Keep that spelling
+/// for containment checks, but hand emulators the ordinary drive/UNC form —
+/// plenty of them treat the verbatim prefix as a nonexistent file.
 #[cfg(windows)]
-fn launcher_path(path: &Path) -> PathBuf {
+fn argv_path(path: &Path) -> PathBuf {
     let text = path.as_os_str().to_string_lossy();
     if let Some(rest) = text.strip_prefix(r"\\?\UNC\") {
         PathBuf::from(format!(r"\\{rest}"))
@@ -499,7 +428,7 @@ fn launcher_path(path: &Path) -> PathBuf {
 }
 
 #[cfg(not(windows))]
-fn launcher_path(path: &Path) -> PathBuf {
+fn argv_path(path: &Path) -> PathBuf {
     path.to_path_buf()
 }
 
@@ -515,118 +444,6 @@ fn normalize_system_id(value: &str) -> Option<String> {
     } else {
         Some(normalized)
     }
-}
-
-fn parse_system_profiles(xml: &str) -> Result<HashMap<String, SystemProfile>, String> {
-    let system_re = Regex::new(r"(?s)<system>(.*?)</system>").map_err(|e| e.to_string())?;
-    let name_re = Regex::new(r"(?s)<name>\s*([^<]+?)\s*</name>").map_err(|e| e.to_string())?;
-    let command_re =
-        Regex::new(r"(?s)<command>\s*(.*?)\s*</command>").map_err(|e| e.to_string())?;
-    let emulators_re =
-        Regex::new(r"(?s)<emulators>(.*?)</emulators>").map_err(|e| e.to_string())?;
-    let emulator_tag_re =
-        Regex::new(r#"(?s)<emulator\s+([^>]*?)(?:/?>)"#).map_err(|e| e.to_string())?;
-    let core_re =
-        Regex::new(r"(?s)<core([^>]*)>\s*([^<]+?)\s*</core>").map_err(|e| e.to_string())?;
-
-    let mut systems = HashMap::new();
-    for capture in system_re.captures_iter(xml) {
-        let block = capture.get(1).map(|value| value.as_str()).unwrap_or("");
-        let Some(name) = name_re
-            .captures(block)
-            .and_then(|value| value.get(1))
-            .map(|value| decode_xml(value.as_str()).trim().to_ascii_lowercase())
-            .filter(|value| normalize_system_id(value).is_some())
-        else {
-            continue;
-        };
-        let command = command_re
-            .captures(block)
-            .and_then(|value| value.get(1))
-            .map(|value| decode_xml(value.as_str()))
-            .unwrap_or_default();
-        let emulator_block = emulators_re
-            .captures(block)
-            .and_then(|value| value.get(1))
-            .map(|value| value.as_str())
-            .unwrap_or("");
-        let tags: Vec<_> = emulator_tag_re.captures_iter(emulator_block).collect();
-        let selected_index = tags
-            .iter()
-            .position(|tag| {
-                tag.get(1)
-                    .map(|attrs| attribute_is_true(attrs.as_str(), "default"))
-                    .unwrap_or(false)
-            })
-            .unwrap_or(0);
-        let Some(selected) = tags.get(selected_index) else {
-            continue;
-        };
-        let attrs = selected.get(1).map(|value| value.as_str()).unwrap_or("");
-        let Some(emulator) = attribute(attrs, "name") else {
-            continue;
-        };
-
-        let start = selected.get(0).map(|value| value.end()).unwrap_or(0);
-        let end = tags
-            .get(selected_index + 1)
-            .and_then(|value| value.get(0))
-            .map(|value| value.start())
-            .unwrap_or(emulator_block.len());
-        let cores: Vec<_> = core_re.captures_iter(&emulator_block[start..end]).collect();
-        let core_index = cores
-            .iter()
-            .position(|core| {
-                core.get(1)
-                    .map(|attrs| attribute_is_true(attrs.as_str(), "default"))
-                    .unwrap_or(false)
-            })
-            .unwrap_or(0);
-        let core = cores
-            .get(core_index)
-            .and_then(|capture| capture.get(2))
-            .map(|value| decode_xml(value.as_str()).trim().to_owned())
-            .unwrap_or_default();
-        systems.insert(
-            name,
-            SystemProfile {
-                emulator,
-                core,
-                uses_retrobat_launcher: command.contains("emulatorLauncher.exe")
-                    && command.contains("%SYSTEM%")
-                    && command.contains("%ROM%"),
-            },
-        );
-    }
-    if systems.is_empty() {
-        Err("RetroBat systems config contained no system profiles".to_owned())
-    } else {
-        Ok(systems)
-    }
-}
-
-fn attribute(attrs: &str, name: &str) -> Option<String> {
-    let pattern = format!(r#"\b{}\s*=\s*[\"']([^\"']+)[\"']"#, regex::escape(name));
-    Regex::new(&pattern)
-        .ok()?
-        .captures(attrs)
-        .and_then(|captures| captures.get(1))
-        .map(|value| decode_xml(value.as_str()))
-}
-
-fn attribute_is_true(attrs: &str, name: &str) -> bool {
-    attribute(attrs, name)
-        .map(|value| value.eq_ignore_ascii_case("true"))
-        .unwrap_or(false)
-}
-
-fn decode_xml(value: &str) -> String {
-    value
-        .replace("&quot;", "\"")
-        .replace("&apos;", "'")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
 }
 
 fn refresh_locked(state: &mut SupervisorState) -> Result<(), ApiError> {
@@ -757,50 +574,32 @@ mod tests {
         assert_eq!(normalize_system_id("wii/game"), None);
     }
 
+    /// Source ids stay intact here — ROM folders on disk are named `megadrive`,
+    /// not `genesis`. Only catalog lookup canonicalizes.
+    #[test]
+    fn normalization_does_not_coalesce_source_ids() {
+        assert_eq!(
+            normalize_system_id("megadrive"),
+            Some("megadrive".to_owned())
+        );
+        assert_eq!(normalize_system_id("psx"), Some("psx".to_owned()));
+    }
+
     #[cfg(windows)]
     #[test]
-    fn removes_windows_verbatim_prefix_for_retrobat_only() {
+    fn removes_the_windows_verbatim_prefix_before_handing_paths_to_emulators() {
         assert_eq!(
-            launcher_path(Path::new(r"\\?\S:\RetroBat\roms\game.iso")),
+            argv_path(Path::new(r"\\?\S:\RetroBat\roms\game.iso")),
             PathBuf::from(r"S:\RetroBat\roms\game.iso")
         );
         assert_eq!(
-            launcher_path(Path::new(r"\\?\UNC\server\share\game.iso")),
+            argv_path(Path::new(r"\\?\UNC\server\share\game.iso")),
             PathBuf::from(r"\\server\share\game.iso")
         );
-    }
-
-    #[test]
-    fn parses_preferred_retrobat_emulator_and_core() {
-        let xml = r#"
-          <systemList><system><name>gamecube</name>
-            <command>&quot;%HOME%\emulatorLauncher.exe&quot; -system %SYSTEM% -rom %ROM%</command>
-            <emulators>
-              <emulator name="libretro"><cores><core>dolphin</core></cores></emulator>
-              <emulator name="dolphin" default="true"><cores>
-                <core>fallback</core><core default="true">dolphin</core>
-              </cores></emulator>
-            </emulators>
-          </system></systemList>
-        "#;
-        let systems = parse_system_profiles(xml).unwrap();
-        let gamecube = systems.get("gamecube").unwrap();
-        assert_eq!(gamecube.emulator, "dolphin");
-        assert_eq!(gamecube.core, "dolphin");
-        assert!(gamecube.uses_retrobat_launcher);
-    }
-
-    #[test]
-    fn parses_self_closing_emulators_without_a_core() {
-        let xml = r#"
-          <systemList><system><name>flash</name>
-            <command>emulatorLauncher.exe -system %SYSTEM% -rom %ROM%</command>
-            <emulators><emulator name="ruffle"/></emulators>
-          </system></systemList>
-        "#;
-        let systems = parse_system_profiles(xml).unwrap();
-        let flash = systems.get("flash").unwrap();
-        assert_eq!(flash.emulator, "ruffle");
-        assert!(flash.core.is_empty());
+        // An ordinary path is already the spelling emulators expect.
+        assert_eq!(
+            argv_path(Path::new(r"S:\roms\game.iso")),
+            PathBuf::from(r"S:\roms\game.iso")
+        );
     }
 }

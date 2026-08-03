@@ -17,7 +17,12 @@ export const LIBRETRO_CORE_PATH_PLACEHOLDER = '{libretroCorePath}' as const;
 
 export type Platform = 'linux' | 'windows';
 export type CoverageStatus = 'good' | 'workable' | 'poor' | 'none';
-export type EmulatorKind = 'retroarch-core' | 'standalone';
+/**
+ * `direct` means the ROM *is* the program: there is no emulator between the
+ * supervisor and the process. Its `binary` is `ROM_PATH_PLACEHOLDER` and the
+ * daemon must still validate that the resolved file is a real executable.
+ */
+export type EmulatorKind = 'retroarch-core' | 'standalone' | 'direct';
 
 export interface EmulatorLaunch {
   /** Human-readable emulator name, including the core/fork where useful. */
@@ -110,6 +115,17 @@ function standalone(
     kind: 'standalone',
     binary,
     argsTemplate,
+    ...(notes ? { notes } : {}),
+  };
+}
+
+/** Run the ROM itself. See `EmulatorKind` for the supervision constraints. */
+function direct(name: string, notes?: string): EmulatorLaunch {
+  return {
+    name,
+    kind: 'direct',
+    binary: ROM_PATH_PLACEHOLDER,
+    argsTemplate: [],
     ...(notes ? { notes } : {}),
   };
 }
@@ -1020,11 +1036,8 @@ const WINDOWS_EMULATORS: Readonly<Record<string, PlatformEmulatorEntry>> = {
     windowsRetroarch('RetroArch / PokeMini', 'pokemini'),
   ]),
 
-  ports: windowsConfig('workable', [
-    windowsStandalone('RetroBat emulator launcher', 'emulatorLauncher.exe', [
-      '-system', 'ports', '-emulator', 'libretro', '-rom', ROM_PATH_PLACEHOLDER,
-    ], 'The .libretro descriptor selects a title-specific core; there is no truthful fixed core name for this system.'),
-  ], 'This is intentionally RetroBat-specific. A future native supervisor should parse each .libretro descriptor instead of pretending all ports share one core.'),
+  ports: windowsConfig('none', [],
+    'Each Ports title carries a .libretro descriptor naming its own core, so there is no fixed emulator for the system. The only entry that ever worked here was RetroBat\'s emulatorLauncher.exe, which the daemon no longer shells out to. Restoring this system means parsing those descriptors and resolving a per-title core.'),
 
   ps2: windowsConfig('good', [
     windowsStandalone('PCSX2 (auto)', 'pcsx2-qt.exe', ['-batch', '-fullscreen', ROM_PATH_PLACEHOLDER]),
@@ -1122,9 +1135,9 @@ const WINDOWS_EMULATORS: Readonly<Record<string, PlatformEmulatorEntry>> = {
     windowsStandalone('Cemu', 'Cemu.exe', ['-f', '-g', ROM_PATH_PLACEHOLDER]),
   ]),
 
-  windows: windowsConfig('good', [
-    windowsStandalone('Windows shell launcher', 'cmd.exe', ['/d', '/s', '/c', 'start', '', ROM_PATH_PLACEHOLDER], 'The supervisor must pass argv directly and validate executable/shortcut paths; do not concatenate a command string.'),
-  ], 'RetroBat labels this emulator windows. The file itself may be an .exe, shortcut, script, URL, archive wrapper, or launcher descriptor.'),
+  windows: windowsConfig('workable', [
+    direct('Windows executable', 'Run the title directly so the supervisor keeps a real child pid. The old cmd.exe /c start entry detached immediately, which meant the console lost the game the moment it started.'),
+  ], 'RetroBat labels this emulator windows. Only a real executable is launchable: shortcuts, scripts, URLs and archive wrappers cannot be supervised and are rejected.'),
 
   xbox: windowsConfig('workable', [
     windowsStandalone('xemu', 'xemu.exe', ['-full-screen', '-dvd_path', ROM_PATH_PLACEHOLDER]),

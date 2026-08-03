@@ -22,9 +22,11 @@ use tokio::sync::broadcast::error::RecvError;
 use tokio::time::{sleep, timeout, Instant};
 
 use crate::auth::{PairResult, PairingService};
+use crate::config::Config;
 use crate::hub::Hub;
 use crate::launch::LaunchService;
 use crate::protocol::{Channel, ClientFrame, Role, ServerFrame};
+use crate::resolve::Resolver;
 use crate::ytdlp::YtDlp;
 
 pub const PORT: u16 = 43_919;
@@ -36,15 +38,19 @@ pub struct AppState {
     hub: Arc<Hub>,
     pub(crate) ytdlp: Arc<YtDlp>,
     pub(crate) launch: Arc<LaunchService>,
+    pub(crate) resolver: Arc<Resolver>,
 }
 
 impl AppState {
     pub fn new(pairing: Arc<PairingService>, hub: Arc<Hub>) -> Self {
+        // Emulator discovery runs once, here, before the server accepts traffic.
+        let resolver = Arc::new(Resolver::new(Arc::new(Config::load())));
         Self {
             pairing,
             hub,
             ytdlp: Arc::new(YtDlp::from_env()),
-            launch: Arc::new(LaunchService::from_env()),
+            launch: Arc::new(LaunchService::new(resolver.clone())),
+            resolver,
         }
     }
 
@@ -59,6 +65,10 @@ pub fn router(state: AppState) -> Router {
         .route("/pair", post(pair).options(preflight))
         .route("/pair-info", get(pair_info).options(preflight))
         .route("/resolve", get(crate::ytdlp::resolve).options(preflight))
+        .route(
+            "/emulators/status",
+            get(emulators_status).options(preflight),
+        )
         .route("/launch", post(crate::launch::launch).options(preflight))
         .route(
             "/launch/status",
@@ -72,6 +82,12 @@ pub fn router(state: AppState) -> Router {
 
 async fn health() -> Json<serde_json::Value> {
     Json(serde_json::json!({"ok": true}))
+}
+
+/// What this machine can actually launch. Reports the same plan the launcher
+/// would use, so a system listed as ready here is genuinely ready.
+async fn emulators_status(State(state): State<AppState>) -> Json<crate::resolve::ResolverReport> {
+    Json(state.resolver.report())
 }
 
 #[derive(Deserialize)]

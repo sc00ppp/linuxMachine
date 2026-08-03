@@ -290,7 +290,7 @@ function GameNowPlaying({
         .join(' / ') || `${consoleEntry.name} is running`
     : launch.phase === 'ended'
       ? 'The emulator has closed. The rest of your library is still here.'
-      : launch.problem?.detail ?? 'Waiting for RetroBat to report a running process.';
+      : launch.problem?.detail ?? 'Waiting for the emulator to report a running process.';
 
   return (
     <article

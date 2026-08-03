@@ -1,0 +1,4011 @@
+{
+  "version": 1,
+  "generatedBy": "tools/emit-emulators.mjs",
+  "aliases": {
+    "gbc": "gb",
+    "megadrive": "genesis",
+    "psx": "ps1"
+  },
+  "systems": {
+    "3ds": {
+      "id": "3ds",
+      "fullname": "Nintendo 3DS",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".3ds",
+        ".3dsx",
+        ".elf",
+        ".axf",
+        ".cci",
+        ".cxi",
+        ".app"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "aes_keys.txt (only for encrypted dumps)",
+          "dumped 3DS system archives (game-dependent)"
+        ],
+        "notes": "No BIOS is required for decrypted games. Some titles need Mii or other system archives dumped from a 3DS."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Citra",
+            "kind": "standalone",
+            "binary": "citra-qt",
+            "args": [
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Citra",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "citra_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/citra_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "The libretro core requires decrypted ROMs."
+            }
+          ],
+          "notes": "Citra is discontinued, so the Linux image must pin and expose a known native/AppImage build as citra-qt. Dual-screen/touch layout still needs a couch-friendly profile."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Citra",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "citra_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\citra_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Citra",
+              "kind": "standalone",
+              "binary": "citra-qt.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Citra Canary",
+              "kind": "standalone",
+              "binary": "citra-qt.exe",
+              "args": [
+                "{romPath}"
+              ],
+              "notes": "Resolved from RetroBat's separate citra-canary directory."
+            }
+          ],
+          "notes": "These are the installed RetroBat choices. Both Citra tracks are discontinued, so keep the known-working media-PC build rather than silently upgrading it."
+        }
+      }
+    },
+    "atari2600": {
+      "id": "atari2600",
+      "fullname": "Atari 2600",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".7z",
+        ".a26",
+        ".bin",
+        ".gz",
+        ".rom",
+        ".zip"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Stella",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "stella_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/stella_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Stella 2014",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "stella2014_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/stella2014_libretro.so",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Stella",
+              "kind": "standalone",
+              "binary": "stella",
+              "args": [
+                "-fullscreen",
+                "1",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Stella",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "stella_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\stella_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Stella 2014",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "stella2014_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\stella2014_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Stella",
+              "kind": "standalone",
+              "binary": "Stella.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (A26)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "atari5200": {
+      "id": "atari5200",
+      "fullname": "Atari 5200",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".rom",
+        ".xfd",
+        ".atr",
+        ".atx",
+        ".cdm",
+        ".cas",
+        ".bin",
+        ".a52",
+        ".xex",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "5200.rom"
+        ],
+        "notes": "Both listed cores can use the optional 5200.rom; keep the correctly named dump for highest compatibility."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / a5200",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "a5200_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/a5200_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Atari800",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "atari800_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/atari800_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / a5200",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "a5200_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\a5200_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Atari800",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "atari800_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\atari800_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / Stella 2014",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "stella2014_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\stella2014_libretro.dll",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "atari7800": {
+      "id": "atari7800",
+      "fullname": "Atari 7800",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".a78",
+        ".bin",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "7800 BIOS (U).rom"
+        ],
+        "notes": "The ProSystem core treats the Atari 7800 BIOS as optional."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / ProSystem",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "prosystem_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/prosystem_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": []
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / ProSystem",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "prosystem_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\prosystem_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "BizHawk (A78)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "atarist": {
+      "id": "atarist",
+      "fullname": "Atari ST",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".st",
+        ".msa",
+        ".stx",
+        ".dim",
+        ".ipf",
+        ".m3u",
+        ".gemdos",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "tos.img"
+        ],
+        "notes": "TOS 1.02 is a broadly compatible ST default, but some ST/STE/Falcon software needs a different dumped TOS revision."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Hatari",
+            "kind": "standalone",
+            "binary": "hatari",
+            "args": [
+              "--fullscreen",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Hatari",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "hatari_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/hatari_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "Computer-style keyboard/mouse input and multi-disk swapping make this less appliance-like than cartridge consoles."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Hatari",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "hatari_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\hatari_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / HatariB",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "hatarib_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\hatarib_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Hatari",
+              "kind": "standalone",
+              "binary": "hatari.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "channelf": {
+      "id": "channelf",
+      "fullname": "Fairchild Channel F",
+      "manufacturer": "Fairchild",
+      "romExtensions": [
+        ".bin",
+        ".rom",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "sl31253.bin",
+          "sl31254.bin",
+          "sl90025.bin"
+        ],
+        "notes": "FreeChaF requires the first two chips; sl90025.bin is the Channel F System II replacement for sl31253.bin."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / FreeChaF",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "freechaf_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/freechaf_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "MAME",
+              "kind": "standalone",
+              "binary": "mame",
+              "args": [
+                "channelf",
+                "-cart",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / FreeChaF",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "freechaf_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\freechaf_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": []
+        }
+      }
+    },
+    "colecovision": {
+      "id": "colecovision",
+      "fullname": "ColecoVision",
+      "manufacturer": "Coleco",
+      "romExtensions": [
+        ".rom",
+        ".ri",
+        ".mx1",
+        ".mx2",
+        ".col",
+        ".dsk",
+        ".cas",
+        ".sg",
+        ".sc",
+        ".m3u",
+        ".zip"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "colecovision.rom"
+        ],
+        "notes": "Gearcoleco also accepts the fallback name coleco.rom."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Gearcoleco",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "gearcoleco_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/gearcoleco_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / blueMSX",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "bluemsx_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/bluemsx_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "Requires the blueMSX Machines and Databases directories, not only a single BIOS file."
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Gearcoleco",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "gearcoleco_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\gearcoleco_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / blueMSX",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "bluemsx_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\bluemsx_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / FinalBurn Neo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbneo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbneo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "openMSX",
+              "kind": "standalone",
+              "binary": "openmsx.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (ColecoVision)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Coleco)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "dreamcast": {
+      "id": "dreamcast",
+      "fullname": "Dreamcast",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".mds",
+        ".mdf",
+        ".cue",
+        ".cdi",
+        ".gdi",
+        ".chd",
+        ".m3u"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "dc/dc_boot.bin",
+          "dc/dc_flash.bin"
+        ],
+        "notes": "Flycast can HLE-boot some retail games, but the catalog treats both matching dumps as required for dependable coverage. NAOMI/Atomiswave BIOS archives are separate."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "Flycast",
+            "kind": "standalone",
+            "binary": "flycast",
+            "args": [
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Flycast",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "flycast_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/flycast_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Flycast",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "flycast_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\flycast_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Flycast",
+              "kind": "standalone",
+              "binary": "flycast.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Redream",
+              "kind": "standalone",
+              "binary": "redream.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Demul (Dreamcast)",
+              "kind": "standalone",
+              "binary": "demul.exe",
+              "args": [
+                "-run=dc",
+                "-image={romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "gamecube": {
+      "id": "gamecube",
+      "fullname": "GameCube",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".gcz",
+        ".iso",
+        ".ciso",
+        ".wbfs",
+        ".wad",
+        ".rvz",
+        ".wia",
+        ".m3u"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "Dolphin",
+            "kind": "standalone",
+            "binary": "dolphin-emu",
+            "args": [
+              "--batch",
+              "--fullscreen",
+              "--exec={romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Dolphin",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "dolphin_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/dolphin_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "The standalone build is preferred because the libretro port trails Dolphin features and configuration."
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "Dolphin",
+            "kind": "standalone",
+            "binary": "Dolphin.exe",
+            "args": [
+              "-b",
+              "-e",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Dolphin",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "dolphin_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\dolphin_libretro.dll",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "gamegear": {
+      "id": "gamegear",
+      "fullname": "Game Gear",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".gg",
+        ".bin",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "bios.gg"
+        ],
+        "notes": "The Game Gear startup BIOS is optional in Genesis Plus GX."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/genesis_plus_gx_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Gearsystem",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "gearsystem_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/gearsystem_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\genesis_plus_gx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / PicoDrive",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "picodrive_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\picodrive_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / FinalBurn Neo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbneo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbneo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (Game Gear)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "gg",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Game Gear)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (SMSHawk)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "gb": {
+      "id": "gb",
+      "fullname": "Game Boy / Game Boy Color",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".gb",
+        ".gbc",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "dmg_boot.bin",
+          "cgb_boot.bin"
+        ],
+        "notes": "SameBoy boot ROMs are optional. Gambatte uses the alternate optional names gb_bios.bin and gbc_bios.bin."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / SameBoy",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "sameboy_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/sameboy_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Gambatte",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "gambatte_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/gambatte_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "Both gb and gbc source ids intentionally resolve to this entry."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Gambatte",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "gambatte_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\gambatte_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / TGB Dual",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "tgbdual_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\tgbdual_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / SameBoy",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "sameboy_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\sameboy_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mesen",
+              "kind": "standalone",
+              "binary": "Mesen.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "mGBA",
+              "kind": "standalone",
+              "binary": "mGBA.exe",
+              "args": [
+                "-f",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (GB/GBC)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Game Boy / Color)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Gambatte/GBHawk/SameBoy)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "Union of the coalesced RetroBat gb and gbc blocks; their common preferred core is Gambatte."
+        }
+      }
+    },
+    "gba": {
+      "id": "gba",
+      "fullname": "Game Boy Advance",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".gba",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "gba_bios.bin"
+        ],
+        "notes": "mGBA has a high-level BIOS; the original GBA BIOS dump is optional."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / mGBA",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mgba_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mgba_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "mGBA",
+              "kind": "standalone",
+              "binary": "mgba-qt",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / mGBA",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mgba_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mgba_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle GBA",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mednafen_gba_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mednafen_gba_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "mGBA",
+              "kind": "standalone",
+              "binary": "mGBA.exe",
+              "args": [
+                "-f",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "NO$GBA",
+              "kind": "standalone",
+              "binary": "NO$GBA.EXE",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (GBA)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "gba",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Game Boy Advance)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (mGBA)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "genesis": {
+      "id": "genesis",
+      "fullname": "Megadrive - Genesis",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".68k",
+        ".sgd",
+        ".smd",
+        ".bin",
+        ".gen",
+        ".md",
+        ".sg",
+        ".wad",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "bios_MD.bin"
+        ],
+        "notes": "The Mega Drive startup ROM is optional."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/genesis_plus_gx_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "BlastEm",
+              "kind": "standalone",
+              "binary": "blastem",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "The RetroBat megadrive id resolves to this canonical genesis entry."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\genesis_plus_gx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Genesis Plus GX Wide",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "genesis_plus_gx_wide_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\genesis_plus_gx_wide_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / PicoDrive",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "picodrive_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\picodrive_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / FinalBurn Neo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbneo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbneo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (Mega Drive)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "md",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Mega Drive)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Kega Fusion (Mega Drive/Genesis)",
+              "kind": "standalone",
+              "binary": "Fusion.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Genplus-gx)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "jaguar": {
+      "id": "jaguar",
+      "fullname": "Jaguar",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".zip",
+        ".7z",
+        ".j64",
+        ".jag",
+        ".rom",
+        ".abs",
+        ".cof",
+        ".bin",
+        ".prg"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "poor",
+          "preferred": {
+            "name": "RetroArch / Virtual Jaguar",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "virtualjaguar_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/virtualjaguar_libretro.so",
+              "{romPath}"
+            ],
+            "notes": "Compatibility is substantially below the Windows-only BigPEmu option."
+          },
+          "alternates": [],
+          "notes": "Per the supplied platform constraint, BigPEmu is not claimed as a Linux option."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Virtual Jaguar",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "virtualjaguar_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\virtualjaguar_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "BigPEmu",
+              "kind": "standalone",
+              "binary": "BigPEmu.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Jaguar)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Phoenix",
+              "kind": "standalone",
+              "binary": "phoenix.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "RetroBat lists Virtual Jaguar first; BigPEmu is the materially better compatibility alternate."
+        }
+      }
+    },
+    "jaguarcd": {
+      "id": "jaguarcd",
+      "fullname": "Jaguar CD",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".cue",
+        ".cdi"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "none",
+          "preferred": null,
+          "alternates": [],
+          "notes": "The reliable RetroBat choice is BigPEmu, which is treated as Windows-only for this project; no Linux option is asserted."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "BigPEmu",
+            "kind": "standalone",
+            "binary": "BigPEmu.exe",
+            "args": [
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "BizHawk (Jaguar)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "lynx": {
+      "id": "lynx",
+      "fullname": "Lynx",
+      "manufacturer": "Atari",
+      "romExtensions": [
+        ".lnx",
+        ".zip",
+        ".o",
+        ".7z"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "lynxboot.img"
+        ],
+        "notes": "Use the exact, case-sensitive filename expected by the cores."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Handy",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "handy_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/handy_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle Lynx",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "mednafen_lynx_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/mednafen_lynx_libretro.so",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / GearLynx",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "gearlynx_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/gearlynx_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle Lynx",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mednafen_lynx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mednafen_lynx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Handy",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "handy_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\handy_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (Lynx)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "lynx",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Handy)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "mastersystem": {
+      "id": "mastersystem",
+      "fullname": "Master System - Mark III",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".bin",
+        ".sms",
+        ".wad",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "bios_U.sms",
+          "bios_E.sms",
+          "bios_J.sms"
+        ],
+        "notes": "Region startup BIOS files are optional in Genesis Plus GX."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/genesis_plus_gx_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Gearsystem",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "gearsystem_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/gearsystem_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\genesis_plus_gx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / PicoDrive",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "picodrive_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\picodrive_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / FinalBurn Neo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbneo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbneo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (Master System)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "sms",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Master System)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Kega Fusion (Master System)",
+              "kind": "standalone",
+              "binary": "Fusion.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (SMSHawk)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "n64": {
+      "id": "n64",
+      "fullname": "Nintendo 64",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".v64",
+        ".z64",
+        ".n64",
+        ".wad",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Mupen64Plus-Next",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mupen64plus_next_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mupen64plus_next_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Mupen64Plus",
+              "kind": "standalone",
+              "binary": "mupen64plus",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Mupen64Plus-Next",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mupen64plus_next_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mupen64plus_next_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / ParaLLEl N64",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "parallel_n64_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\parallel_n64_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mupen64Plus",
+              "kind": "standalone",
+              "binary": "mupen64plus-ui-console.exe",
+              "args": [
+                "{romPath}"
+              ],
+              "notes": "RetroBat emulator id is confirmed; verify this bundled executable basename when resolving its directory."
+            },
+            {
+              "name": "simple64",
+              "kind": "standalone",
+              "binary": "simple64-gui.exe",
+              "args": [
+                "{romPath}"
+              ],
+              "notes": "Verify the bundled filename when the supervisor first resolves the RetroBat simple64 directory."
+            },
+            {
+              "name": "ares (Nintendo 64)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Ares64/Mupen64Plus)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Project64",
+              "kind": "standalone",
+              "binary": "Project64.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "n64dd": {
+      "id": "n64dd",
+      "fullname": "Nintendo 64 Disk Drive",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".v64",
+        ".z64",
+        ".n64",
+        ".wad",
+        ".zip",
+        ".7z",
+        ".ndd"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "Mupen64plus/IPL.n64"
+        ],
+        "notes": "The 64DD IPL must live under the RetroArch system directory with this exact subpath."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "RetroArch / Mupen64Plus-Next",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mupen64plus_next_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mupen64plus_next_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "Mupen64Plus-Next accepts .ndd images, but disk/cartridge pairing and the small 64DD library still need per-title validation."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Mupen64Plus",
+            "kind": "standalone",
+            "binary": "mupen64plus-ui-console.exe",
+            "args": [
+              "{romPath}"
+            ],
+            "notes": "RetroBat emulator id is confirmed; verify this bundled executable basename when resolving its directory."
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Mupen64Plus-Next",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mupen64plus_next_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mupen64plus_next_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / ParaLLEl N64",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "parallel_n64_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\parallel_n64_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Nintendo 64DD)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Project64",
+              "kind": "standalone",
+              "binary": "Project64.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "nds": {
+      "id": "nds",
+      "fullname": "Nintendo DS",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".nds",
+        ".bin",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "bios7.bin",
+          "bios9.bin",
+          "firmware.bin",
+          "dsi_bios7.bin (DSi mode)",
+          "dsi_bios9.bin (DSi mode)",
+          "dsi_firmware.bin (DSi mode)",
+          "dsi_nand.bin (full DSi mode)"
+        ],
+        "notes": "Current melonDS can direct-boot ordinary decrypted DS games with built-in replacements. Real dumps are required for full firmware boot, encrypted content, and complete DSi behavior."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "melonDS",
+            "kind": "standalone",
+            "binary": "melonDS",
+            "args": [
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / melonDS DS",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "melondsds_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/melondsds_libretro.so",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / DeSmuME",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "desmume_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/desmume_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "A TV-friendly two-screen layout and a pointer binding must be configured before treating this as appliance-ready."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / melonDS DS",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "melondsds_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\melondsds_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / DeSmuME",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "desmume_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\desmume_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / DeSmuME 2015",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "desmume2015_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\desmume2015_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / melonDS",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "melonds_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\melonds_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "melonDS",
+              "kind": "standalone",
+              "binary": "melonDS.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (melonDS)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "neogeo": {
+      "id": "neogeo",
+      "fullname": "Neo Geo",
+      "manufacturer": "SNK",
+      "romExtensions": [
+        ".zip",
+        ".wad",
+        ".neo",
+        ".7z"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "neogeo.zip"
+        ],
+        "notes": "The BIOS archive must match the installed FBNeo ROM-set version. Keep the archive intact; the configured BIOS directory may be system/fbneo or beside the game archive."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / FinalBurn Neo",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "fbneo_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/fbneo_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Geolith",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "geolith_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/geolith_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "Geolith expects NeoSD .neo images rather than ordinary FBNeo split/merged ZIP sets."
+            },
+            {
+              "name": "RetroArch / MAME",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "mame_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/mame_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / FinalBurn Neo",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "fbneo_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\fbneo_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / FinalBurn Alpha",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbalpha_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbalpha_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / FBA 2012 Neo Geo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbalpha2012_neogeo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbalpha2012_neogeo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / Geolith",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "geolith_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\geolith_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Raine",
+              "kind": "standalone",
+              "binary": "raine64.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "MAME (Neo Geo)",
+              "kind": "standalone",
+              "binary": "mame.exe",
+              "args": [
+                "neogeo",
+                "-cart",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "nes": {
+      "id": "nes",
+      "fullname": "Nintendo Entertainment System - Famicom",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".fds",
+        ".nes",
+        ".wad",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "disksys.rom (Famicom Disk System only)"
+        ],
+        "notes": "Cartridge games need no BIOS; FDS images need disksys.rom."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Mesen",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mesen_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mesen_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Nestopia UE",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "nestopia_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/nestopia_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / FCEUmm",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "fceumm_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\fceumm_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Nestopia",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "nestopia_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\nestopia_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / Mesen",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mesen_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mesen_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (NES)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "nes",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mesen",
+              "kind": "standalone",
+              "binary": "Mesen.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Famicom)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (NesHawk/QuickNes)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "pcengine": {
+      "id": "pcengine",
+      "fullname": "PC Engine",
+      "manufacturer": "NEC",
+      "romExtensions": [
+        ".pce",
+        ".bin",
+        ".zip",
+        ".7z",
+        ".wad"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "syscard3.pce (PC Engine CD only)"
+        ],
+        "notes": "HuCard games need no BIOS. CD/Super CD content requires the appropriate system card; syscard3.pce covers most of it."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle PCE",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mednafen_pce_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mednafen_pce_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle PCE Fast",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "mednafen_pce_fast_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/mednafen_pce_fast_libretro.so",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen",
+              "kind": "standalone",
+              "binary": "mednafen",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle PCE",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mednafen_pce_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mednafen_pce_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle PCE Fast",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mednafen_pce_fast_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mednafen_pce_fast_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / FinalBurn Neo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbneo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbneo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (PCE)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "pce",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (PC Engine)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (HyperNyma/PCEHawk/TurboNyma)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "MagicEngine",
+              "kind": "standalone",
+              "binary": "pce.exe",
+              "args": [
+                "{romPath}"
+              ],
+              "notes": "RetroBat lists MagicEngine; pce.exe is the conventional binary name but should be verified in that installed directory."
+            }
+          ]
+        }
+      }
+    },
+    "pcfx": {
+      "id": "pcfx",
+      "fullname": "PC-FX",
+      "manufacturer": "NEC",
+      "romExtensions": [
+        ".cue",
+        ".ccd",
+        ".toc",
+        ".chd"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "pcfx.rom"
+        ],
+        "notes": "Beetle PC-FX and Mednafen require this exact BIOS filename."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle PC-FX",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mednafen_pcfx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mednafen_pcfx_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Mednafen (PC-FX)",
+              "kind": "standalone",
+              "binary": "mednafen",
+              "args": [
+                "-force_module",
+                "pcfx",
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "Included for BIOS completeness even though the current library has no PC-FX games."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle PC-FX",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mednafen_pcfx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mednafen_pcfx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Mednafen (PC-FX)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "pcfx",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (PCFX)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "pokemini": {
+      "id": "pokemini",
+      "fullname": "Pokemon-Mini",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".min",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / PokeMini",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "pokemini_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/pokemini_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": []
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / PokeMini",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "pokemini_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\pokemini_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": []
+        }
+      }
+    },
+    "ports": {
+      "id": "ports",
+      "fullname": "Ports",
+      "manufacturer": "Ports",
+      "romExtensions": [
+        ".libretro"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "none",
+          "preferred": null,
+          "alternates": [],
+          "notes": "There is no generic Ports emulator. RetroBat .bat/.lnk wrappers are Windows-specific; each title needs a native Linux executable or a newly authored, audited per-title launcher before it can be registered."
+        },
+        "windows": {
+          "coverage": "none",
+          "preferred": null,
+          "alternates": [],
+          "notes": "Each Ports title carries a .libretro descriptor naming its own core, so there is no fixed emulator for the system. The only entry that ever worked here was RetroBat's emulatorLauncher.exe, which the daemon no longer shells out to. Restoring this system means parsing those descriptors and resolving a per-title core."
+        }
+      }
+    },
+    "ps1": {
+      "id": "ps1",
+      "fullname": "PlayStation",
+      "manufacturer": "Sony",
+      "romExtensions": [
+        ".cue",
+        ".img",
+        ".mdf",
+        ".pbp",
+        ".toc",
+        ".cbn",
+        ".m3u",
+        ".ccd",
+        ".chd",
+        ".zip",
+        ".7z",
+        ".iso",
+        ".cso"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "scph5500.bin",
+          "scph5501.bin",
+          "scph5502.bin"
+        ],
+        "notes": "These are the exact case-sensitive JP/US/EU filenames required by Beetle PSX HW. DuckStation accepts additional verified regional dumps."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "DuckStation",
+            "kind": "standalone",
+            "binary": "duckstation-qt",
+            "args": [
+              "-batch",
+              "-fullscreen",
+              "--",
+              "{romPath}"
+            ],
+            "notes": "Linux packages/AppImages expose different outer filenames; the console image must provide a stable duckstation-qt wrapper."
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle PSX HW",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "beetle_psx_hw_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/beetle_psx_hw_libretro.so",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / SwanStation",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "swanstation_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/swanstation_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "RetroBat calls this preference mednafen_psx_hw; this catalog exposes the requested actual core name beetle_psx_hw_libretro."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle PSX HW",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "beetle_psx_hw_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\beetle_psx_hw_libretro.dll",
+              "{romPath}"
+            ],
+            "notes": "RetroBat names this core mednafen_psx_hw."
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / SwanStation",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "swanstation_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\swanstation_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / PCSX-ReARMed",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "pcsx_rearmed_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\pcsx_rearmed_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "DuckStation",
+              "kind": "standalone",
+              "binary": "duckstation-qt-x64-ReleaseLTCG.exe",
+              "args": [
+                "-batch",
+                "-fullscreen",
+                "--",
+                "{romPath}"
+              ],
+              "notes": "DuckStation release filenames change; resolve this against the installed RetroBat duckstation directory rather than assuming a future package name."
+            },
+            {
+              "name": "Mednafen (PSX)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "psx",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Nymashock/Octoshock)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "ps2": {
+      "id": "ps2",
+      "fullname": "Playstation 2",
+      "manufacturer": "Sony",
+      "romExtensions": [
+        ".iso",
+        ".cso",
+        ".bin",
+        ".mdf",
+        ".gz",
+        ".chd"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "scph39001.bin",
+          "SCPH-70012_BIOS_V12_USA_200.bin",
+          "ps2-0230a-20080220.bin"
+        ],
+        "notes": "Only one valid, legally dumped regional BIOS is required. These are conventional examples; PCSX2 detects BIOS contents and does not impose one universal filename. Keep its associated .nvm/.mec files."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "PCSX2",
+            "kind": "standalone",
+            "binary": "pcsx2-qt",
+            "args": [
+              "-batch",
+              "-fullscreen",
+              "--",
+              "{romPath}"
+            ]
+          },
+          "alternates": []
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "PCSX2 (auto)",
+            "kind": "standalone",
+            "binary": "pcsx2-qt.exe",
+            "args": [
+              "-batch",
+              "-fullscreen",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "PCSX2 (SSE4)",
+              "kind": "standalone",
+              "binary": "pcsx2-qt.exe",
+              "args": [
+                "-batch",
+                "-fullscreen",
+                "{romPath}"
+              ],
+              "notes": "RetroBat core selector chooses the SSE4 build/directory."
+            },
+            {
+              "name": "PCSX2 (AVX2)",
+              "kind": "standalone",
+              "binary": "pcsx2-qt.exe",
+              "args": [
+                "-batch",
+                "-fullscreen",
+                "{romPath}"
+              ],
+              "notes": "RetroBat core selector chooses the AVX2 build/directory."
+            },
+            {
+              "name": "PCSX2 1.6",
+              "kind": "standalone",
+              "binary": "pcsx2.exe",
+              "args": [
+                "--nogui",
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Play!",
+              "kind": "standalone",
+              "binary": "Play!.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / PCSX2",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "pcsx2_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\pcsx2_libretro.dll",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "ps3": {
+      "id": "ps3",
+      "fullname": "Playstation 3",
+      "manufacturer": "Sony",
+      "romExtensions": [
+        ".m3u",
+        ".ps3",
+        ".iso",
+        ".7z",
+        ".zip",
+        ".rar",
+        ".squashfs"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "PS3UPDAT.PUP"
+        ],
+        "notes": "Install official PS3 system firmware into RPCS3 once; the PUP is not passed on each game launch."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "RPCS3",
+            "kind": "standalone",
+            "binary": "rpcs3",
+            "args": [
+              "--no-gui",
+              "--fullscreen",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "RPCS3 compatibility is title- and CPU-dependent. The GTX 970 is usable with Vulkan, but the unknown host CPU prevents calling PS3 coverage good."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "RPCS3",
+            "kind": "standalone",
+            "binary": "rpcs3.exe",
+            "args": [
+              "--no-gui",
+              "--fullscreen",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "Compatibility remains title- and CPU-dependent even though this is the installed working emulator."
+        }
+      }
+    },
+    "psp": {
+      "id": "psp",
+      "fullname": "PlayStation Portable",
+      "manufacturer": "Sony",
+      "romExtensions": [
+        ".iso",
+        ".cso",
+        ".pbp",
+        ".elf",
+        ".prx",
+        ".zip"
+      ],
+      "bios": {
+        "required": false,
+        "files": [],
+        "notes": "PPSSPP does not use a PSP BIOS. Its data assets are distributed with the emulator and are not console firmware."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "PPSSPP",
+            "kind": "standalone",
+            "binary": "PPSSPPSDL",
+            "args": [
+              "--fullscreen",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / PPSSPP",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "ppsspp_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/ppsspp_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "The core also needs its bundled assets, lang and flash0 directories under the RetroArch system/PPSSPP directory."
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / PPSSPP",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "ppsspp_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\ppsspp_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "PPSSPP",
+              "kind": "standalone",
+              "binary": "PPSSPPWindows64.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "saturn": {
+      "id": "saturn",
+      "fullname": "Saturn",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".zip",
+        ".cue",
+        ".toc",
+        ".m3u",
+        ".ccd",
+        ".chd",
+        ".iso",
+        ".cso",
+        ".mds"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "sega_101.bin",
+          "mpr-17933.bin"
+        ],
+        "notes": "Beetle Saturn requires the exact JP and US/EU BIOS filenames shown here."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle Saturn",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mednafen_saturn_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mednafen_saturn_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Mednafen",
+              "kind": "standalone",
+              "binary": "mednafen",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / Kronos",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "kronos_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/kronos_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "Hardware rendering and upscaling are useful, but compatibility is below Beetle Saturn."
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Kronos",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "kronos_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\kronos_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle Saturn",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mednafen_saturn_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mednafen_saturn_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (Saturn)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "saturn",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (Saturnus)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "SSF",
+              "kind": "standalone",
+              "binary": "SSF.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "sega32x": {
+      "id": "sega32x",
+      "fullname": "32X",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".32x",
+        ".smd",
+        ".bin",
+        ".md",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "RetroArch / PicoDrive",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "picodrive_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/picodrive_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "Genesis Plus GX does not emulate 32X. PicoDrive is the established open-source core, but it is less accurate than the best Genesis-only emulators."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "RetroArch / PicoDrive",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "picodrive_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\picodrive_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "ares (Mega 32X)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Kega Fusion (32X)",
+              "kind": "standalone",
+              "binary": "Fusion.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (PicoDrive)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "segacd": {
+      "id": "segacd",
+      "fullname": "Mega CD",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".cue",
+        ".iso",
+        ".cso",
+        ".zip",
+        ".7z",
+        ".chd",
+        ".m3u"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "bios_CD_U.bin",
+          "bios_CD_E.bin",
+          "bios_CD_J.bin"
+        ],
+        "notes": "Use the exact case-sensitive US, Europe and Japan filenames expected by both listed cores."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/genesis_plus_gx_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / PicoDrive",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "picodrive_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/picodrive_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Genesis Plus GX",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "genesis_plus_gx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\genesis_plus_gx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Genesis Plus GX Wide",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "genesis_plus_gx_wide_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\genesis_plus_gx_wide_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / PicoDrive",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "picodrive_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\picodrive_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Mega CD)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Kega Fusion (Mega CD/Sega CD)",
+              "kind": "standalone",
+              "binary": "Fusion.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "snes": {
+      "id": "snes",
+      "fullname": "Super Nintendo Entertainment System",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".smc",
+        ".fig",
+        ".sfc",
+        ".gd3",
+        ".gd7",
+        ".dx2",
+        ".bsx",
+        ".swc",
+        ".rom",
+        ".wad",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "BS-X.bin (Satellaview only)",
+          "STBIOS.bin (Sufami Turbo only)"
+        ],
+        "notes": "Ordinary SNES/SFC cartridges need no BIOS."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Snes9x",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "snes9x_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/snes9x_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / bsnes",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "bsnes_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/bsnes_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Snes9x",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "snes9x_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\snes9x_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / bsnes",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "bsnes_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\bsnes_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / bsnes HD beta",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "bsnes_hd_beta_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\bsnes_hd_beta_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / Beetle SNES",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mednafen_snes_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mednafen_snes_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "RetroArch / Mesen-S",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "mesen-s_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\mesen-s_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (SNES)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "snes",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mesen",
+              "kind": "standalone",
+              "binary": "Mesen.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Snes9x",
+              "kind": "standalone",
+              "binary": "snes9x-x64.exe",
+              "args": [
+                "-fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (Super Famicom)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (BSNES/Faust/Snes9x)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "supergrafx": {
+      "id": "supergrafx",
+      "fullname": "SuperGrafx",
+      "manufacturer": "NEC",
+      "romExtensions": [
+        ".pce",
+        ".zip",
+        ".7z",
+        ".fba"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "syscard3.pce (CD content only)"
+        ],
+        "notes": "SuperGrafx HuCards need no BIOS; CD content uses the PC Engine system card."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle SuperGrafx",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mednafen_supergrafx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mednafen_supergrafx_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Beetle PCE",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "mednafen_pce_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/mednafen_pce_libretro.so",
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle SuperGrafx",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mednafen_supergrafx_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mednafen_supergrafx_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / FinalBurn Neo",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "fbneo_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\fbneo_libretro.dll",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "Mednafen (PCE)",
+              "kind": "standalone",
+              "binary": "mednafen.exe",
+              "args": [
+                "-force_module",
+                "pce",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "ares (SuperGrafx)",
+              "kind": "standalone",
+              "binary": "ares.exe",
+              "args": [
+                "--fullscreen",
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "BizHawk (HyperNyma/PCEHawk/TurboNyma)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            },
+            {
+              "name": "MagicEngine",
+              "kind": "standalone",
+              "binary": "pce.exe",
+              "args": [
+                "{romPath}"
+              ],
+              "notes": "RetroBat lists MagicEngine; pce.exe is the conventional binary name but should be verified in that installed directory."
+            }
+          ]
+        }
+      }
+    },
+    "switch": {
+      "id": "switch",
+      "fullname": "Switch",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".nso",
+        ".nro",
+        ".nca",
+        ".xci",
+        ".nsp",
+        ".kip"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "prod.keys",
+          "title.keys (content-dependent)",
+          "dumped Nintendo Switch system firmware"
+        ],
+        "notes": "Keys and firmware must be dumped from hardware the owner controls. They are not redistributable BIOS downloads."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "poor",
+          "preferred": {
+            "name": "Ryujinx",
+            "kind": "standalone",
+            "binary": "Ryujinx",
+            "args": [
+              "{romPath}"
+            ],
+            "notes": "Expose the validated Linux build through a stable Ryujinx wrapper; the actual package may be an AppImage or Flatpak."
+          },
+          "alternates": [],
+          "notes": "The GTX 970 has only 4 GB VRAM, compatibility is title-specific, and emulator availability/upstream status is volatile. Validate and pin the chosen Linux build before promoting this above poor."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Yuzu",
+            "kind": "standalone",
+            "binary": "yuzu.exe",
+            "args": [
+              "-f",
+              "-g",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Yuzu Early Access",
+              "kind": "standalone",
+              "binary": "yuzu.exe",
+              "args": [
+                "-f",
+                "-g",
+                "{romPath}"
+              ],
+              "notes": "Resolved from RetroBat's separate yuzu-early-access directory."
+            },
+            {
+              "name": "Ryujinx",
+              "kind": "standalone",
+              "binary": "Ryujinx.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ],
+          "notes": "The XML order is preserved, but both original upstream projects were discontinued; keep the known-working installed builds and keys/firmware together."
+        }
+      }
+    },
+    "triforce": {
+      "id": "triforce",
+      "fullname": "Triforce",
+      "manufacturer": "Sega",
+      "romExtensions": [
+        ".iso",
+        ".zip",
+        ".cue"
+      ],
+      "bios": {
+        "required": false,
+        "files": [],
+        "notes": "No BIOS contract is asserted until the dedicated Dolphin-Triforce build is validated."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "none",
+          "preferred": null,
+          "alternates": [],
+          "notes": "The media PC uses a dedicated Dolphin-Triforce build. No known, packaged Linux binary is asserted until the console image validates one."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Dolphin Triforce",
+            "kind": "standalone",
+            "binary": "Dolphin.exe",
+            "args": [
+              "-b",
+              "-e",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "This is RetroBat's dedicated dolphin-triforce directory, not ordinary Dolphin."
+        }
+      }
+    },
+    "virtualboy": {
+      "id": "virtualboy",
+      "fullname": "Virtual Boy",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".vb",
+        ".vboy",
+        ".bin",
+        ".zip",
+        ".7z"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle VB",
+            "kind": "retroarch-core",
+            "binary": "retroarch",
+            "core": "mednafen_vb_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}/mednafen_vb_libretro.so",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Mednafen",
+              "kind": "standalone",
+              "binary": "mednafen",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "RetroArch / Beetle VB",
+            "kind": "retroarch-core",
+            "binary": "retroarch.exe",
+            "core": "mednafen_vb_libretro",
+            "args": [
+              "--fullscreen",
+              "-L",
+              "{libretroCorePath}\\mednafen_vb_libretro.dll",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "BizHawk (VirtualBoyee)",
+              "kind": "standalone",
+              "binary": "EmuHawk.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "wii": {
+      "id": "wii",
+      "fullname": "Wii",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".gcz",
+        ".iso",
+        ".ciso",
+        ".wbfs",
+        ".wad",
+        ".rvz",
+        ".wia"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "good",
+          "preferred": {
+            "name": "Dolphin",
+            "kind": "standalone",
+            "binary": "dolphin-emu",
+            "args": [
+              "--batch",
+              "--fullscreen",
+              "--exec={romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Dolphin",
+              "kind": "retroarch-core",
+              "binary": "retroarch",
+              "core": "dolphin_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}/dolphin_libretro.so",
+                "{romPath}"
+              ],
+              "notes": "The standalone build is preferred for Wii Remote, motion and per-game controller configuration."
+            }
+          ],
+          "notes": "Games that require pointing, motion, Balance Board or other attachments need per-title input profiles."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "Dolphin",
+            "kind": "standalone",
+            "binary": "Dolphin.exe",
+            "args": [
+              "-b",
+              "-e",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "RetroArch / Dolphin",
+              "kind": "retroarch-core",
+              "binary": "retroarch.exe",
+              "core": "dolphin_libretro",
+              "args": [
+                "--fullscreen",
+                "-L",
+                "{libretroCorePath}\\dolphin_libretro.dll",
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "wiiu": {
+      "id": "wiiu",
+      "fullname": "Wii U",
+      "manufacturer": "Nintendo",
+      "romExtensions": [
+        ".iso",
+        ".rpx",
+        ".wud",
+        ".wux",
+        ".wua",
+        ".m3u"
+      ],
+      "bios": {
+        "required": false,
+        "files": [
+          "keys.txt (encrypted content only)"
+        ],
+        "notes": "Cemu needs no console BIOS. Encrypted disc/install formats need legally dumped title keys; decrypted/loadiine content does not."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Cemu",
+            "kind": "standalone",
+            "binary": "cemu",
+            "args": [
+              "-f",
+              "-g",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "Cemu is native on Linux and runs most Wii U games, but the Linux port and GamePad second-screen/control experience still require per-title validation."
+        },
+        "windows": {
+          "coverage": "good",
+          "preferred": {
+            "name": "Cemu",
+            "kind": "standalone",
+            "binary": "Cemu.exe",
+            "args": [
+              "-f",
+              "-g",
+              "{romPath}"
+            ]
+          },
+          "alternates": []
+        }
+      }
+    },
+    "windows": {
+      "id": "windows",
+      "fullname": "Windows",
+      "manufacturer": "Microsoft",
+      "romExtensions": [
+        ".exe",
+        ".bat",
+        ".cmd",
+        ".lnk",
+        ".game",
+        ".url",
+        ".pc",
+        ".win",
+        ".windows",
+        ".wine",
+        ".7z",
+        ".zip",
+        ".rar",
+        ".wsquashfs"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "poor",
+          "preferred": {
+            "name": "Wine (per-title prefix)",
+            "kind": "standalone",
+            "binary": "wine",
+            "args": [
+              "{romPath}"
+            ],
+            "notes": "The resolved path must be a Windows executable, not the source RetroBat .lnk/.bat wrapper."
+          },
+          "alternates": [
+            {
+              "name": "UMU/Proton (per-title prefix)",
+              "kind": "standalone",
+              "binary": "umu-run",
+              "args": [
+                "{romPath}"
+              ],
+              "notes": "Requires a configured Proton build, prefix and per-title environment; there is no safe universal configuration."
+            }
+          ],
+          "notes": "Windows games are not one emulated platform. Every title needs a Linux-visible executable, prefix, runtime/dependency setup and controller profile; original Windows drive letters and shortcuts cannot be reused."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Windows executable",
+            "kind": "direct",
+            "binary": "{romPath}",
+            "args": [],
+            "notes": "Run the title directly so the supervisor keeps a real child pid. The old cmd.exe /c start entry detached immediately, which meant the console lost the game the moment it started."
+          },
+          "alternates": [],
+          "notes": "RetroBat labels this emulator windows. Only a real executable is launchable: shortcuts, scripts, URLs and archive wrappers cannot be supervised and are rejected."
+        }
+      }
+    },
+    "xbox": {
+      "id": "xbox",
+      "fullname": "Xbox",
+      "manufacturer": "Microsoft",
+      "romExtensions": [
+        ".xbe",
+        ".iso"
+      ],
+      "bios": {
+        "required": true,
+        "files": [
+          "mcpx_1.0.bin",
+          "Complex_4627v1.03.bin (recommended compatible flash ROM; filename is configurable)",
+          "xbox_hdd.qcow2"
+        ],
+        "notes": "xemu is a low-level emulator and needs an MCPX boot ROM, compatible flash ROM and initialized HDD image. Dump copyrighted firmware from owned hardware."
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "xemu",
+            "kind": "standalone",
+            "binary": "xemu",
+            "args": [
+              "-full-screen",
+              "-dvd_path",
+              "{romPath}"
+            ]
+          },
+          "alternates": [],
+          "notes": "Compatibility is substantial but not complete, so keep per-title overrides and a compatibility check in the future launcher UI."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "xemu",
+            "kind": "standalone",
+            "binary": "xemu.exe",
+            "args": [
+              "-full-screen",
+              "-dvd_path",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Cxbx-Reloaded",
+              "kind": "standalone",
+              "binary": "Cxbx.exe",
+              "args": [
+                "{romPath}"
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "xbox360": {
+      "id": "xbox360",
+      "fullname": "Xbox 360",
+      "manufacturer": "Microsoft",
+      "romExtensions": [
+        ".iso",
+        ".xex",
+        ".xcp",
+        ".zar",
+        ".m3u"
+      ],
+      "bios": {
+        "required": false,
+        "files": []
+      },
+      "platforms": {
+        "linux": {
+          "coverage": "none",
+          "preferred": null,
+          "alternates": [],
+          "notes": "Xenia is a Windows application with no native Linux build. It can sometimes start through Wine/Vulkan, but that path is too fragile and hardware-dependent to register as a viable living-room launcher on this GTX 970 target."
+        },
+        "windows": {
+          "coverage": "workable",
+          "preferred": {
+            "name": "Xenia",
+            "kind": "standalone",
+            "binary": "xenia.exe",
+            "args": [
+              "--fullscreen=true",
+              "{romPath}"
+            ]
+          },
+          "alternates": [
+            {
+              "name": "Xenia Canary",
+              "kind": "standalone",
+              "binary": "xenia_canary.exe",
+              "args": [
+                "--fullscreen=true",
+                "{romPath}"
+              ],
+              "notes": "Canary archive naming varies; resolve the actual file in RetroBat's xenia-canary directory."
+            }
+          ],
+          "notes": "Xenia is Windows-only; no Linux cell is fabricated for it."
+        }
+      }
+    }
+  }
+}
